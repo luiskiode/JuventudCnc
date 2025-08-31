@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Juventud CNC</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="stylesheet" href="styles.css" />
+<meta name="theme-color" content="#0A2B7A" />
+</head>
+<body>
+<!-- Drawer lateral -->
+<aside id="drawer" class="drawer">
+<div class="drawer-header">
+<h2>Juventud CNC</h2>
+<button id="closeDrawer" aria-label="Cerrar">✕</button>
+</div>
+<nav class="drawer-nav">
+<a href="#inicio">Inicio</a>
+<a href="#eventos">Eventos</a>
+<a href="#grupos">Grupos</a>
+<a href="#recursos">Recursos</a>
+<a href="#contacto">Contacto</a>
+</nav>
+<footer class="drawer-footer">v1 • Hecho con ❤</footer>
+</aside>
+
+
+<!-- Overlay del drawer -->
+<div id="overlay" class="overlay" tabindex="-1" aria-hidden="true"></div>
+
+
+<!-- Topbar -->
+<header class="topbar">
+<button id="openDrawer" class="icon-btn" aria-label="Menú">☰</button>
+<h1>Juventud CNC</h1>
+<button class="icon-btn" aria-label="Perfil">👤</button>
+</header>
+
+
+<main class="container" id="inicio" tabindex="-1">
+<!-- Hero Bienvenida -->
+<section class="card hero">
+<h2>¡Bienvenido a Juventud CNC!</h2>
+<p>Tu espacio para conectar, crecer y vivir la fe.</p>
+<div class="hero-icons" aria-hidden="true">💙 🙂</div>
+</section>
+
+
+<!-- Próximos Eventos -->
+<section class="card" id="eventos">
+<h3>Próximos Eventos</h3>
+<ul id="eventList" class="event-list">
+<!-- Rellenado por app.js -->
+</ul>
+<a class="link" href="#" id="verMasEventos">Ver todos</a>
+</section>
+</main>
+
+
+<!-- Botón de acción flotante -->
+<button id="fab" class="fab" title="Agregar evento">＋</button>
+
+
+<script src="app.js"></script>
+</body>
+</html>
