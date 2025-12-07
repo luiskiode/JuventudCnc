@@ -9,17 +9,24 @@
   <link rel="stylesheet" href="styles.css" />
   <meta name="theme-color" content="#0b1020" />
 
-  <!-- Modo diseño (Brenda / paletas) -->
-  <script src="./design-mode.js" defer></script>
-
-  <!-- SDKs -->
+  <!-- SDKs base -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js"></script>
 
-  <!-- Configs (pon tus claves reales dentro de estos archivos, no aquí) -->
+  <!-- Configuración de Supabase y Firebase
+       (IMPORTANTE: asegurarse que estos archivos definan:
+        - window.supabaseClient = supabase.createClient(...)
+        - firebase.initializeApp(...)
+       ) -->
   <script src="supabase-config.js" defer></script>
   <script src="firebase-config.js" defer></script>
+
+  <!-- Modo diseño (lee jc_tokens) -->
+  <script src="design-mode.js" defer></script>
+
+  <!-- Panel técnico / diagnóstico -->
+  <script src="debug-dashboard.js" defer></script>
 </head>
 
 <body class="app-shell">
@@ -41,14 +48,17 @@
     </footer>
   </aside>
 
-  <!-- Overlay -->
+  <!-- Overlay compartido (drawer + Angie) -->
   <div id="overlay" class="overlay" tabindex="-1" aria-hidden="true"></div>
 
   <!-- Topbar -->
   <header class="topbar">
     <button id="openDrawer" class="icon-btn" aria-label="Abrir menú">☰</button>
     <h1 class="topbar-title">Juventud CNC</h1>
-    <button id="btnPerfil" class="icon-btn" aria-label="Perfil">👤</button>
+    <div class="topbar-actions">
+      <button id="btnAngie" class="icon-btn" aria-label="Herramienta de colores">🎨</button>
+      <button id="btnPerfil" class="icon-btn" aria-label="Perfil">👤</button>
+    </div>
   </header>
 
   <!-- Vistas -->
@@ -189,11 +199,109 @@
     <button class="tab" data-tab="avisos" role="tab" aria-selected="false">🔔<span>Avisos</span></button>
   </nav>
 
-   <!-- FAB -->
+  <!-- FAB -->
   <button id="fab" class="fab" title="Acción rápida">＋</button>
 
-  <!-- App JS -->
+  <!-- Panel lateral: Herramienta de Angie -->
+  <aside id="angie-panel" class="sidepanel" aria-label="Herramienta de colores Angie">
+    <div class="sidepanel-header">
+      <h2>Paleta de colores (Angie)</h2>
+      <button id="closeAngiePanel" class="icon-btn" type="button" aria-label="Cerrar Angie">✕</button>
+    </div>
+    <iframe
+      src="Angie herramienta.html"
+      class="sidepanel-iframe"
+      title="Angie - herramienta de paleta">
+    </iframe>
+  </aside>
+
+  <!-- App principal -->
   <script src="app.js"></script>
-  <script src="debug-dashboard.js" defer></script>
+
+  <!-- Control del panel de Angie + integración de tokens -->
+  <script>
+    (function () {
+      const panel = document.getElementById('angie-panel');
+      const btn = document.getElementById('btnAngie');
+      const closeBtn = document.getElementById('closeAngiePanel');
+      const overlay = document.getElementById('overlay');
+
+      if (!panel) return;
+
+      function openPanel() {
+        panel.classList.add('open');
+        if (overlay) overlay.classList.add('show');
+      }
+
+      function closePanel() {
+        panel.classList.remove('open');
+        if (overlay) overlay.classList.remove('show');
+      }
+
+      if (btn) btn.addEventListener('click', openPanel);
+      if (closeBtn) closeBtn.addEventListener('click', closePanel);
+      if (overlay) overlay.addEventListener('click', (e) => {
+        // si Angie está abierta, ciérrala; si no, cierra drawer (lo maneja app.js)
+        if (panel.classList.contains('open')) {
+          e.stopPropagation();
+          closePanel();
+        }
+      });
+
+      // Atajo: Ctrl+Alt+A para abrir/cerrar Angie
+      window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'a') {
+          if (panel.classList.contains('open')) {
+            closePanel();
+          } else {
+            openPanel();
+          }
+        }
+        if (e.key === 'Escape') {
+          if (panel.classList.contains('open')) {
+            closePanel();
+          }
+        }
+      });
+
+      // Activar automáticamente si la URL trae ?angie=1
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('angie')) {
+        openPanel();
+      }
+
+      // 🔗 Integración: escuchar mensajes de Angie con tokens de diseño
+      // Dentro de "Angie herramienta.html" deberás, al aplicar una paleta,
+      // hacer algo como:
+      // window.parent.postMessage({ type: 'jc-apply-tokens', tokens }, '*');
+      window.addEventListener('message', (event) => {
+        const data = event.data;
+        if (!data || data.type !== 'jc-apply-tokens') return;
+
+        try {
+          const tokens = data.tokens;
+          if (!tokens || typeof tokens !== 'object') return;
+
+          // Guardar tokens en localStorage para que design-mode.js los use
+          localStorage.setItem('jc_tokens', JSON.stringify(tokens));
+
+          // Aplicar inmediatamente algunas variables clave
+          const root = document.documentElement;
+          if (tokens.brand) root.style.setProperty('--brand', tokens.brand);
+          if (tokens.brand2) root.style.setProperty('--brand-2', tokens.brand2);
+          if (tokens.accent) root.style.setProperty('--accent', tokens.accent);
+          if (tokens.guyMain) root.style.setProperty('--guy-main', tokens.guyMain);
+          if (tokens.girlMain) root.style.setProperty('--girl-main', tokens.girlMain);
+          if (tokens.neutral900) root.style.setProperty('--neutral-900', tokens.neutral900);
+          if (tokens.neutral800) root.style.setProperty('--neutral-800', tokens.neutral800);
+
+          alert('Paleta aplicada a Juventud CNC. Puedes cerrar Angie o seguir ajustando.');
+
+        } catch (e) {
+          console.error('Error aplicando tokens de Angie:', e);
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

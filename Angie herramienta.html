@@ -3,50 +3,145 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Editor de Paleta (No-Code)</title>
+<title>Editor de Paleta (Angie · Juventud CNC)</title>
 <style>
   :root{
-    --brand: #1e3a8a;   /* principal */
-    --brand-2: #3b82f6; /* secundario */
-    --accent: #00d1b2;  /* acento */
-    --neutral-900:#0b0f1a;
-    --neutral-700:#1f2937;
+    /* Valores por defecto alineados con la app */
+    --brand: #2563eb;   /* principal (azul chico) */
+    --brand-2: #1d4ed8; /* secundario azul */
+    --accent: #ec4899;  /* acento (rosado chica) */
+    --neutral-900:#050816;
+    --neutral-700:#111827;
     --neutral-400:#9ca3af;
     --neutral-100:#f3f4f6;
   }
   *{box-sizing:border-box}
-  body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--neutral-100);color:#0b1220;margin:0;padding:24px}
+  body{
+    font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--neutral-100);
+    color:#0b1220;
+    margin:0;
+    padding:24px;
+  }
   h1{margin:0 0 12px}
   .grid{display:grid;gap:16px}
-  .panel{background:#fff;border-radius:16px;padding:16px;box-shadow:0 6px 24px rgba(0,0,0,.08)}
-  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  label{min-width:120px;font-weight:600}
-  input[type="color"]{width:48px;height:36px;border:none;background:none;padding:0}
-  .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
-  .swatch{border-radius:12px;overflow:hidden;border:1px solid #e5e7eb}
+  .panel{
+    background:#fff;
+    border-radius:16px;
+    padding:16px;
+    box-shadow:0 6px 24px rgba(0,0,0,.08)
+  }
+  .row{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap
+  }
+  label{min-width:140px;font-weight:600}
+  input[type="color"]{
+    width:48px;
+    height:36px;
+    border:none;
+    background:none;
+    padding:0;
+    cursor:pointer;
+  }
+  .swatches{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:12px
+  }
+  .swatch{
+    border-radius:12px;
+    overflow:hidden;
+    border:1px solid #e5e7eb
+  }
   .swatch .box{height:72px}
-  .swatch .meta{padding:8px 10px;font-size:12px;display:flex;justify-content:space-between;align-items:center}
-  .preview{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
-  .btn.primary{background:var(--brand);color:#fff}
-  .btn.secondary{background:var(--brand-2);color:#020617}
-  .card{background:#fff;border-radius:16px;padding:16px;border:1px solid #e5e7eb}
-  .badge{display:inline-block;padding:6px 10px;border-radius:999px;background:var(--accent);color:#042; font-weight:700}
-  textarea{width:100%;min-height:120px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;border-radius:12px;border:1px solid #e5e7eb;padding:10px}
+  .swatch .meta{
+    padding:8px 10px;
+    font-size:12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center
+  }
+  .preview{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px
+  }
+  .btn{
+    border:0;
+    border-radius:12px;
+    padding:10px 14px;
+    font-weight:700;
+    cursor:pointer;
+    font-size:13px;
+  }
+  .btn.primary{
+    background:var(--brand);
+    color:#fff
+  }
+  .btn.secondary{
+    background:var(--brand-2);
+    color:#020617
+  }
+  .btn.outline{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    color:#020617;
+  }
+  .card{
+    background:#fff;
+    border-radius:16px;
+    padding:16px;
+    border:1px solid #e5e7eb
+  }
+  .badge{
+    display:inline-block;
+    padding:6px 10px;
+    border-radius:999px;
+    background:var(--accent);
+    color:#042;
+    font-weight:700
+  }
+  textarea{
+    width:100%;
+    min-height:120px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    border-radius:12px;
+    border:1px solid #e5e7eb;
+    padding:10px;
+    font-size:12px;
+  }
+  .actions-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:12px;
+  }
+  small{
+    font-size:11px;
+    color:#6b7280;
+  }
 </style>
 </head>
 <body>
   <h1>Editor de Paleta (No-Code)</h1>
-  <p>Elige colores. Luego copia las variables CSS o el JSON de “tokens”.</p>
+  <p>
+    Elige colores. Luego puedes:
+    <strong>copiar las variables CSS</strong>,
+    <strong>copiar los tokens JSON</strong> o
+    <strong>aplicar la paleta directamente en Juventud CNC</strong> si estás dentro de la app.
+  </p>
 
   <div class="grid" style="grid-template-columns: 1.2fr 1fr">
     <div class="panel">
-      <h2>Colores</h2>
-      <div class="row"><label>Principal (--brand)</label><input id="brand" type="color" value="#1e3a8a"></div>
-      <div class="row"><label>Secundario (--brand-2)</label><input id="brand2" type="color" value="#3b82f6"></div>
-      <div class="row"><label>Acento (--accent)</label><input id="accent" type="color" value="#00d1b2"></div>
-      <div class="row"><label>Fondo oscuro (--neutral-900)</label><input id="n900" type="color" value="#0b0f1a"></div>
-      <div class="row"><label>Oscuro medio (--neutral-700)</label><input id="n700" type="color" value="#1f2937"></div>
+      <h2>Colores base</h2>
+      <div class="row"><label>Principal (--brand)</label><input id="brand" type="color" value="#2563eb"></div>
+      <div class="row"><label>Secundario (--brand-2)</label><input id="brand2" type="color" value="#1d4ed8"></div>
+      <div class="row"><label>Acento (--accent)</label><input id="accent" type="color" value="#ec4899"></div>
+      <div class="row"><label>Fondo oscuro (--neutral-900)</label><input id="n900" type="color" value="#050816"></div>
+      <div class="row"><label>Oscuro medio (--neutral-700)</label><input id="n700" type="color" value="#111827"></div>
       <div class="row"><label>Gris (--neutral-400)</label><input id="n400" type="color" value="#9ca3af"></div>
       <div class="row"><label>Fondo claro (--neutral-100)</label><input id="n100" type="color" value="#f3f4f6"></div>
 
@@ -56,10 +151,12 @@
       <h3>Tokens (JSON)</h3>
       <textarea id="jsonTokens" readonly></textarea>
 
-      <div class="row" style="margin-top:12px">
+      <div class="actions-row">
         <button class="btn primary" id="copyCss">Copiar CSS</button>
         <button class="btn secondary" id="copyJson">Copiar JSON</button>
+        <button class="btn outline" id="applyApp">Aplicar en Juventud CNC</button>
       </div>
+      <small id="statusMsg"></small>
     </div>
 
     <div class="panel">
@@ -93,8 +190,8 @@ const inputs = {
   n100: document.getElementById('n100'),
 };
 
-function sync(){
-  const vals = {
+function getVals(){
+  return {
     '--brand': inputs.brand.value,
     '--brand-2': inputs.brand2.value,
     '--accent': inputs.accent.value,
@@ -103,12 +200,18 @@ function sync(){
     '--neutral-400': inputs.n400.value,
     '--neutral-100': inputs.n100.value,
   };
+}
+
+function sync(){
+  const vals = getVals();
   const root = document.documentElement;
   Object.entries(vals).forEach(([k,v])=>root.style.setProperty(k,v));
 
+  // CSS
   document.getElementById('cssVars').value =
     ':root{\n' + Object.entries(vals).map(([k,v])=>`  ${k}: ${v};`).join('\n') + '\n}';
 
+  // JSON tokens (estructura anidada para diseño)
   document.getElementById('jsonTokens').value = JSON.stringify({
     color: {
       brand: { value: vals['--brand'] },
@@ -141,6 +244,7 @@ function renderSwatches(vals){
 Object.values(inputs).forEach(i=>i.addEventListener('input',sync));
 sync();
 
+// Copiar
 document.getElementById('copyCss').onclick = () => {
   navigator.clipboard.writeText(document.getElementById('cssVars').value);
   alert('Variables CSS copiadas.');
@@ -148,6 +252,35 @@ document.getElementById('copyCss').onclick = () => {
 document.getElementById('copyJson').onclick = () => {
   navigator.clipboard.writeText(document.getElementById('jsonTokens').value);
   alert('Tokens JSON copiados.');
+};
+
+// Aplicar en Juventud CNC (enviar tokens al parent)
+const statusMsg = document.getElementById('statusMsg');
+document.getElementById('applyApp').onclick = () => {
+  const vals = getVals();
+
+  // Tokens "planos" que el index.html está esperando
+  const tokens = {
+    brand: vals['--brand'],
+    brand2: vals['--brand-2'],
+    accent: vals['--accent'],
+    neutral900: vals['--neutral-900'],
+    neutral700: vals['--neutral-700'],
+    neutral400: vals['--neutral-400'],
+    neutral100: vals['--neutral-100'],
+  };
+
+  try{
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'jc-apply-tokens', tokens }, '*');
+      statusMsg.textContent = 'Paleta enviada a Juventud CNC. Revisa la app para ver los cambios.';
+    } else {
+      statusMsg.textContent = 'No se detectó app padre. Usa esta herramienta dentro de Juventud CNC.';
+    }
+  } catch (e){
+    console.error(e);
+    statusMsg.textContent = 'Error al intentar enviar la paleta a la app.';
+  }
 };
 </script>
 </body>
