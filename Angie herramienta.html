@@ -7,9 +7,9 @@
 <style>
   :root{
     /* Valores por defecto alineados con la app */
-    --brand: #2563eb;   /* principal (azul chico) */
-    --brand-2: #1d4ed8; /* secundario azul */
-    --accent: #ec4899;  /* acento (rosado chica) */
+    --brand: #2563eb;   /* principal (chicos) */
+    --brand-2: #1d4ed8; /* secundario */
+    --accent: #ec4899;  /* acento (chicas) */
     --neutral-900:#050816;
     --neutral-700:#111827;
     --neutral-400:#9ca3af;
@@ -19,11 +19,13 @@
   body{
     font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
     background:var(--neutral-100);
-    color:#0b1220;
+    color:#020617;
     margin:0;
     padding:24px;
   }
-  h1{margin:0 0 12px}
+  h1{margin:0 0 8px;font-size:20px}
+  h2{margin:16px 0 8px;font-size:16px}
+  p{margin:0 0 10px;font-size:13px;color:#4b5563}
   .grid{display:grid;gap:16px}
   .panel{
     background:#fff;
@@ -37,10 +39,10 @@
     align-items:center;
     flex-wrap:wrap
   }
-  label{min-width:140px;font-weight:600}
+  label{min-width:150px;font-weight:600;font-size:13px}
   input[type="color"]{
     width:48px;
-    height:36px;
+    height:34px;
     border:none;
     background:none;
     padding:0;
@@ -59,10 +61,10 @@
   .swatch .box{height:72px}
   .swatch .meta{
     padding:8px 10px;
-    font-size:12px;
+    font-size:11px;
     display:flex;
     justify-content:space-between;
-    align-items:center
+    align-items:center;
   }
   .preview{
     display:grid;
@@ -72,10 +74,10 @@
   .btn{
     border:0;
     border-radius:12px;
-    padding:10px 14px;
+    padding:8px 12px;
     font-weight:700;
     cursor:pointer;
-    font-size:13px;
+    font-size:12px;
   }
   .btn.primary{
     background:var(--brand);
@@ -90,6 +92,11 @@
     border:1px solid #e5e7eb;
     color:#020617;
   }
+  .btn.pill{
+    border-radius:999px;
+    padding:6px 10px;
+    font-size:11px;
+  }
   .card{
     background:#fff;
     border-radius:16px;
@@ -98,44 +105,59 @@
   }
   .badge{
     display:inline-block;
-    padding:6px 10px;
+    padding:5px 10px;
     border-radius:999px;
     background:var(--accent);
-    color:#042;
-    font-weight:700
+    color:#042f2e;
+    font-weight:700;
+    font-size:11px;
   }
   textarea{
     width:100%;
-    min-height:120px;
-    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    min-height:110px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
     border-radius:12px;
     border:1px solid #e5e7eb;
-    padding:10px;
-    font-size:12px;
+    padding:8px;
+    font-size:11px;
   }
   .actions-row{
     display:flex;
     flex-wrap:wrap;
     gap:8px;
-    margin-top:12px;
+    margin-top:10px;
   }
   small{
     font-size:11px;
     color:#6b7280;
   }
+  .preset-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:10px;
+  }
 </style>
 </head>
 <body>
-  <h1>Editor de Paleta (No-Code)</h1>
+  <h1>Editor de Paleta</h1>
   <p>
-    Elige colores. Luego puedes:
-    <strong>copiar las variables CSS</strong>,
-    <strong>copiar los tokens JSON</strong> o
-    <strong>aplicar la paleta directamente en Juventud CNC</strong> si estás dentro de la app.
+    Elige colores o usa uno de los perfiles rápidos.  
+    Puedes <strong>copiar CSS</strong>, <strong>copiar JSON</strong> o
+    <strong>aplicar directo en Juventud CNC</strong> si estás dentro de la app.
   </p>
 
   <div class="grid" style="grid-template-columns: 1.2fr 1fr">
     <div class="panel">
+      <h2>Perfiles rápidos</h2>
+      <div class="preset-row">
+        <button class="btn pill outline" data-preset="chicos">Chicos 💙</button>
+        <button class="btn pill outline" data-preset="chicas">Chicas 💗</button>
+        <button class="btn pill outline" data-preset="mix">Mix 💙💗</button>
+        <button class="btn pill outline" data-preset="oscuro">Oscuro 🕯</button>
+        <button class="btn pill outline" data-preset="evento">Evento especial 🎉</button>
+      </div>
+
       <h2>Colores base</h2>
       <div class="row"><label>Principal (--brand)</label><input id="brand" type="color" value="#2563eb"></div>
       <div class="row"><label>Secundario (--brand-2)</label><input id="brand2" type="color" value="#1d4ed8"></div>
@@ -211,7 +233,7 @@ function sync(){
   document.getElementById('cssVars').value =
     ':root{\n' + Object.entries(vals).map(([k,v])=>`  ${k}: ${v};`).join('\n') + '\n}';
 
-  // JSON tokens (estructura anidada para diseño)
+  // JSON tokens (estructura para design)
   document.getElementById('jsonTokens').value = JSON.stringify({
     color: {
       brand: { value: vals['--brand'] },
@@ -227,6 +249,9 @@ function sync(){
   }, null, 2);
 
   renderSwatches(vals);
+
+  // Guardar últimos valores localmente (para que Angie recuerde)
+  localStorage.setItem('angie_last_palette', JSON.stringify(vals));
 }
 
 function renderSwatches(vals){
@@ -241,8 +266,91 @@ function renderSwatches(vals){
   });
 }
 
+// Listeners de inputs
 Object.values(inputs).forEach(i=>i.addEventListener('input',sync));
-sync();
+
+// Perfiles rápidos
+const presets = {
+  chicos: {
+    '--brand':'#2563eb',
+    '--brand-2':'#1d4ed8',
+    '--accent':'#60a5fa',
+    '--neutral-900':'#050816',
+    '--neutral-700':'#0f172a',
+    '--neutral-400':'#9ca3af',
+    '--neutral-100':'#f3f4f6',
+  },
+  chicas: {
+    '--brand':'#ec4899',
+    '--brand-2':'#db2777',
+    '--accent':'#f97316',
+    '--neutral-900':'#3b0d1f',
+    '--neutral-700':'#4a044e',
+    '--neutral-400':'#f9a8d4',
+    '--neutral-100':'#fdf2f8',
+  },
+  mix: {
+    '--brand':'#2563eb',
+    '--brand-2':'#1d4ed8',
+    '--accent':'#ec4899',
+    '--neutral-900':'#050816',
+    '--neutral-700':'#111827',
+    '--neutral-400':'#e5e7eb',
+    '--neutral-100':'#f9fafb',
+  },
+  oscuro:{
+    '--brand':'#0ea5e9',
+    '--brand-2':'#6366f1',
+    '--accent':'#f97316',
+    '--neutral-900':'#020617',
+    '--neutral-700':'#0b1120',
+    '--neutral-400':'#64748b',
+    '--neutral-100':'#111827',
+  },
+  evento:{
+    '--brand':'#22c55e',
+    '--brand-2':'#16a34a',
+    '--accent':'#eab308',
+    '--neutral-900':'#022c22',
+    '--neutral-700':'#064e3b',
+    '--neutral-400':'#a3e635',
+    '--neutral-100':'#ecfccb',
+  }
+};
+
+document.querySelectorAll('[data-preset]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const key = btn.dataset.preset;
+    const vals = presets[key];
+    if(!vals) return;
+    // aplicar a los inputs
+    inputs.brand.value = vals['--brand'];
+    inputs.brand2.value = vals['--brand-2'];
+    inputs.accent.value = vals['--accent'];
+    inputs.n900.value = vals['--neutral-900'];
+    inputs.n700.value = vals['--neutral-700'];
+    inputs.n400.value = vals['--neutral-400'];
+    inputs.n100.value = vals['--neutral-100'];
+    sync();
+  });
+});
+
+// Restaurar última paleta usada en Angie
+(function restoreLast(){
+  const raw = localStorage.getItem('angie_last_palette');
+  if(!raw) { sync(); return; }
+  try{
+    const vals = JSON.parse(raw);
+    if(vals['--brand']) inputs.brand.value = vals['--brand'];
+    if(vals['--brand-2']) inputs.brand2.value = vals['--brand-2'];
+    if(vals['--accent']) inputs.accent.value = vals['--accent'];
+    if(vals['--neutral-900']) inputs.n900.value = vals['--neutral-900'];
+    if(vals['--neutral-700']) inputs.n700.value = vals['--neutral-700'];
+    if(vals['--neutral-400']) inputs.n400.value = vals['--neutral-400'];
+    if(vals['--neutral-100']) inputs.n100.value = vals['--neutral-100'];
+  }catch(e){}
+  sync();
+})();
 
 // Copiar
 document.getElementById('copyCss').onclick = () => {
@@ -254,12 +362,10 @@ document.getElementById('copyJson').onclick = () => {
   alert('Tokens JSON copiados.');
 };
 
-// Aplicar en Juventud CNC (enviar tokens al parent)
+// Aplicar en la app (enviar tokens al padre)
 const statusMsg = document.getElementById('statusMsg');
 document.getElementById('applyApp').onclick = () => {
   const vals = getVals();
-
-  // Tokens "planos" que el index.html está esperando
   const tokens = {
     brand: vals['--brand'],
     brand2: vals['--brand-2'],
@@ -269,7 +375,6 @@ document.getElementById('applyApp').onclick = () => {
     neutral400: vals['--neutral-400'],
     neutral100: vals['--neutral-100'],
   };
-
   try{
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({ type: 'jc-apply-tokens', tokens }, '*');

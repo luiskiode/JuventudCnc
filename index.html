@@ -53,13 +53,19 @@
 
   <!-- Topbar -->
   <header class="topbar">
-    <button id="openDrawer" class="icon-btn" aria-label="Abrir menú">☰</button>
-    <h1 class="topbar-title">Juventud CNC</h1>
-    <div class="topbar-actions">
-      <button id="btnAngie" class="icon-btn" aria-label="Herramienta de colores">🎨</button>
-      <button id="btnPerfil" class="icon-btn" aria-label="Perfil">👤</button>
-    </div>
-  </header>
+  <button id="openDrawer" class="icon-btn" aria-label="Menú">☰</button>
+  <h1 class="topbar-title">Juventud CNC</h1>
+  <div class="topbar-actions">
+    <select id="themePicker" class="theme-picker" aria-label="Tema visual">
+      <option value="auto">Auto</option>
+      <option value="chicos">Chicos 💙</option>
+      <option value="chicas">Chicas 💗</option>
+      <option value="mix">Mix 💙💗</option>
+    </select>
+    <button id="btnAngie" class="icon-btn" aria-label="Herramienta de colores">🎨</button>
+    <button id="btnPerfil" class="icon-btn" aria-label="Perfil">👤</button>
+  </div>
+</header>
 
   <!-- Vistas -->
   <main class="container" id="main">
@@ -218,59 +224,134 @@
   <!-- App principal -->
   <script src="app.js"></script>
 
-  <!-- Control del panel de Angie + integración de tokens -->
-   <script>
+  <!-- Panel técnico -->
+  <script src="debug-dashboard.js" defer></script>
+
+  <!-- Control Angie + tema + tokens + Supabase -->
+  <script>
     (function () {
       const panel = document.getElementById('angie-panel');
       const btn = document.getElementById('btnAngie');
       const closeBtn = document.getElementById('closeAngiePanel');
       const overlay = document.getElementById('overlay');
-
-      if (!panel) return;
+      const themePicker = document.getElementById('themePicker');
 
       function openPanel() {
-        panel.classList.add('open');
-        if (overlay) overlay.classList.add('show');
+        panel?.classList.add('open');
+        overlay?.classList.add('show');
       }
-
       function closePanel() {
-        panel.classList.remove('open');
-        if (overlay) overlay.classList.remove('show');
+        panel?.classList.remove('open');
+        overlay?.classList.remove('show');
       }
 
-      if (btn) btn.addEventListener('click', openPanel);
-      if (closeBtn) closeBtn.addEventListener('click', closePanel);
-      if (overlay) overlay.addEventListener('click', (e) => {
-        if (panel.classList.contains('open')) {
+      btn?.addEventListener('click', openPanel);
+      closeBtn?.addEventListener('click', closePanel);
+      overlay?.addEventListener('click', (e) => {
+        if (panel?.classList.contains('open')) {
           e.stopPropagation();
           closePanel();
         }
       });
 
-      // Atajo: Ctrl+Alt+A para abrir/cerrar Angie
+      // Atajo: Ctrl+Alt+A abre/cierra Angie
       window.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'a') {
-          if (panel.classList.contains('open')) {
-            closePanel();
-          } else {
-            openPanel();
-          }
+          if (panel?.classList.contains('open')) closePanel();
+          else openPanel();
         }
-        if (e.key === 'Escape') {
-          if (panel.classList.contains('open')) {
-            closePanel();
-          }
+        if (e.key === 'Escape' && panel?.classList.contains('open')) {
+          closePanel();
         }
       });
 
-      // Activar automáticamente si la URL trae ?angie=1
+      // Abrir Angie con ?angie=1
       const params = new URLSearchParams(window.location.search);
       if (params.has('angie')) {
         openPanel();
       }
 
-      // 🔗 Integración: escuchar mensajes de Angie con tokens de diseño
-      window.addEventListener('message', (event) => {
+      // ========= APLICAR TOKENS =========
+      function applyTokens(tokens) {
+        if (!tokens || typeof tokens !== 'object') return;
+        const root = document.documentElement;
+
+        if (tokens.brand) {
+          root.style.setProperty('--brand', tokens.brand);
+          root.style.setProperty('--guy-main', tokens.brand);
+        }
+        if (tokens.brand2) {
+          root.style.setProperty('--brand-2', tokens.brand2);
+        }
+        if (tokens.accent) {
+          root.style.setProperty('--accent', tokens.accent);
+          root.style.setProperty('--girl-main', tokens.accent);
+        }
+        if (tokens.neutral900) root.style.setProperty('--neutral-900', tokens.neutral900);
+        if (tokens.neutral700) root.style.setProperty('--neutral-700', tokens.neutral700);
+        if (tokens.neutral400) root.style.setProperty('--neutral-400', tokens.neutral400);
+        if (tokens.neutral100) root.style.setProperty('--neutral-100', tokens.neutral100);
+      }
+
+      // Hacer accesible para otros scripts (app.js si lo necesitas)
+      window.jcApplyTokens = applyTokens;
+
+      // ========= AUTO-RESTABLECER PALETA GUARDADA =========
+      (function restoreTokensOnLoad() {
+        const saved = localStorage.getItem('jc_tokens');
+        if (!saved) return;
+        try {
+          const tokens = JSON.parse(saved);
+          applyTokens(tokens);
+          console.log('💾 Paleta personalizada restaurada desde localStorage.');
+        } catch (e) {
+          console.error('Error cargando jc_tokens:', e);
+        }
+      })();
+
+      // ========= SELECTOR DE TEMA (chicos/chicas/mix/auto) =========
+      function applyThemeMode(mode) {
+        const root = document.documentElement;
+        if (mode === 'chicos') {
+          root.style.setProperty('--brand', '#2563eb');
+          root.style.setProperty('--brand-2', '#1d4ed8');
+          root.style.setProperty('--accent', '#60a5fa');
+          root.style.setProperty('--guy-main', '#2563eb');
+          root.style.setProperty('--girl-main', '#60a5fa');
+          localStorage.setItem('jc_theme_mode', 'chicos');
+        } else if (mode === 'chicas') {
+          root.style.setProperty('--brand', '#ec4899');
+          root.style.setProperty('--brand-2', '#db2777');
+          root.style.setProperty('--accent', '#f97316');
+          root.style.setProperty('--guy-main', '#ec4899');
+          root.style.setProperty('--girl-main', '#f97316');
+          localStorage.setItem('jc_theme_mode', 'chicas');
+        } else if (mode === 'mix') {
+          root.style.setProperty('--brand', '#2563eb');
+          root.style.setProperty('--brand-2', '#1d4ed8');
+          root.style.setProperty('--accent', '#ec4899');
+          root.style.setProperty('--guy-main', '#2563eb');
+          root.style.setProperty('--girl-main', '#ec4899');
+          localStorage.setItem('jc_theme_mode', 'mix');
+        } else {
+          // auto = respetar lo que esté en tokens
+          localStorage.setItem('jc_theme_mode', 'auto');
+        }
+      }
+
+      const savedMode = localStorage.getItem('jc_theme_mode') || 'auto';
+      if (themePicker) {
+        themePicker.value = savedMode;
+        if (savedMode !== 'auto') applyThemeMode(savedMode);
+        themePicker.addEventListener('change', (e) => {
+          applyThemeMode(e.target.value);
+        });
+      } else {
+        if (savedMode !== 'auto') applyThemeMode(savedMode);
+      }
+
+      // ========= ESCUCHAR A ANGIE Y GUARDAR EN SUPABASE =========
+      window.addEventListener('message', async (event) => {
         const data = event.data;
         if (!data || data.type !== 'jc-apply-tokens') return;
 
@@ -278,35 +359,39 @@
           const tokens = data.tokens;
           if (!tokens || typeof tokens !== 'object') return;
 
-          // Guardar tokens en localStorage para design-mode.js
+          // Guardar en localStorage
           localStorage.setItem('jc_tokens', JSON.stringify(tokens));
 
-          const root = document.documentElement;
+          // Aplicar directamente
+          applyTokens(tokens);
 
-          // brand → var(--brand) y también --guy-main
-          if (tokens.brand) {
-            root.style.setProperty('--brand', tokens.brand);
-            root.style.setProperty('--guy-main', tokens.brand);
+          // Guardar en Supabase por usuario (si hay sesión)
+          const sb = window.supabaseClient;
+          if (sb && sb.auth) {
+            try {
+              const { data: userRes, error: authErr } = await sb.auth.getUser();
+              if (!authErr && userRes?.user?.id) {
+                const uid = userRes.user.id;
+                const modo = localStorage.getItem('jc_theme_mode') || 'personalizado';
+
+                await sb
+                  .from('paletas_usuarios') // crea esta tabla en Supabase
+                  .upsert(
+                    {
+                      user_id: uid,
+                      tokens,
+                      modo,
+                      updated_at: new Date().toISOString()
+                    },
+                    { onConflict: 'user_id' }
+                  );
+              }
+            } catch (e) {
+              console.error('Error guardando paleta en Supabase:', e);
+            }
           }
 
-          // brand2 → var(--brand-2)
-          if (tokens.brand2) {
-            root.style.setProperty('--brand-2', tokens.brand2);
-          }
-
-          // accent → var(--accent) y también --girl-main
-          if (tokens.accent) {
-            root.style.setProperty('--accent', tokens.accent);
-            root.style.setProperty('--girl-main', tokens.accent);
-          }
-
-          // Neutrales
-          if (tokens.neutral900) root.style.setProperty('--neutral-900', tokens.neutral900);
-          if (tokens.neutral700) root.style.setProperty('--neutral-700', tokens.neutral700);
-          if (tokens.neutral400) root.style.setProperty('--neutral-400', tokens.neutral400);
-          if (tokens.neutral100) root.style.setProperty('--neutral-100', tokens.neutral100);
-
-          alert('Paleta aplicada a Juventud CNC. Los colores principales ya deberían cambiar.');
+          alert('Paleta aplicada a Juventud CNC. Los cambios deberían verse de inmediato.');
 
         } catch (e) {
           console.error('Error aplicando tokens de Angie:', e);
@@ -314,39 +399,5 @@
       });
     })();
   </script>
-
-  <script>
-  // AUTO-RESTABLECER PALETA GUARDADA
-  (function () {
-    const saved = localStorage.getItem('jc_tokens');
-    if (!saved) return;
-
-    try {
-      const tokens = JSON.parse(saved);
-      const root = document.documentElement;
-
-      if (tokens.brand) {
-        root.style.setProperty('--brand', tokens.brand);
-        root.style.setProperty('--guy-main', tokens.brand);
-      }
-      if (tokens.brand2) {
-        root.style.setProperty('--brand-2', tokens.brand2);
-      }
-      if (tokens.accent) {
-        root.style.setProperty('--accent', tokens.accent);
-        root.style.setProperty('--girl-main', tokens.accent);
-      }
-
-      if (tokens.neutral900) root.style.setProperty('--neutral-900', tokens.neutral900);
-      if (tokens.neutral700) root.style.setProperty('--neutral-700', tokens.neutral700);
-      if (tokens.neutral400) root.style.setProperty('--neutral-400', tokens.neutral400);
-      if (tokens.neutral100) root.style.setProperty('--neutral-100', tokens.neutral100);
-
-      console.log("💾 Paleta personalizada restaurada automáticamente.");
-    } catch (e) {
-      console.error("Error cargando tokens guardados:", e);
-    }
-  })();
-</script>
 </body>
 </html>
