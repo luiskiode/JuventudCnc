@@ -290,32 +290,6 @@ function mostrarEstadoPerfil(texto, tipo = 'ok') {
 }
 
 
-
-  // Guardar info básica de perfil en localStorage (sin tocar la BD)
-   const perfilGuardado = { nombre, rol_key, frase };
-  localStorage.setItem('jc_perfil', JSON.stringify(perfilGuardado));
-  actualizarUIPerfil(perfilGuardado);
-
-  const labelRol =
-    rol_key === 'moderador'
-      ? 'moderador (solicitud enviada)'
-      : rol_key === 'voluntario'
-      ? 'voluntario digital'
-      : 'miembro';
-
-  if (huboErrorRemoto) {
-    mostrarEstadoPerfil(
-      `Perfil guardado en este dispositivo como ${labelRol}. Más adelante se sincronizará con el servidor.`,
-      'error'
-    );
-  } else {
-    mostrarEstadoPerfil(`Registro guardado correctamente como ${labelRol}.`, 'ok');
-  }
-
-  // Ya no necesitamos mostrar el formulario después del primer registro
-  ocultarFormularioPerfil();
-;
-
 formMiembro?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = new FormData(formMiembro);
