@@ -314,5 +314,39 @@
       });
     })();
   </script>
+
+  <script>
+  // AUTO-RESTABLECER PALETA GUARDADA
+  (function () {
+    const saved = localStorage.getItem('jc_tokens');
+    if (!saved) return;
+
+    try {
+      const tokens = JSON.parse(saved);
+      const root = document.documentElement;
+
+      if (tokens.brand) {
+        root.style.setProperty('--brand', tokens.brand);
+        root.style.setProperty('--guy-main', tokens.brand);
+      }
+      if (tokens.brand2) {
+        root.style.setProperty('--brand-2', tokens.brand2);
+      }
+      if (tokens.accent) {
+        root.style.setProperty('--accent', tokens.accent);
+        root.style.setProperty('--girl-main', tokens.accent);
+      }
+
+      if (tokens.neutral900) root.style.setProperty('--neutral-900', tokens.neutral900);
+      if (tokens.neutral700) root.style.setProperty('--neutral-700', tokens.neutral700);
+      if (tokens.neutral400) root.style.setProperty('--neutral-400', tokens.neutral400);
+      if (tokens.neutral100) root.style.setProperty('--neutral-100', tokens.neutral100);
+
+      console.log("💾 Paleta personalizada restaurada automáticamente.");
+    } catch (e) {
+      console.error("Error cargando tokens guardados:", e);
+    }
+  })();
+</script>
 </body>
 </html>
