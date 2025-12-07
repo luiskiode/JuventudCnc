@@ -686,7 +686,32 @@ async function cargarListaMiembros () {
 
   const STORAGE_KEY_HIDE = 'jc_angie_hide_until';
 
-  // Mensajes por momento del día
+  function obtenerNombreUsuario() {
+    return (
+      document.getElementById("perfilNombreTexto")?.textContent?.trim() ||
+      "amigo"
+    );
+  }
+
+  // --- Saludo rápido inicial ANTES del sistema principal ---
+  setTimeout(() => {
+    const nombre = obtenerNombreUsuario();
+    const frasesIniciales = [
+      `¡Hola ${nombre}! ¿Ya tomaste agüita hoy? 💧`,
+      `${nombre}, adivina... ¡Dios tiene un plan contigo! ✨`,
+      `Oye ${nombre}, vi que te esforzaste hoy 👀`,
+      `¡Hey! ¿Listo para un gran día? 😄`,
+      `Te estuve esperando, ${nombre} 💗💙`
+    ];
+
+    widget.classList.add("angie-widget--visible");
+    textEl.textContent =
+      frasesIniciales[Math.floor(Math.random() * frasesIniciales.length)];
+  }, 1800);
+  // --- FIN saludo rápido inicial ---
+
+
+  // ⭐ Sistema de mensajes según hora + travesuras + wiggle  
   const mensajesBase = {
     manana: [
       '🌞 ¡Buenos días! Hoy podemos hacer algo grande.',
@@ -706,61 +731,64 @@ async function cargarListaMiembros () {
     travesuras: [
       '🙈 Me asomé solo a ver si seguías por aquí…',
       '😏 No le digas a nadie, pero tú eres mi usuario favorito.',
-      '🎨 ¿Te acuerdas que también puedo cambiar colores? Jejeje.'
+      '🎨 ¿Te acuerdas que también puedo cambiar colores? Jejeje.',
+      '👟 Casi me tropiezo entrando, no te rías 🙃'
     ]
   };
 
-  function momentoDelDia () {
+  function momentoDelDia() {
     const h = new Date().getHours();
     if (h >= 6 && h < 12) return 'manana';
     if (h >= 12 && h < 19) return 'tarde';
     return 'noche';
   }
 
-  function elegirMensaje () {
+  function elegirMensaje() {
     const bloque = mensajesBase[momentoDelDia()] || mensajesBase.tarde;
     const extra = Math.random() < 0.35 ? mensajesBase.travesuras : [];
     const pool = bloque.concat(extra);
     const idx = Math.floor(Math.random() * pool.length);
-    return pool[idx] || 'Hola, soy Angie 👋';
+    return pool[idx];
   }
 
-  function mostrarAngie () {
-    // Respetar si el usuario la ocultó hace poco
+  function mostrarAngie() {
     const hideUntil = Number(localStorage.getItem(STORAGE_KEY_HIDE) || '0');
     if (Date.now() < hideUntil) return;
 
-    textEl.textContent = elegirMensaje();
+    const nombre = obtenerNombreUsuario();
+    const mensaje = elegirMensaje().replace("{{nombre}}", nombre);
+
+    textEl.textContent = mensaje;
     widget.classList.add('angie-widget--visible');
 
-    // A veces se pone traviesa y se menea
     if (Math.random() < 0.6) {
       widget.classList.add('angie-widget--wiggle');
       setTimeout(() => widget.classList.remove('angie-widget--wiggle'), 3000);
     }
   }
 
-  function ocultarAngie () {
+  function ocultarAngie() {
     widget.classList.remove('angie-widget--visible');
     widget.classList.remove('angie-widget--wiggle');
-    // No molestar por 30 minutos
-    const treintaMin = 30 * 60 * 1000;
-    localStorage.setItem(STORAGE_KEY_HIDE, String(Date.now() + treintaMin));
+    localStorage.setItem(
+      STORAGE_KEY_HIDE,
+      String(Date.now() + 30 * 60 * 1000)
+    );
   }
 
   btnClose?.addEventListener('click', ocultarAngie);
 
-  // Mostrarla unos segundos después de entrar
+  // ⭐ Aparición principal
   setTimeout(mostrarAngie, 4500);
 
-  // Cada vez que cambias de sección importante, que se asome a veces
+  // ⭐ Reaparición según la vista
   window.addEventListener('hashchange', () => {
     const view = (location.hash || '#inicio').replace('#', '');
-    if (view === 'comunidad' || view === 'eventos' || view === 'miembros-activos') {
+
+    if (['comunidad', 'eventos', 'miembros-activos'].includes(view)) {
       if (Math.random() < 0.45) {
         setTimeout(mostrarAngie, 1200);
       }
     }
   });
 })();
-
