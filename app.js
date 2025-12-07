@@ -686,14 +686,13 @@ async function cargarListaMiembros () {
 
   const STORAGE_KEY_HIDE = 'jc_angie_hide_until';
 
+  // Siempre retorna un nombre válido
   function obtenerNombreUsuario() {
-    return (
-      document.getElementById("perfilNombreTexto")?.textContent?.trim() ||
-      "amigo"
-    );
+    const raw = document.getElementById("perfilNombreTexto")?.textContent;
+    return raw && raw.trim().length > 0 ? raw.trim() : "amigo";
   }
 
-  // --- Saludo rápido inicial ANTES del sistema principal ---
+  // --- Saludo inicial (antes del sistema) ---
   setTimeout(() => {
     const nombre = obtenerNombreUsuario();
     const frasesIniciales = [
@@ -708,10 +707,10 @@ async function cargarListaMiembros () {
     textEl.textContent =
       frasesIniciales[Math.floor(Math.random() * frasesIniciales.length)];
   }, 1800);
-  // --- FIN saludo rápido inicial ---
+  // --- FIN saludo inicial ---
 
 
-  // ⭐ Sistema de mensajes según hora + travesuras + wiggle  
+  // ⭐ Sistema principal de mensajes y travesuras
   const mensajesBase = {
     manana: [
       '🌞 ¡Buenos días! Hoy podemos hacer algo grande.',
@@ -743,24 +742,26 @@ async function cargarListaMiembros () {
     return 'noche';
   }
 
-  function elegirMensaje() {
+  function elegirMensaje(nombre) {
     const bloque = mensajesBase[momentoDelDia()] || mensajesBase.tarde;
     const extra = Math.random() < 0.35 ? mensajesBase.travesuras : [];
     const pool = bloque.concat(extra);
-    const idx = Math.floor(Math.random() * pool.length);
-    return pool[idx];
+
+    const msg = pool[Math.floor(Math.random() * pool.length)];
+    return msg.replace("{{nombre}}", nombre);
   }
 
   function mostrarAngie() {
     const hideUntil = Number(localStorage.getItem(STORAGE_KEY_HIDE) || '0');
-    if (Date.now() < hideUntil) return;
+    if (Date.now() < hideUntil) return; // aún está escondida
 
     const nombre = obtenerNombreUsuario();
-    const mensaje = elegirMensaje().replace("{{nombre}}", nombre);
+    const mensaje = elegirMensaje(nombre);
 
     textEl.textContent = mensaje;
     widget.classList.add('angie-widget--visible');
 
+    // Wiggle travieso
     if (Math.random() < 0.6) {
       widget.classList.add('angie-widget--wiggle');
       setTimeout(() => widget.classList.remove('angie-widget--wiggle'), 3000);
@@ -770,6 +771,8 @@ async function cargarListaMiembros () {
   function ocultarAngie() {
     widget.classList.remove('angie-widget--visible');
     widget.classList.remove('angie-widget--wiggle');
+
+    // Se oculta por 30 minutos
     localStorage.setItem(
       STORAGE_KEY_HIDE,
       String(Date.now() + 30 * 60 * 1000)
@@ -778,7 +781,7 @@ async function cargarListaMiembros () {
 
   btnClose?.addEventListener('click', ocultarAngie);
 
-  // ⭐ Aparición principal
+  // ⭐ Aparición principal (después del saludo inicial)
   setTimeout(mostrarAngie, 4500);
 
   // ⭐ Reaparición según la vista

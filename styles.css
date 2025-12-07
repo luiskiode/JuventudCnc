@@ -980,4 +980,12 @@ input::placeholder {
     bottom:88px;
   }
 }
+.angie-widget { opacity:0; transform: translateY(20px); transition:0.4s; }
+.angie-widget--visible { opacity:1; transform:translateY(0); }
+.angie-widget--wiggle { animation: wiggle 0.3s ease-in-out infinite alternate; }
+
+@keyframes wiggle {
+  0% { transform: rotate(-2deg); }
+  100% { transform: rotate(2deg); }
+}
 
