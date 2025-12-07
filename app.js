@@ -278,7 +278,7 @@ function mostrarEstadoPerfil(texto, tipo = 'ok') {
   perfilEstado.classList.add(tipo);
 }
 
-ormMiembro?.addEventListener('submit', async (e) => {
+formMiembro?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = new FormData(formMiembro);
   const nombre = f.get('nombre');
