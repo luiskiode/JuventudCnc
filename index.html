@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Juventud CNC</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+  <meta name="theme-color" content="#0b1020" />
+
+  <!-- Modo diseño (Brenda / paletas) -->
+  <script src="./design-mode.js" defer></script>
+
+  <!-- SDKs -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js"></script>
+
+  <!-- Configs (pon tus claves reales dentro de estos archivos, no aquí) -->
+  <script src="supabase-config.js" defer></script>
+  <script src="firebase-config.js" defer></script>
+</head>
+
+<body class="app-shell">
+  <!-- Drawer lateral -->
+  <aside id="drawer" class="drawer" aria-label="Menú principal">
+    <div class="drawer-header">
+      <h2>Juventud CNC</h2>
+      <button id="closeDrawer" class="icon-btn" aria-label="Cerrar menú">✕</button>
+    </div>
+    <nav class="drawer-nav">
+      <a href="#inicio" data-tab="inicio">Inicio</a>
+      <a href="#eventos" data-tab="eventos">Eventos</a>
+      <a href="#comunidad" data-tab="comunidad">Comunidad</a>
+      <a href="#recursos" data-tab="recursos">Recursos</a>
+      <a href="#avisos" data-tab="avisos">Avisos</a>
+    </nav>
+    <footer class="drawer-footer">
+      v1.0 • Pensado para jóvenes 💙💗
+    </footer>
+  </aside>
+
+  <!-- Overlay -->
+  <div id="overlay" class="overlay" tabindex="-1" aria-hidden="true"></div>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <button id="openDrawer" class="icon-btn" aria-label="Abrir menú">☰</button>
+    <h1 class="topbar-title">Juventud CNC</h1>
+    <button id="btnPerfil" class="icon-btn" aria-label="Perfil">👤</button>
+  </header>
+
+  <!-- Vistas -->
+  <main class="container" id="main">
+    <!-- INICIO -->
+    <section class="view active" id="view-inicio" data-view="inicio" tabindex="-1">
+      <!-- Mensaje semanal -->
+      <section class="card" id="mensaje-semanal">
+        <header class="card-header">
+          <h2 class="with-emoji" data-emoji="🕊️">Mensaje semanal</h2>
+          <span class="badge badge-mix">Para chicos 💙 y chicas 💗</span>
+        </header>
+        <article class="card-body">
+          <h3 id="msgTitle">Cargando mensaje...</h3>
+          <p id="msgBody">
+            Aquí aparecerá una palabra breve para acompañar tu semana:
+            estudio, trabajo, servicio y descanso.
+          </p>
+          <small id="msgMeta">–</small>
+        </article>
+      </section>
+
+      <!-- Hero bienvenida -->
+      <section class="card hero">
+        <div class="hero-content">
+          <h2>Bienvenido a Juventud CNC</h2>
+          <p>Un solo espacio para que jóvenes hombres y mujeres crezcan, sirvan y se encuentren con Dios.</p>
+          <div class="hero-badges" aria-hidden="true">
+            <span class="badge badge-guy">Chicos 💙</span>
+            <span class="badge badge-girl">Chicas 💗</span>
+          </div>
+        </div>
+        <div class="hero-icons" aria-hidden="true">
+          ✝️
+          <span class="hero-gradient-bubbles"></span>
+        </div>
+      </section>
+
+      <!-- Próximos eventos (vista rápida) -->
+      <section class="card">
+        <div class="card-header">
+          <h3 class="with-emoji" data-emoji="📅">Próximos eventos</h3>
+          <a class="link" href="#eventos" data-tab="eventos">Ver todos</a>
+        </div>
+        <ul id="eventListHome" class="event-list"></ul>
+        <p class="muted small">
+          Aquí verás los próximos 4 eventos. Para ver el calendario completo entra en la pestaña
+          <strong>Eventos</strong>.
+        </p>
+      </section>
+    </section>
+
+    <!-- EVENTOS -->
+    <section class="view" id="view-eventos" data-view="eventos" tabindex="-1">
+      <section class="card">
+        <header class="card-header">
+          <h2 class="with-emoji" data-emoji="📅">Eventos</h2>
+          <div class="filter-group">
+            <label for="filtroTipo" class="muted small">Filtrar</label>
+            <select id="filtroTipo">
+              <option value="">Todos</option>
+              <option value="reunión">Reunión</option>
+              <option value="formación">Formación</option>
+              <option value="retiro">Retiro</option>
+              <option value="vigilia">Vigilia</option>
+              <option value="voluntariado">Voluntariado</option>
+            </select>
+          </div>
+        </header>
+        <ul id="eventList" class="event-list"></ul>
+      </section>
+    </section>
+
+    <!-- COMUNIDAD -->
+    <section class="view" id="view-comunidad" data-view="comunidad" tabindex="-1">
+      <!-- Registro -->
+      <section class="card" id="miembros">
+        <h2 class="with-emoji" data-emoji="👥">Registro de miembros</h2>
+        <form id="formMiembro" class="grid">
+          <input name="nombre" placeholder="Nombre y apellido" required />
+          <input name="edad" type="number" placeholder="Edad" min="10" max="99" required />
+          <input name="contacto" type="tel" placeholder="Contacto (celular)" />
+          <input name="ministerio" placeholder="Ministerio / grupo (opcional)" />
+          <select name="rol_key">
+            <option value="miembro">Miembro</option>
+            <option value="moderador">Moderador</option>
+          </select>
+          <button class="btn" type="submit">Guardar</button>
+        </form>
+      </section>
+
+      <!-- Comunidad activa (chips) -->
+      <section class="card">
+        <h3 class="with-emoji" data-emoji="⭐">Comunidad activa</h3>
+        <div class="grid grid-compact">
+          <button class="chip chip-guy" data-action="retos">💪 Retos para chicos</button>
+          <button class="chip chip-girl" data-action="retos-chicas">✨ Retos para chicas</button>
+          <button class="chip" data-action="noticias">📰 Noticias parroquiales</button>
+          <button class="chip" data-action="multimedia">🎶 Multimedia</button>
+          <button class="chip" data-action="foro">💬 Foro joven</button>
+        </div>
+        <p class="muted small">(Estas secciones se irán habilitando por fases.)</p>
+      </section>
+    </section>
+
+    <!-- RECURSOS -->
+    <section class="view" id="view-recursos" data-view="recursos" tabindex="-1">
+      <section class="card" id="recursos">
+        <header class="card-header">
+          <h2 class="with-emoji" data-emoji="📂">Recursos</h2>
+          <label class="btn small adminOnly" hidden>
+            Subir archivo
+            <input id="fileRec" type="file" hidden />
+          </label>
+        </header>
+        <ul id="listaRecursos" class="file-list"></ul>
+      </section>
+    </section>
+
+    <!-- AVISOS -->
+    <section class="view" id="view-avisos" data-view="avisos" tabindex="-1">
+      <section class="card">
+        <header class="card-header">
+          <h2 class="with-emoji" data-emoji="🔔">Avisos</h2>
+          <button id="btnPermPush" class="btn small">Activar notificaciones</button>
+        </header>
+        <ul id="avisosList" class="notice-list"></ul>
+      </section>
+    </section>
+  </main>
+
+  <!-- Tabs inferior -->
+  <nav class="tabs" role="tablist" aria-label="Secciones principales">
+    <button class="tab active" data-tab="inicio" role="tab" aria-selected="true">🏠<span>Inicio</span></button>
+    <button class="tab" data-tab="eventos" role="tab" aria-selected="false">📅<span>Eventos</span></button>
+    <button class="tab" data-tab="comunidad" role="tab" aria-selected="false">👥<span>Comunidad</span></button>
+    <button class="tab" data-tab="recursos" role="tab" aria-selected="false">📂<span>Recursos</span></button>
+    <button class="tab" data-tab="avisos" role="tab" aria-selected="false">🔔<span>Avisos</span></button>
+  </nav>
+
+  <!-- FAB -->
+  <button id="fab" class="fab" title="Acción rápida">＋</button>
+
+  <!-- App JS -->
+  <script src="app.js"></script>
+</body>
+</html>

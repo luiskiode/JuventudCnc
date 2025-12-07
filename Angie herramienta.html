@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Editor de Paleta (No-Code)</title>
+<style>
+  :root{
+    --brand: #1e3a8a;   /* principal */
+    --brand-2: #3b82f6; /* secundario */
+    --accent: #00d1b2;  /* acento */
+    --neutral-900:#0b0f1a;
+    --neutral-700:#1f2937;
+    --neutral-400:#9ca3af;
+    --neutral-100:#f3f4f6;
+  }
+  *{box-sizing:border-box}
+  body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--neutral-100);color:#0b1220;margin:0;padding:24px}
+  h1{margin:0 0 12px}
+  .grid{display:grid;gap:16px}
+  .panel{background:#fff;border-radius:16px;padding:16px;box-shadow:0 6px 24px rgba(0,0,0,.08)}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  label{min-width:120px;font-weight:600}
+  input[type="color"]{width:48px;height:36px;border:none;background:none;padding:0}
+  .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .swatch{border-radius:12px;overflow:hidden;border:1px solid #e5e7eb}
+  .swatch .box{height:72px}
+  .swatch .meta{padding:8px 10px;font-size:12px;display:flex;justify-content:space-between;align-items:center}
+  .preview{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
+  .btn.primary{background:var(--brand);color:#fff}
+  .btn.secondary{background:var(--brand-2);color:#020617}
+  .card{background:#fff;border-radius:16px;padding:16px;border:1px solid #e5e7eb}
+  .badge{display:inline-block;padding:6px 10px;border-radius:999px;background:var(--accent);color:#042; font-weight:700}
+  textarea{width:100%;min-height:120px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;border-radius:12px;border:1px solid #e5e7eb;padding:10px}
+</style>
+</head>
+<body>
+  <h1>Editor de Paleta (No-Code)</h1>
+  <p>Elige colores. Luego copia las variables CSS o el JSON de “tokens”.</p>
+
+  <div class="grid" style="grid-template-columns: 1.2fr 1fr">
+    <div class="panel">
+      <h2>Colores</h2>
+      <div class="row"><label>Principal (--brand)</label><input id="brand" type="color" value="#1e3a8a"></div>
+      <div class="row"><label>Secundario (--brand-2)</label><input id="brand2" type="color" value="#3b82f6"></div>
+      <div class="row"><label>Acento (--accent)</label><input id="accent" type="color" value="#00d1b2"></div>
+      <div class="row"><label>Fondo oscuro (--neutral-900)</label><input id="n900" type="color" value="#0b0f1a"></div>
+      <div class="row"><label>Oscuro medio (--neutral-700)</label><input id="n700" type="color" value="#1f2937"></div>
+      <div class="row"><label>Gris (--neutral-400)</label><input id="n400" type="color" value="#9ca3af"></div>
+      <div class="row"><label>Fondo claro (--neutral-100)</label><input id="n100" type="color" value="#f3f4f6"></div>
+
+      <h3>Variables CSS</h3>
+      <textarea id="cssVars" readonly></textarea>
+
+      <h3>Tokens (JSON)</h3>
+      <textarea id="jsonTokens" readonly></textarea>
+
+      <div class="row" style="margin-top:12px">
+        <button class="btn primary" id="copyCss">Copiar CSS</button>
+        <button class="btn secondary" id="copyJson">Copiar JSON</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Vista previa</h2>
+      <div class="swatches" id="swatches"></div>
+      <div class="preview" style="margin-top:12px">
+        <div class="card">
+          <h3 style="color:var(--brand)">Título ejemplo</h3>
+          <p style="color:var(--neutral-700)">Texto de párrafo en gris oscuro.</p>
+          <span class="badge">Badge acento</span><br><br>
+          <button class="btn primary">Primario</button>
+          <button class="btn secondary">Secundario</button>
+        </div>
+        <div class="card" style="background:var(--neutral-900);color:#fff">
+          <h3 style="color:var(--brand-2)">Módulo oscuro</h3>
+          <p style="color:var(--neutral-100)">Ejemplo en tema dark.</p>
+          <button class="btn" style="background:var(--accent);color:#041">Acción</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const inputs = {
+  brand: document.getElementById('brand'),
+  brand2: document.getElementById('brand2'),
+  accent: document.getElementById('accent'),
+  n900: document.getElementById('n900'),
+  n700: document.getElementById('n700'),
+  n400: document.getElementById('n400'),
+  n100: document.getElementById('n100'),
+};
+
+function sync(){
+  const vals = {
+    '--brand': inputs.brand.value,
+    '--brand-2': inputs.brand2.value,
+    '--accent': inputs.accent.value,
+    '--neutral-900': inputs.n900.value,
+    '--neutral-700': inputs.n700.value,
+    '--neutral-400': inputs.n400.value,
+    '--neutral-100': inputs.n100.value,
+  };
+  const root = document.documentElement;
+  Object.entries(vals).forEach(([k,v])=>root.style.setProperty(k,v));
+
+  document.getElementById('cssVars').value =
+    ':root{\n' + Object.entries(vals).map(([k,v])=>`  ${k}: ${v};`).join('\n') + '\n}';
+
+  document.getElementById('jsonTokens').value = JSON.stringify({
+    color: {
+      brand: { value: vals['--brand'] },
+      brand2:{ value: vals['--brand-2'] },
+      accent:{ value: vals['--accent'] },
+      neutral: {
+        900:{ value: vals['--neutral-900'] },
+        700:{ value: vals['--neutral-700'] },
+        400:{ value: vals['--neutral-400'] },
+        100:{ value: vals['--neutral-100'] },
+      }
+    }
+  }, null, 2);
+
+  renderSwatches(vals);
+}
+
+function renderSwatches(vals){
+  const c = document.getElementById('swatches');
+  c.innerHTML='';
+  Object.entries(vals).forEach(([k,v])=>{
+    const el = document.createElement('div');
+    el.className='swatch';
+    el.innerHTML = `<div class="box" style="background:${v}"></div>
+      <div class="meta"><strong>${k}</strong><code>${v}</code></div>`;
+    c.appendChild(el);
+  });
+}
+
+Object.values(inputs).forEach(i=>i.addEventListener('input',sync));
+sync();
+
+document.getElementById('copyCss').onclick = () => {
+  navigator.clipboard.writeText(document.getElementById('cssVars').value);
+  alert('Variables CSS copiadas.');
+};
+document.getElementById('copyJson').onclick = () => {
+  navigator.clipboard.writeText(document.getElementById('jsonTokens').value);
+  alert('Tokens JSON copiados.');
+};
+</script>
+</body>
+</html>
