@@ -209,35 +209,137 @@ async function cargarMensajeSemanal () {
   }
 }
 
-// ====== Miembros ======
+/// ====== Miembros / Perfil ======
 // Nota: Recomendado usar Supabase Auth para que RLS reconozca auth.uid().
 const formMiembro = document.getElementById('formMiembro');
 
-formMiembro?.addEventListener('submit', async e => {
+const perfilEstado     = document.getElementById('perfilEstado');
+const perfilNombreTxt  = document.getElementById('perfilNombreTexto');
+const perfilRolTxt     = document.getElementById('perfilRolTexto');
+const perfilFraseTxt   = document.getElementById('perfilFraseTexto');
+
+const perfilNombreInput = document.getElementById('perfilNombreInput');
+const perfilRolSelect   = document.getElementById('perfilRolSelect');
+const perfilFraseInput  = document.getElementById('perfilFraseInput');
+
+const avatarInicial = document.getElementById('perfilAvatarInicial');
+const avatarImg     = document.getElementById('perfilAvatarImg');
+const btnCambiarFoto = document.getElementById('btnCambiarFoto');
+const fotoInput      = document.getElementById('perfilFotoInput');
+
+// Previsualizar y guardar foto en localStorage
+btnCambiarFoto?.addEventListener('click', () => fotoInput?.click());
+fotoInput?.addEventListener('change', () => {
+  const file = fotoInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = reader.result;
+    if (avatarImg) {
+      avatarImg.src = dataUrl;
+      avatarImg.style.display = 'block';
+    }
+    if (avatarInicial) avatarInicial.style.display = 'none';
+    localStorage.setItem('jc_perfil_foto', dataUrl);
+  };
+  reader.readAsDataURL(file);
+});
+
+function actualizarUIPerfil({ nombre, rol_key, frase }) {
+  if (nombre && perfilNombreTxt) {
+    perfilNombreTxt.textContent = nombre;
+    if (avatarInicial) avatarInicial.textContent = nombre.trim().charAt(0).toUpperCase();
+  }
+  if (rol_key && perfilRolTxt) {
+    const label =
+      rol_key === 'moderador'
+        ? 'Moderador (solicitud)'
+        : rol_key === 'voluntario'
+        ? 'Voluntario digital'
+        : 'Miembro';
+    perfilRolTxt.textContent = label;
+  }
+  if (perfilFraseTxt) {
+    perfilFraseTxt.textContent =
+      frase && frase.trim()
+        ? `“${frase.trim()}”`
+        : 'Aquí aparecerá la frase que elijas para tu perfil.';
+  }
+}
+
+function mostrarEstadoPerfil(texto, tipo = 'ok') {
+  if (!perfilEstado) return;
+  perfilEstado.textContent = texto;
+  perfilEstado.classList.remove('ok', 'error');
+  perfilEstado.classList.add(tipo);
+}
+
+formMiembro?.addEventListener('submit', async (e) => {
   e.preventDefault();
-
   const f = new FormData(formMiembro);
-  const { data: u } = await sb.auth.getUser();
+  const nombre = f.get('nombre');
+  const rol_key = f.get('rol_key') || 'miembro';
+  const frase = f.get('frase') || '';
 
+  const { data: u } = await sb.auth.getUser();
   const payload = {
-    nombre: f.get('nombre'),
+    nombre,
     edad: Number(f.get('edad')),
     contacto: f.get('contacto') || null,
     ministerio: f.get('ministerio') || null,
-    rol_key: f.get('rol_key') || 'miembro',
+    rol_key,
     user_id: u?.user?.id || null // UUID de Supabase Auth
   };
 
   const { error } = await sb.from('miembros').insert(payload);
-
   if (error) {
-    alert('Error al guardar miembro');
     console.error(error);
-  } else {
-    alert('¡Miembro registrado!');
-    formMiembro.reset();
+    mostrarEstadoPerfil('Ocurrió un error al guardar tu registro. Intenta nuevamente.', 'error');
+    alert('Error al guardar miembro');
+    return;
   }
+
+  // Guardar info básica de perfil en localStorage (sin tocar la BD)
+  const perfilGuardado = { nombre, rol_key, frase };
+  localStorage.setItem('jc_perfil', JSON.stringify(perfilGuardado));
+
+  actualizarUIPerfil(perfilGuardado);
+
+  const labelRol =
+    rol_key === 'moderador'
+      ? 'moderador (solicitud enviada)'
+      : rol_key === 'voluntario'
+      ? 'voluntario digital'
+      : 'miembro';
+
+  mostrarEstadoPerfil(`Registro guardado correctamente como ${labelRol}.`, 'ok');
+
+  formMiembro.reset();
 });
+
+// Restaurar perfil desde localStorage al cargar
+(function restaurarPerfilDesdeLocalStorage() {
+  try {
+    const raw = localStorage.getItem('jc_perfil');
+    if (raw) {
+      const p = JSON.parse(raw);
+      actualizarUIPerfil(p);
+
+      // Prefill inputs
+      if (perfilNombreInput && p.nombre) perfilNombreInput.value = p.nombre;
+      if (perfilRolSelect && p.rol_key) perfilRolSelect.value = p.rol_key;
+      if (perfilFraseInput && p.frase) perfilFraseInput.value = p.frase;
+    }
+    const foto = localStorage.getItem('jc_perfil_foto');
+    if (foto && avatarImg) {
+      avatarImg.src = foto;
+      avatarImg.style.display = 'block';
+      if (avatarInicial) avatarInicial.style.display = 'none';
+    }
+  } catch (e) {
+    console.error('Error restaurando perfil desde localStorage', e);
+  }
+})();
 
 // ====== Recursos ======
 const fileInput = document.getElementById('fileRec');

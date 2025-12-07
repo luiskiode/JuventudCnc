@@ -141,20 +141,14 @@
 
     <!-- COMUNIDAD -->
     <section class="view" id="view-comunidad" data-view="comunidad" tabindex="-1">
-      <!-- Registro -->
-      <section class="card" id="miembros">
-        <h2 class="with-emoji" data-emoji="👥">Registro de miembros</h2>
-        <form id="formMiembro" class="grid">
-          <input name="nombre" placeholder="Nombre y apellido" required />
-          <input name="edad" type="number" placeholder="Edad" min="10" max="99" required />
-          <input name="contacto" type="tel" placeholder="Contacto (celular)" />
-          <input name="ministerio" placeholder="Ministerio / grupo (opcional)" />
-          <select name="rol_key">
-            <option value="miembro">Miembro</option>
-            <option value="moderador">Moderador</option>
-          </select>
-          <button class="btn" type="submit">Guardar</button>
-        </form>
+      <!-- Mensaje -->
+      <section class="card">
+        <h2 class="with-emoji" data-emoji="👥">Comunidad</h2>
+        <p class="muted">
+          Tu registro y datos personales ahora se gestionan desde la sección
+          <strong>“Mi perfil”</strong>.  
+          Aquí verás dinámicas, noticias y espacios para compartir.
+        </p>
       </section>
 
       <!-- Comunidad activa (chips) -->
@@ -185,32 +179,58 @@
             </button>
             <input type="file" id="perfilFotoInput" accept="image/*" hidden />
           </div>
+
           <div class="perfil-header-text">
-            <h3 class="with-emoji" data-emoji="🙋‍♂️">Mi perfil</h3>
+            <h2 class="with-emoji" data-emoji="🙋‍♂️">Mi perfil</h2>
             <p class="perfil-subtext">
-              Completa tus datos y sube una foto para que la comunidad te reconozca.
+              Regístrate una sola vez y personaliza tu espacio. Tu rol se usará para darte
+              acceso a más herramientas según corresponda.
             </p>
           </div>
         </div>
 
-        <form id="perfilForm" class="grid perfil-form">
-          <input name="nombre" id="perfilNombre" placeholder="Nombre y Apellido" required />
-          <input name="email" id="perfilEmail" type="email" placeholder="Tu correo" />
-          <select name="rol" id="perfilRol" required>
+        <!-- Resumen visible del perfil -->
+        <div class="perfil-resumen">
+          <div>
+            <div class="perfil-nombre" id="perfilNombreTexto">Aún sin registrar</div>
+            <div class="perfil-rol" id="perfilRolTexto"></div>
+          </div>
+        </div>
+
+        <!-- Frase elegida por el usuario -->
+        <p id="perfilFraseTexto" class="perfil-frase">
+          Aquí aparecerá la frase que elijas para tu perfil.
+        </p>
+
+        <!-- Mensaje de estado / confirmación -->
+        <p id="perfilEstado" class="perfil-estado"></p>
+
+        <!-- Formulario ÚNICO de registro -->
+        <form id="formMiembro" class="grid perfil-form">
+          <input name="nombre" id="perfilNombreInput" placeholder="Nombre y apellido" required />
+          <input name="edad" type="number" placeholder="Edad" min="10" max="99" required />
+          <input name="contacto" type="tel" placeholder="Contacto (celular)" />
+          <input name="ministerio" placeholder="Ministerio / grupo (opcional)" />
+          <select name="rol_key" id="perfilRolSelect">
             <option value="miembro">Miembro</option>
             <option value="voluntario">Voluntario digital</option>
             <option value="moderador">Moderador (solicitud)</option>
           </select>
-          <textarea name="bio" id="perfilBio" rows="3" placeholder="Cuéntanos algo sobre ti (dones, servicios, hobbies)"></textarea>
+          <input
+            name="frase"
+            id="perfilFraseInput"
+            placeholder="Frase que te represente (aparecerá debajo de tu foto)" />
+
           <button class="btn" type="submit">Guardar perfil</button>
         </form>
 
         <p class="perfil-hint">
-          Tu rol de moderador será activado por un responsable. Mientras tanto podrás participar como miembro o voluntario digital.
+          Cuando te registres verás un mensaje de confirmación con tu rol.
+          Si eliges “Moderador”, tu solicitud será revisada por los responsables.
         </p>
       </section>
     </section>
-
+    
     <!-- RECURSOS -->
     <section class="view" id="view-recursos" data-view="recursos" tabindex="-1">
       <section class="card" id="recursos">
