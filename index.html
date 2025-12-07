@@ -208,6 +208,11 @@
   <!-- FAB -->
   <button id="fab" class="fab" title="Acción rápida">＋</button>
 
+  <!-- Botón para instalar la app -->
+  <button id="btnInstallApp" class="btn-install" type="button" style="display:none;">
+    📲 Instalar app
+  </button>
+
   <!-- Panel lateral: Herramienta de Angie -->
   <aside id="angie-panel" class="sidepanel" aria-label="Herramienta de colores Angie">
     <div class="sidepanel-header">
@@ -223,6 +228,8 @@
 
   <!-- App principal -->
   <script src="app.js"></script>
+
+  
 
   <!-- Panel técnico -->
   <script src="debug-dashboard.js" defer></script>
@@ -398,6 +405,37 @@
         }
       });
     })();
+  </script>
+
+ <script>
+    // Mostrar botón de "Instalar app" cuando el navegador lo permita
+    let deferredPrompt = null;
+    const installBtn = document.getElementById('btnInstallApp');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Evita que salga el banner automático
+      e.preventDefault();
+      deferredPrompt = e;
+      if (installBtn) {
+        installBtn.style.display = 'inline-flex';
+      }
+    });
+
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('Resultado instalación:', outcome);
+        deferredPrompt = null;
+        installBtn.style.display = 'none';
+      });
+    }
+
+    window.addEventListener('appinstalled', () => {
+      console.log('✅ App Juventud CNC instalada');
+      if (installBtn) installBtn.style.display = 'none';
+    });
   </script>
 </body>
 </html>

@@ -612,3 +612,18 @@ input::placeholder {
   font-size: 11px;
   padding: 4px 8px;
 }
+.btn-install {
+  position: fixed;
+  left: 16px;
+  bottom: 82px;
+  z-index: 56;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(15, 23, 42, 0.95);
+  color: #e5e7eb;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
