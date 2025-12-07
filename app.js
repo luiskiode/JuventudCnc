@@ -231,6 +231,12 @@ const avatarImg     = document.getElementById('perfilAvatarImg');
 const btnCambiarFoto = document.getElementById('btnCambiarFoto');
 const fotoInput      = document.getElementById('perfilFotoInput');
 
+function ocultarFormularioPerfil() {
+  if (formMiembro) {
+    formMiembro.style.display = 'none';
+  }
+}
+
 // Previsualizar y guardar foto en localStorage
 btnCambiarFoto?.addEventListener('click', () => fotoInput?.click());
 fotoInput?.addEventListener('change', () => {
@@ -304,9 +310,8 @@ formMiembro?.addEventListener('submit', async (e) => {
   }
 
   // Guardar info básica de perfil en localStorage (sin tocar la BD)
-  const perfilGuardado = { nombre, rol_key, frase };
+   const perfilGuardado = { nombre, rol_key, frase };
   localStorage.setItem('jc_perfil', JSON.stringify(perfilGuardado));
-
   actualizarUIPerfil(perfilGuardado);
 
   const labelRol =
@@ -316,9 +321,17 @@ formMiembro?.addEventListener('submit', async (e) => {
       ? 'voluntario digital'
       : 'miembro';
 
-  mostrarEstadoPerfil(`Registro guardado correctamente como ${labelRol}.`, 'ok');
+  if (huboErrorRemoto) {
+    mostrarEstadoPerfil(
+      `Perfil guardado en este dispositivo como ${labelRol}. Más adelante se sincronizará con el servidor.`,
+      'error'
+    );
+  } else {
+    mostrarEstadoPerfil(`Registro guardado correctamente como ${labelRol}.`, 'ok');
+  }
 
-  formMiembro.reset();
+  // Ya no necesitamos mostrar el formulario después del primer registro
+  ocultarFormularioPerfil();
 });
 
 formMiembro?.addEventListener('submit', async (e) => {
@@ -397,11 +410,15 @@ formMiembro?.addEventListener('submit', async (e) => {
       const p = JSON.parse(raw);
       actualizarUIPerfil(p);
 
-      // Prefill inputs
+      // Prefill inputs (por si algún día quieres reactivar edición)
       if (perfilNombreInput && p.nombre) perfilNombreInput.value = p.nombre;
       if (perfilRolSelect && p.rol_key) perfilRolSelect.value = p.rol_key;
       if (perfilFraseInput && p.frase) perfilFraseInput.value = p.frase;
+
+      // Si ya hay perfil guardado, no mostramos el formulario otra vez
+      ocultarFormularioPerfil();
     }
+
     const foto = localStorage.getItem('jc_perfil_foto');
     if (foto && avatarImg) {
       avatarImg.src = foto;
