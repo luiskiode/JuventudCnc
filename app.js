@@ -3,6 +3,10 @@ const sb = window.supabaseClient;
 const LOCALE = 'es-PE';
 const TZ = 'America/Lima';
 
+if (!sb) {
+  console.error('⚠️ Supabase todavía no está listo (window.supabaseClient es undefined). Revisa el orden de los scripts.');
+}
+
 // Drawer
 const drawer = document.getElementById('drawer');
 const overlay = document.getElementById('overlay');
@@ -274,7 +278,7 @@ function mostrarEstadoPerfil(texto, tipo = 'ok') {
   perfilEstado.classList.add(tipo);
 }
 
-formMiembro?.addEventListener('submit', async (e) => {
+ormMiembro?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = new FormData(formMiembro);
   const nombre = f.get('nombre');
@@ -313,6 +317,74 @@ formMiembro?.addEventListener('submit', async (e) => {
       : 'miembro';
 
   mostrarEstadoPerfil(`Registro guardado correctamente como ${labelRol}.`, 'ok');
+
+  formMiembro.reset();
+});
+
+formMiembro?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = new FormData(formMiembro);
+  const nombre = f.get('nombre');
+  const rol_key = f.get('rol_key') || 'miembro';
+  const frase = f.get('frase') || '';
+
+  // 1) Intentar obtener user_id SOLO si sb.auth existe
+  let userId = null;
+  try {
+    if (sb?.auth?.getUser) {
+      const { data: u } = await sb.auth.getUser();
+      userId = u?.user?.id || null;
+    }
+  } catch (err) {
+    console.warn('No se pudo leer usuario de Supabase Auth (se guarda como invitado):', err);
+  }
+
+  const payload = {
+    nombre,
+    edad: Number(f.get('edad')),
+    contacto: f.get('contacto') || null,
+    ministerio: f.get('ministerio') || null,
+    rol_key,
+    user_id: userId
+  };
+
+  // 2) Intentar guardar en Supabase, pero aunque falle, mantenemos el perfil local
+  let huboErrorRemoto = false;
+  if (sb?.from) {
+    try {
+      const { error } = await sb.from('miembros').insert(payload);
+      if (error) {
+        console.error(error);
+        huboErrorRemoto = true;
+      }
+    } catch (err) {
+      console.error('Error de red/cliente al guardar miembro:', err);
+      huboErrorRemoto = true;
+    }
+  } else {
+    huboErrorRemoto = true;
+  }
+
+  // 3) Guardar info básica de perfil en localStorage SIEMPRE
+  const perfilGuardado = { nombre, rol_key, frase };
+  localStorage.setItem('jc_perfil', JSON.stringify(perfilGuardado));
+  actualizarUIPerfil(perfilGuardado);
+
+  const labelRol =
+    rol_key === 'moderador'
+      ? 'moderador (solicitud enviada)'
+      : rol_key === 'voluntario'
+      ? 'voluntario digital'
+      : 'miembro';
+
+  if (huboErrorRemoto) {
+    mostrarEstadoPerfil(
+      `Perfil guardado solo en este dispositivo como ${labelRol}. Más adelante se sincronizará con el servidor.`,
+      'error'
+    );
+  } else {
+    mostrarEstadoPerfil(`Registro guardado correctamente como ${labelRol}.`, 'ok');
+  }
 
   formMiembro.reset();
 });
@@ -454,46 +526,41 @@ async function cargarPaletaUsuario (uid) {
 }
 
 // ====== Auth (Supabase) y roles ======
-sb.auth.onAuthStateChange(async (_event, session) => {
-  // Oculta por defecto
-  document
-    .querySelectorAll('.adminOnly')
-    .forEach(el => (el.hidden = true));
-
-  const uid = session?.user?.id || null;
-
-  if (!uid) {
-    cargarPublic();
-    return;
-  }
-
-  // Chequear rol en BD (RLS aplica sobre auth.uid())
-  const { data } = await sb
-    .from('miembros')
-    .select('rol_key')
-    .eq('user_id', uid)
-    .maybeSingle();
-
-  if (data?.rol_key === 'admin' || data?.rol_key === 'moderador') {
+if (sb?.auth?.onAuthStateChange) {
+  sb.auth.onAuthStateChange(async (_event, session) => {
+    // Oculta por defecto
     document
       .querySelectorAll('.adminOnly')
-      .forEach(el => (el.hidden = false));
-  }
+      .forEach(el => (el.hidden = true));
 
-  // Cargar paleta visual desde Supabase si existe
-  await cargarPaletaUsuario(uid);
+    const uid = session?.user?.id || null;
 
-  // Cargar contenido público
+    if (!uid) {
+      cargarPublic();
+      return;
+    }
+
+    // Chequear rol en BD (RLS aplica sobre auth.uid())
+    const { data } = await sb
+      .from('miembros')
+      .select('rol_key')
+      .eq('user_id', uid)
+      .maybeSingle();
+
+    if (data?.rol_key === 'admin' || data?.rol_key === 'moderador') {
+      document
+        .querySelectorAll('.adminOnly')
+        .forEach(el => (el.hidden = false));
+    }
+
+    await cargarPaletaUsuario(uid);
+    cargarPublic();
+  });
+} else {
+  // Si no hay auth todavía, cargamos contenido público básico
   cargarPublic();
-});
-
-// Carga pública
-function cargarPublic () {
-  cargarMensajeSemanal();
-  cargarEventos();
-  cargarEventosHome();
-  listarRecursos();
 }
+
 
 // ====== Push / PWA ======
 const btnPermPush = document.getElementById('btnPermPush');
