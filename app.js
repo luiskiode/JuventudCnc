@@ -676,3 +676,91 @@ async function cargarListaMiembros () {
     lista.appendChild(li);
   });
 }
+// ================== ANGIE ANIMADA TRAVIESA ==================
+(function initAngieTraviesa () {
+  const widget = document.getElementById('angieWidget');
+  const textEl = document.getElementById('angieText');
+  const btnClose = document.getElementById('angieClose');
+
+  if (!widget || !textEl) return;
+
+  const STORAGE_KEY_HIDE = 'jc_angie_hide_until';
+
+  // Mensajes por momento del día
+  const mensajesBase = {
+    manana: [
+      '🌞 ¡Buenos días! Hoy podemos hacer algo grande.',
+      '☕ ¿Ya desayunaste? Las misiones se hacen con energía.',
+      '📖 Hoy es buen día para leer el mensaje semanal.'
+    ],
+    tarde: [
+      '💪 Mitad de día… ¡Mitad de misión completada!',
+      '👀 Te estuve viendo, ¿haciendo cosas de bien o procrastinando?',
+      '🎯 ¿Ya revisaste los eventos de esta semana?'
+    ],
+    noche: [
+      '🌙 Ya es tarde, pero nunca es tarde para hablar con Dios.',
+      '✨ Gracias por pasarte por aquí hoy.',
+      '🛏️ No olvides descansar, mañana seguimos con la aventura.'
+    ],
+    travesuras: [
+      '🙈 Me asomé solo a ver si seguías por aquí…',
+      '😏 No le digas a nadie, pero tú eres mi usuario favorito.',
+      '🎨 ¿Te acuerdas que también puedo cambiar colores? Jejeje.'
+    ]
+  };
+
+  function momentoDelDia () {
+    const h = new Date().getHours();
+    if (h >= 6 && h < 12) return 'manana';
+    if (h >= 12 && h < 19) return 'tarde';
+    return 'noche';
+  }
+
+  function elegirMensaje () {
+    const bloque = mensajesBase[momentoDelDia()] || mensajesBase.tarde;
+    const extra = Math.random() < 0.35 ? mensajesBase.travesuras : [];
+    const pool = bloque.concat(extra);
+    const idx = Math.floor(Math.random() * pool.length);
+    return pool[idx] || 'Hola, soy Angie 👋';
+  }
+
+  function mostrarAngie () {
+    // Respetar si el usuario la ocultó hace poco
+    const hideUntil = Number(localStorage.getItem(STORAGE_KEY_HIDE) || '0');
+    if (Date.now() < hideUntil) return;
+
+    textEl.textContent = elegirMensaje();
+    widget.classList.add('angie-widget--visible');
+
+    // A veces se pone traviesa y se menea
+    if (Math.random() < 0.6) {
+      widget.classList.add('angie-widget--wiggle');
+      setTimeout(() => widget.classList.remove('angie-widget--wiggle'), 3000);
+    }
+  }
+
+  function ocultarAngie () {
+    widget.classList.remove('angie-widget--visible');
+    widget.classList.remove('angie-widget--wiggle');
+    // No molestar por 30 minutos
+    const treintaMin = 30 * 60 * 1000;
+    localStorage.setItem(STORAGE_KEY_HIDE, String(Date.now() + treintaMin));
+  }
+
+  btnClose?.addEventListener('click', ocultarAngie);
+
+  // Mostrarla unos segundos después de entrar
+  setTimeout(mostrarAngie, 4500);
+
+  // Cada vez que cambias de sección importante, que se asome a veces
+  window.addEventListener('hashchange', () => {
+    const view = (location.hash || '#inicio').replace('#', '');
+    if (view === 'comunidad' || view === 'eventos' || view === 'miembros-activos') {
+      if (Math.random() < 0.45) {
+        setTimeout(mostrarAngie, 1200);
+      }
+    }
+  });
+})();
+

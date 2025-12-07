@@ -849,3 +849,135 @@ input::placeholder {
   color: #ef4444;
   font-weight: 600;
 }
+
+/* ================== ANGIE WIDGET ================== */
+
+.angie-widget{
+  position:fixed;
+  right:18px;
+  bottom:86px; /* por encima del FAB y tabs */
+  display:flex;
+  align-items:flex-end;
+  gap:8px;
+  transform:translateY(140%) scale(.9);
+  opacity:0;
+  pointer-events:none;
+  z-index:70;
+  transition:
+    transform .45s cubic-bezier(.17,.67,.33,1.35),
+    opacity .35s ease-out;
+}
+
+.angie-widget--visible{
+  transform:translateY(0) scale(1);
+  opacity:1;
+  pointer-events:auto;
+}
+
+.angie-avatar{
+  width:64px;
+  height:64px;
+  border-radius:999px;
+  background: radial-gradient(circle at 30% 20%, rgba(244,114,182,.95), rgba(37,99,235,.95));
+  box-shadow:0 12px 24px rgba(15,23,42,.6);
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  padding:4px;
+  overflow:hidden;
+  animation: angie-pop 600ms ease-out forwards;
+}
+
+.angie-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+/* Globito de mensaje */
+.angie-bubble{
+  max-width:260px;
+  padding:10px 12px;
+  border-radius:18px;
+  border:1px solid rgba(148,163,184,.6);
+  background:rgba(15,23,42,.96);
+  color:var(--text-100,#e5e7eb);
+  font-size:13px;
+  box-shadow:0 14px 30px rgba(15,23,42,.85);
+  position:relative;
+}
+
+.angie-bubble::before{
+  content:"";
+  position:absolute;
+  right:-6px;
+  bottom:14px;
+  width:12px;
+  height:12px;
+  background:inherit;
+  border-left:1px solid rgba(148,163,184,.6);
+  border-bottom:1px solid rgba(148,163,184,.6);
+  transform:rotate(45deg);
+}
+
+.angie-bubble-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:4px;
+}
+
+.angie-name{
+  font-weight:700;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--accent,#f472b6);
+}
+
+.angie-close{
+  border:0;
+  background:transparent;
+  color:#94a3b8;
+  cursor:pointer;
+  font-size:14px;
+  padding:0;
+}
+.angie-close:hover{
+  color:#e5e7eb;
+}
+
+.angie-text{
+  margin:0;
+  line-height:1.35;
+}
+
+/* Traviesas: pequeño balanceo */
+.angie-widget--wiggle .angie-avatar{
+  animation: angie-wiggle 900ms ease-in-out infinite;
+}
+
+/* Animaciones */
+@keyframes angie-pop{
+  0%{ transform:translateY(20%) scale(.6); opacity:0; }
+  60%{ transform:translateY(-6%) scale(1.05); opacity:1; }
+  100%{ transform:translateY(0) scale(1); opacity:1; }
+}
+
+@keyframes angie-wiggle{
+  0%{ transform:translateY(0) rotate(0deg); }
+  25%{ transform:translateY(-2px) rotate(-3deg); }
+  50%{ transform:translateY(0) rotate(3deg); }
+  75%{ transform:translateY(-1px) rotate(-2deg); }
+  100%{ transform:translateY(0) rotate(0deg); }
+}
+
+/* En pantallas muy pequeñas, moverla un poco */
+@media (max-width: 480px){
+  .angie-widget{
+    right:10px;
+    bottom:88px;
+  }
+}
+
