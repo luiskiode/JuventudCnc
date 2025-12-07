@@ -826,3 +826,26 @@ input::placeholder {
   background: rgba(248,113,113,.15);
   color: #f97373;
 }
+.user-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.user-list li {
+  padding: 12px;
+  border-bottom: 1px solid rgba(150,150,150,0.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-list .estado-activo {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.user-list .estado-inactivo {
+  color: #ef4444;
+  font-weight: 600;
+}

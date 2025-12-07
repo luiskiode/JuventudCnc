@@ -47,6 +47,11 @@ function activate (tab) {
   if (location.hash !== `#${t}`) {
     history.replaceState(null, '', `#${t}`);
   }
+
+  // 🔥 Cargar lista al entrar a "miembros-activos"
+  if (t === 'miembros-activos') {
+    cargarListaMiembros();
+  }
 }
 
 document
@@ -624,3 +629,46 @@ document.getElementById('fab')?.addEventListener('click', () => {
     alert('Acción rápida');
   }
 });
+
+async function cargarListaMiembros() {
+  const lista = document.getElementById('listaMiembros');
+  if (!lista) return;
+
+  lista.innerHTML = "<li>Cargando...</li>";
+
+  if (!sb?.from) {
+    lista.innerHTML = "<li>No se puede conectar al servidor.</li>";
+    return;
+  }
+
+  const { data, error } = await sb
+    .from('miembros')
+    .select('*')
+    .order('creado_en', { ascending: false });
+
+  if (error) {
+    console.error(error);
+    lista.innerHTML = "<li>Error al cargar miembros.</li>";
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    lista.innerHTML = "<li>No hay miembros registrados aún.</li>";
+    return;
+  }
+
+  lista.innerHTML = "";
+  data.forEach(m => {
+    const estadoClass = 
+      m.estado === 'activo' ? 'estado-activo' : 'estado-inactivo';
+    const estadoTexto =
+      m.estado === 'activo' ? 'Activo' : 'Inactivo';
+
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <span><strong>${m.nombre}</strong> – ${m.rol_key}</span>
+      <span class="${estadoClass}">${estadoTexto}</span>
+    `;
+    lista.appendChild(li);
+  });
+}
