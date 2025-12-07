@@ -219,7 +219,7 @@
   <script src="app.js"></script>
 
   <!-- Control del panel de Angie + integración de tokens -->
-  <script>
+   <script>
     (function () {
       const panel = document.getElementById('angie-panel');
       const btn = document.getElementById('btnAngie');
@@ -241,7 +241,6 @@
       if (btn) btn.addEventListener('click', openPanel);
       if (closeBtn) closeBtn.addEventListener('click', closePanel);
       if (overlay) overlay.addEventListener('click', (e) => {
-        // si Angie está abierta, ciérrala; si no, cierra drawer (lo maneja app.js)
         if (panel.classList.contains('open')) {
           e.stopPropagation();
           closePanel();
@@ -271,9 +270,6 @@
       }
 
       // 🔗 Integración: escuchar mensajes de Angie con tokens de diseño
-      // Dentro de "Angie herramienta.html" deberás, al aplicar una paleta,
-      // hacer algo como:
-      // window.parent.postMessage({ type: 'jc-apply-tokens', tokens }, '*');
       window.addEventListener('message', (event) => {
         const data = event.data;
         if (!data || data.type !== 'jc-apply-tokens') return;
@@ -282,20 +278,35 @@
           const tokens = data.tokens;
           if (!tokens || typeof tokens !== 'object') return;
 
-          // Guardar tokens en localStorage para que design-mode.js los use
+          // Guardar tokens en localStorage para design-mode.js
           localStorage.setItem('jc_tokens', JSON.stringify(tokens));
 
-          // Aplicar inmediatamente algunas variables clave
           const root = document.documentElement;
-          if (tokens.brand) root.style.setProperty('--brand', tokens.brand);
-          if (tokens.brand2) root.style.setProperty('--brand-2', tokens.brand2);
-          if (tokens.accent) root.style.setProperty('--accent', tokens.accent);
-          if (tokens.guyMain) root.style.setProperty('--guy-main', tokens.guyMain);
-          if (tokens.girlMain) root.style.setProperty('--girl-main', tokens.girlMain);
-          if (tokens.neutral900) root.style.setProperty('--neutral-900', tokens.neutral900);
-          if (tokens.neutral800) root.style.setProperty('--neutral-800', tokens.neutral800);
 
-          alert('Paleta aplicada a Juventud CNC. Puedes cerrar Angie o seguir ajustando.');
+          // brand → var(--brand) y también --guy-main
+          if (tokens.brand) {
+            root.style.setProperty('--brand', tokens.brand);
+            root.style.setProperty('--guy-main', tokens.brand);
+          }
+
+          // brand2 → var(--brand-2)
+          if (tokens.brand2) {
+            root.style.setProperty('--brand-2', tokens.brand2);
+          }
+
+          // accent → var(--accent) y también --girl-main
+          if (tokens.accent) {
+            root.style.setProperty('--accent', tokens.accent);
+            root.style.setProperty('--girl-main', tokens.accent);
+          }
+
+          // Neutrales
+          if (tokens.neutral900) root.style.setProperty('--neutral-900', tokens.neutral900);
+          if (tokens.neutral700) root.style.setProperty('--neutral-700', tokens.neutral700);
+          if (tokens.neutral400) root.style.setProperty('--neutral-400', tokens.neutral400);
+          if (tokens.neutral100) root.style.setProperty('--neutral-100', tokens.neutral100);
+
+          alert('Paleta aplicada a Juventud CNC. Los colores principales ya deberían cambiar.');
 
         } catch (e) {
           console.error('Error aplicando tokens de Angie:', e);

@@ -176,7 +176,7 @@ body.app-shell {
   grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.3fr);
   gap: 12px;
   align-items: center;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.65), rgba(236, 72, 153, 0.72));
+  background: linear-gradient(135deg, var(--brand), var(--accent));
   border-radius: var(--radius-lg);
   border: 1px solid rgba(248, 250, 252, 0.22);
 }
