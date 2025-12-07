@@ -289,30 +289,7 @@ function mostrarEstadoPerfil(texto, tipo = 'ok') {
   perfilEstado.classList.add(tipo);
 }
 
-formMiembro?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const f = new FormData(formMiembro);
-  const nombre = f.get('nombre');
-  const rol_key = f.get('rol_key') || 'miembro';
-  const frase = f.get('frase') || '';
 
-  const { data: u } = await sb.auth.getUser();
-  const payload = {
-    nombre,
-    edad: Number(f.get('edad')),
-    contacto: f.get('contacto') || null,
-    ministerio: f.get('ministerio') || null,
-    rol_key,
-    user_id: u?.user?.id || null // UUID de Supabase Auth
-  };
-
-  const { error } = await sb.from('miembros').insert(payload);
-  if (error) {
-    console.error(error);
-    mostrarEstadoPerfil('Ocurrió un error al guardar tu registro. Intenta nuevamente.', 'error');
-    alert('Error al guardar miembro');
-    return;
-  }
 
   // Guardar info básica de perfil en localStorage (sin tocar la BD)
    const perfilGuardado = { nombre, rol_key, frase };
@@ -337,7 +314,7 @@ formMiembro?.addEventListener('submit', async (e) => {
 
   // Ya no necesitamos mostrar el formulario después del primer registro
   ocultarFormularioPerfil();
-});
+;
 
 formMiembro?.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -547,6 +524,20 @@ async function cargarPaletaUsuario (uid) {
   }
 }
 
+// ====== Contenido público (inicio básico) ======
+async function cargarPublic () {
+  try {
+    await Promise.all([
+      cargarEventosHome(),
+      cargarMensajeSemanal(),
+      cargarEventos({ destinoId: 'eventList', tipo: '' }),
+      listarRecursos()
+    ]);
+  } catch (e) {
+    console.error('Error en cargarPublic:', e);
+  }
+}
+
 // ====== Auth (Supabase) y roles ======
 if (sb?.auth?.onAuthStateChange) {
   sb.auth.onAuthStateChange(async (_event, session) => {
@@ -588,9 +579,19 @@ if (sb?.auth?.onAuthStateChange) {
 const btnPermPush = document.getElementById('btnPermPush');
 btnPermPush?.addEventListener('click', () => setupPush());
 
-const messaging = firebase.messaging(); // FCM solo para notificaciones
+// Protegerse si Firebase no está inicializado
+let messaging = null;
+if (window.firebase && firebase.apps && firebase.apps.length) {
+  messaging = firebase.messaging(); // FCM solo si hay app inicializada
+} else {
+  console.warn('Firebase no inicializado; notificaciones desactivadas por ahora.');
+}
 
 async function setupPush () {
+  if (!messaging) {
+    console.warn('No hay instancia de messaging; omitiendo setupPush.');
+    return;
+  }
   try {
     await Notification.requestPermission();
     const token = await messaging.getToken({ vapidKey: 'TU_VAPID_KEY' });
@@ -630,44 +631,47 @@ document.getElementById('fab')?.addEventListener('click', () => {
   }
 });
 
-async function cargarListaMiembros() {
+async function cargarListaMiembros () {
   const lista = document.getElementById('listaMiembros');
   if (!lista) return;
 
-  lista.innerHTML = "<li>Cargando...</li>";
+  lista.innerHTML = '<li>Cargando...</li>';
 
   if (!sb?.from) {
-    lista.innerHTML = "<li>No se puede conectar al servidor.</li>";
+    lista.innerHTML = '<li>No se puede conectar al servidor.</li>';
     return;
   }
 
   const { data, error } = await sb
     .from('miembros')
-    .select('*')
-    .order('creado_en', { ascending: false });
+    .select('nombre, rol_key')
+    .limit(50);
 
   if (error) {
-    console.error(error);
-    lista.innerHTML = "<li>Error al cargar miembros.</li>";
+    console.error('Error al cargar miembros:', error);
+    lista.innerHTML = '<li>Error al cargar miembros.</li>';
     return;
   }
 
   if (!data || data.length === 0) {
-    lista.innerHTML = "<li>No hay miembros registrados aún.</li>";
+    lista.innerHTML = '<li>No hay miembros registrados aún.</li>';
     return;
   }
 
-  lista.innerHTML = "";
+  lista.innerHTML = '';
   data.forEach(m => {
-    const estadoClass = 
-      m.estado === 'activo' ? 'estado-activo' : 'estado-inactivo';
-    const estadoTexto =
-      m.estado === 'activo' ? 'Activo' : 'Inactivo';
-
     const li = document.createElement('li');
+    li.className = 'user-item';
+    const labelRol =
+      m.rol_key === 'moderador'
+        ? 'Moderador'
+        : m.rol_key === 'voluntario'
+        ? 'Voluntario digital'
+        : 'Miembro';
+
     li.innerHTML = `
-      <span><strong>${m.nombre}</strong> – ${m.rol_key}</span>
-      <span class="${estadoClass}">${estadoTexto}</span>
+      <span><strong>${m.nombre}</strong></span>
+      <span class="estado-activo">${labelRol}</span>
     `;
     lista.appendChild(li);
   });
