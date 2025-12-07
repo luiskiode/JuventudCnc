@@ -210,7 +210,7 @@
     document.body.appendChild(d);
     const cs = getComputedStyle(d).color;
     document.body.removeChild(d);
-    const m = cs.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/i);
+    const m = cs.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)\)/i);
     if (!m) return fallback;
     const r = (+m[1]).toString(16).padStart(2,'0');
     const g = (+m[2]).toString(16).padStart(2,'0');
