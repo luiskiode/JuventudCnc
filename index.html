@@ -40,6 +40,7 @@
       <a href="#inicio" data-tab="inicio">Inicio</a>
       <a href="#eventos" data-tab="eventos">Eventos</a>
       <a href="#comunidad" data-tab="comunidad">Comunidad</a>
+      <a href="#perfil" data-tab="perfil">Mi perfil</a>
       <a href="#recursos" data-tab="recursos">Recursos</a>
       <a href="#avisos" data-tab="avisos">Avisos</a>
     </nav>
@@ -53,19 +54,19 @@
 
   <!-- Topbar -->
   <header class="topbar">
-  <button id="openDrawer" class="icon-btn" aria-label="Menú">☰</button>
-  <h1 class="topbar-title">Juventud CNC</h1>
-  <div class="topbar-actions">
-    <select id="themePicker" class="theme-picker" aria-label="Tema visual">
-      <option value="auto">Auto</option>
-      <option value="chicos">Chicos 💙</option>
-      <option value="chicas">Chicas 💗</option>
-      <option value="mix">Mix 💙💗</option>
-    </select>
-    <button id="btnAngie" class="icon-btn" aria-label="Herramienta de colores">🎨</button>
-    <button id="btnPerfil" class="icon-btn" aria-label="Perfil">👤</button>
-  </div>
-</header>
+    <button id="openDrawer" class="icon-btn" aria-label="Menú">☰</button>
+    <h1 class="topbar-title">Juventud CNC</h1>
+    <div class="topbar-actions">
+      <select id="themePicker" class="theme-picker" aria-label="Tema visual">
+        <option value="auto">Auto</option>
+        <option value="chicos">Chicos 💙</option>
+        <option value="chicas">Chicas 💗</option>
+        <option value="mix">Mix 💙💗</option>
+      </select>
+      <button id="btnAngie" class="icon-btn" aria-label="Herramienta de colores">🎨</button>
+      <button id="btnPerfil" class="icon-btn" aria-label="Perfil">👤</button>
+    </div>
+  </header>
 
   <!-- Vistas -->
   <main class="container" id="main">
@@ -170,6 +171,46 @@
       </section>
     </section>
 
+    <!-- PERFIL -->
+    <section class="view" id="view-perfil" data-view="perfil" tabindex="-1">
+      <section class="card perfil-card">
+        <div class="perfil-header">
+          <div class="perfil-avatar-wrapper">
+            <div class="perfil-avatar" id="perfilAvatar">
+              <span id="perfilAvatarInicial">🙂</span>
+              <img id="perfilAvatarImg" alt="Foto de perfil" />
+            </div>
+            <button type="button" class="btn small perfil-foto-btn" id="btnCambiarFoto">
+              Cambiar foto
+            </button>
+            <input type="file" id="perfilFotoInput" accept="image/*" hidden />
+          </div>
+          <div class="perfil-header-text">
+            <h3 class="with-emoji" data-emoji="🙋‍♂️">Mi perfil</h3>
+            <p class="perfil-subtext">
+              Completa tus datos y sube una foto para que la comunidad te reconozca.
+            </p>
+          </div>
+        </div>
+
+        <form id="perfilForm" class="grid perfil-form">
+          <input name="nombre" id="perfilNombre" placeholder="Nombre y Apellido" required />
+          <input name="email" id="perfilEmail" type="email" placeholder="Tu correo" />
+          <select name="rol" id="perfilRol" required>
+            <option value="miembro">Miembro</option>
+            <option value="voluntario">Voluntario digital</option>
+            <option value="moderador">Moderador (solicitud)</option>
+          </select>
+          <textarea name="bio" id="perfilBio" rows="3" placeholder="Cuéntanos algo sobre ti (dones, servicios, hobbies)"></textarea>
+          <button class="btn" type="submit">Guardar perfil</button>
+        </form>
+
+        <p class="perfil-hint">
+          Tu rol de moderador será activado por un responsable. Mientras tanto podrás participar como miembro o voluntario digital.
+        </p>
+      </section>
+    </section>
+
     <!-- RECURSOS -->
     <section class="view" id="view-recursos" data-view="recursos" tabindex="-1">
       <section class="card" id="recursos">
@@ -228,11 +269,6 @@
 
   <!-- App principal -->
   <script src="app.js"></script>
-
-  
-
-  <!-- Panel técnico -->
-  <script src="debug-dashboard.js" defer></script>
 
   <!-- Control Angie + tema + tokens + Supabase -->
   <script>
@@ -407,7 +443,7 @@
     })();
   </script>
 
- <script>
+  <script>
     // Mostrar botón de "Instalar app" cuando el navegador lo permita
     let deferredPrompt = null;
     const installBtn = document.getElementById('btnInstallApp');
