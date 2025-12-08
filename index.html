@@ -176,71 +176,93 @@
   </section>
 </section>
 
-    <!-- PERFIL -->
-    <section class="view" id="view-perfil" data-view="perfil" tabindex="-1">
-      <section class="card perfil-card">
-        <div class="perfil-header">
-          <div class="perfil-avatar-wrapper">
-            <div class="perfil-avatar" id="perfilAvatar">
-              <span id="perfilAvatarInicial">🙂</span>
-              <img id="perfilAvatarImg" alt="Foto de perfil" />
-            </div>
-            <button type="button" class="btn small perfil-foto-btn" id="btnCambiarFoto">
-              Cambiar foto
-            </button>
-            <input type="file" id="perfilFotoInput" accept="image/*" hidden />
-          </div>
-
-          <div class="perfil-header-text">
-            <h2 class="with-emoji" data-emoji="🙋‍♂️">Mi perfil</h2>
-            <p class="perfil-subtext">
-              Regístrate una sola vez y personaliza tu espacio. Tu rol se usará para darte
-              acceso a más herramientas según corresponda.
-            </p>
-          </div>
+<!-- PERFIL -->
+<section class="view" id="view-perfil" data-view="perfil" tabindex="-1">
+  <section class="card perfil-card">
+    <div class="perfil-header">
+      <div class="perfil-avatar-wrapper">
+        <div class="perfil-avatar" id="perfilAvatar">
+          <span id="perfilAvatarInicial">🙂</span>
+          <img id="perfilAvatarImg" alt="Foto de perfil" />
         </div>
+        <button type="button" class="btn small perfil-foto-btn" id="btnCambiarFoto">
+          Cambiar foto
+        </button>
+        <input type="file" id="perfilFotoInput" accept="image/*" hidden />
+      </div>
 
-        <!-- Resumen visible del perfil -->
-        <div class="perfil-resumen">
-          <div>
-            <div class="perfil-nombre" id="perfilNombreTexto">Aún sin registrar</div>
-            <div class="perfil-rol" id="perfilRolTexto"></div>
-          </div>
-        </div>
-
-        <!-- Frase elegida por el usuario -->
-        <p id="perfilFraseTexto" class="perfil-frase">
-          Aquí aparecerá la frase que elijas para tu perfil.
+      <div class="perfil-header-text">
+        <h2 class="with-emoji" data-emoji="🙋‍♂️">Mi perfil</h2>
+        <p class="perfil-subtext">
+          Regístrate una sola vez y personaliza tu espacio.  
+          Después podrás ver tu perfil sin volver a llenar el formulario.
         </p>
+      </div>
+    </div>
 
-        <!-- Mensaje de estado / confirmación -->
-        <p id="perfilEstado" class="perfil-estado"></p>
+    <!-- Resumen visible del perfil -->
+    <div class="perfil-resumen">
+      <div>
+        <div class="perfil-nombre" id="perfilNombreTexto">Aún sin registrar</div>
+        <div class="perfil-rol" id="perfilRolTexto"></div>
+      </div>
+      <button
+        type="button"
+        class="btn small perfil-logout-btn"
+        id="btnCerrarPerfil"
+        style="display:none;">
+        Cerrar sesión en este dispositivo
+      </button>
+    </div>
 
-        <!-- Formulario ÚNICO de registro -->
-        <form id="formMiembro" class="grid perfil-form">
-          <input name="nombre" id="perfilNombreInput" placeholder="Nombre y apellido" required />
-          <input name="edad" type="number" placeholder="Edad" min="10" max="99" required />
-          <input name="contacto" type="tel" placeholder="Contacto (celular)" />
-          <input name="ministerio" placeholder="Ministerio / grupo (opcional)" />
-          <select name="rol_key" id="perfilRolSelect">
-            <option value="miembro">Miembro</option>
-            <option value="voluntario">Voluntario digital</option>
-            <option value="moderador">Moderador (solicitud)</option>
-          </select>
-          <input
-            name="frase"
-            id="perfilFraseInput"
-            placeholder="Frase que te represente (aparecerá debajo de tu foto)" />
+    <!-- Frase elegida por el usuario -->
+    <p id="perfilFraseTexto" class="perfil-frase">
+      Aquí aparecerá la frase que elijas para tu perfil.
+    </p>
 
-          <button class="btn" type="submit">Guardar perfil</button>
-        </form>
+    <!-- Mensaje de estado / confirmación -->
+    <p id="perfilEstado" class="perfil-estado"></p>
 
-        <p class="perfil-hint">
-          Cuando te registres verás un mensaje de confirmación con tu rol.
-          Si eliges “Moderador”, tu solicitud será revisada por los responsables.
-        </p>
-      </section>
-    </section>
+    <!-- Formulario ÚNICO de registro -->
+    <form id="formMiembro" class="grid perfil-form">
+      <input
+        name="nombre"
+        id="perfilNombreInput"
+        placeholder="Nombre y apellido"
+        required />
+      <input
+        name="edad"
+        type="number"
+        placeholder="Edad"
+        min="10"
+        max="99"
+        required />
+      <input
+        name="contacto"
+        type="tel"
+        placeholder="Contacto (celular)" />
+      <input
+        name="ministerio"
+        placeholder="Ministerio / grupo (opcional)" />
+      <select name="rol_key" id="perfilRolSelect">
+        <option value="miembro">Miembro</option>
+        <option value="voluntario">Voluntario digital</option>
+        <option value="moderador">Moderador (solicitud)</option>
+      </select>
+      <input
+        name="frase"
+        id="perfilFraseInput"
+        placeholder="Frase que te represente (aparecerá debajo de tu foto)" />
+
+      <button class="btn" type="submit">Guardar perfil</button>
+    </form>
+
+    <p class="perfil-hint">
+      Al guardar verás un mensaje de confirmación con tu rol.  
+      La próxima vez que entres, solo verás tu perfil (sin volver a registrarte).
+    </p>
+  </section>
+</section>
 
     <!-- RECURSOS -->
     <section class="view" id="view-recursos" data-view="recursos" tabindex="-1">
@@ -301,7 +323,7 @@
     <!-- Angie asistente traviesa -->
   <div class="angie-widget" id="angieWidget" aria-live="polite">
     <div class="angie-avatar">
-      <img src="assets/angie-widget.png" alt="Angie, asistente juvenil" />
+<img src="assets/angie-widget-v2.png" alt="Angie, asistente juvenil" />
     </div>
     <div class="angie-bubble">
       <div class="angie-bubble-header">
@@ -313,9 +335,9 @@
       </p>
     </div>
   </div>
-  
+
  <div id="angieWidget" class="angie-widget">
-  <img src="./assets/angie-widget.png" class="angie-avatar" />
+  <img src="./assets/angie-widget-v2.png" class="angie-avatar" />
   <div id="angieText" class="angie-text"></div>
   <button id="angieClose" class="angie-close">✖</button>
 </div>

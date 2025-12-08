@@ -226,6 +226,8 @@ const perfilEstado     = document.getElementById('perfilEstado');
 const perfilNombreTxt  = document.getElementById('perfilNombreTexto');
 const perfilRolTxt     = document.getElementById('perfilRolTexto');
 const perfilFraseTxt   = document.getElementById('perfilFraseTexto');
+const btnCerrarPerfil  = document.getElementById('btnCerrarPerfil');
+
 
 const perfilNombreInput = document.getElementById('perfilNombreInput');
 const perfilRolSelect   = document.getElementById('perfilRolSelect');
@@ -239,6 +241,18 @@ const fotoInput      = document.getElementById('perfilFotoInput');
 function ocultarFormularioPerfil() {
   if (formMiembro) {
     formMiembro.style.display = 'none';
+  }
+  if (btnCerrarPerfil) {
+    btnCerrarPerfil.style.display = 'inline-flex';
+  }
+}
+
+function mostrarFormularioPerfil() {
+  if (formMiembro) {
+    formMiembro.style.display = 'grid';
+  }
+  if (btnCerrarPerfil) {
+    btnCerrarPerfil.style.display = 'none';
   }
 }
 
@@ -385,6 +399,35 @@ formMiembro?.addEventListener('submit', async (e) => {
     console.error('Error restaurando perfil desde localStorage', e);
   }
 })();
+
+btnCerrarPerfil?.addEventListener('click', () => {
+  // Borrar datos locales
+  localStorage.removeItem('jc_perfil');
+  localStorage.removeItem('jc_perfil_foto');
+
+  // Reset UI básica
+  if (perfilNombreTxt) perfilNombreTxt.textContent = 'Aún sin registrar';
+  if (perfilRolTxt) perfilRolTxt.textContent = '';
+  if (perfilFraseTxt) {
+    perfilFraseTxt.textContent =
+      'Aquí aparecerá la frase que elijas para tu perfil.';
+  }
+
+  if (avatarImg) {
+    avatarImg.src = '';
+    avatarImg.style.display = 'none';
+  }
+  if (avatarInicial) {
+    avatarInicial.style.display = 'block';
+    avatarInicial.textContent = '🙂';
+  }
+
+  mostrarFormularioPerfil();
+  mostrarEstadoPerfil(
+    'Perfil borrado en este dispositivo. Puedes volver a registrarte.',
+    'ok'
+  );
+});
 
 // ====== Recursos ======
 const fileInput = document.getElementById('fileRec');
