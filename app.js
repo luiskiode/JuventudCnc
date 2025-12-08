@@ -4,20 +4,22 @@ const LOCALE = 'es-PE';
 const TZ = 'America/Lima';
 
 if (!sb) {
-  console.error('⚠️ Supabase todavía no está listo (window.supabaseClient es undefined). Revisa el orden de los scripts.');
+  console.error(
+    '⚠️ Supabase todavía no está listo (window.supabaseClient es undefined). Revisa el orden de los scripts.'
+  );
 }
 
-// Drawer
+// ====== Drawer (menú lateral) ======
 const drawer = document.getElementById('drawer');
 const overlay = document.getElementById('overlay');
 const openBtn = document.getElementById('openDrawer');
 const closeBtn = document.getElementById('closeDrawer');
 
-function openDrawer () {
+function openDrawer() {
   drawer?.classList.add('open');
   overlay?.classList.add('show');
 }
-function closeDrawer () {
+function closeDrawer() {
   drawer?.classList.remove('open');
   overlay?.classList.remove('show');
 }
@@ -26,11 +28,11 @@ openBtn?.addEventListener('click', openDrawer);
 closeBtn?.addEventListener('click', closeDrawer);
 overlay?.addEventListener('click', closeDrawer);
 
-// Tabs SPA
+// ====== Tabs SPA ======
 const tabs = Array.from(document.querySelectorAll('.tab'));
 const views = Array.from(document.querySelectorAll('.view'));
 
-function activate (tab) {
+function activate(tab) {
   const t = typeof tab === 'string' ? tab : tab?.dataset.tab;
   if (!t) return;
 
@@ -48,7 +50,7 @@ function activate (tab) {
     history.replaceState(null, '', `#${t}`);
   }
 
-  // 🔥 Cargar lista al entrar a "miembros-activos"
+  // Cargar lista al entrar a "miembros-activos"
   if (t === 'miembros-activos') {
     cargarListaMiembros();
   }
@@ -87,7 +89,9 @@ const fmtTime = d =>
   }).format(d);
 
 // ====== Eventos ======
-async function cargarEventos ({ destinoId = 'eventList', tipo = '' } = {}) {
+async function cargarEventos({ destinoId = 'eventList', tipo = '' } = {}) {
+  if (!sb?.from) return;
+
   let query = sb
     .from('eventos')
     .select('*')
@@ -135,7 +139,9 @@ async function cargarEventos ({ destinoId = 'eventList', tipo = '' } = {}) {
   });
 }
 
-async function cargarEventosHome () {
+async function cargarEventosHome() {
+  if (!sb?.from) return;
+
   const { data } = await sb
     .from('eventos')
     .select('*')
@@ -175,7 +181,9 @@ document
   );
 
 // ====== Mensaje semanal ======
-async function cargarMensajeSemanal () {
+async function cargarMensajeSemanal() {
+  if (!sb?.from) return;
+
   const monday = (d => {
     const n = new Date(d);
     const day = (n.getDay() + 6) % 7;
@@ -218,25 +226,23 @@ async function cargarMensajeSemanal () {
   }
 }
 
-/// ====== Miembros / Perfil ======
-// Nota: Recomendado usar Supabase Auth para que RLS reconozca auth.uid().
+// ====== Miembros / Perfil ======
 const formMiembro = document.getElementById('formMiembro');
 
-const perfilEstado     = document.getElementById('perfilEstado');
-const perfilNombreTxt  = document.getElementById('perfilNombreTexto');
-const perfilRolTxt     = document.getElementById('perfilRolTexto');
-const perfilFraseTxt   = document.getElementById('perfilFraseTexto');
-const btnCerrarPerfil  = document.getElementById('btnCerrarPerfil');
-
+const perfilEstado = document.getElementById('perfilEstado');
+const perfilNombreTxt = document.getElementById('perfilNombreTexto');
+const perfilRolTxt = document.getElementById('perfilRolTexto');
+const perfilFraseTxt = document.getElementById('perfilFraseTexto');
+const btnCerrarPerfil = document.getElementById('btnCerrarPerfil');
 
 const perfilNombreInput = document.getElementById('perfilNombreInput');
-const perfilRolSelect   = document.getElementById('perfilRolSelect');
-const perfilFraseInput  = document.getElementById('perfilFraseInput');
+const perfilRolSelect = document.getElementById('perfilRolSelect');
+const perfilFraseInput = document.getElementById('perfilFraseInput');
 
 const avatarInicial = document.getElementById('perfilAvatarInicial');
-const avatarImg     = document.getElementById('perfilAvatarImg');
+const avatarImg = document.getElementById('perfilAvatarImg');
 const btnCambiarFoto = document.getElementById('btnCambiarFoto');
-const fotoInput      = document.getElementById('perfilFotoInput');
+const fotoInput = document.getElementById('perfilFotoInput');
 
 function ocultarFormularioPerfil() {
   if (formMiembro) {
@@ -277,7 +283,8 @@ fotoInput?.addEventListener('change', () => {
 function actualizarUIPerfil({ nombre, rol_key, frase }) {
   if (nombre && perfilNombreTxt) {
     perfilNombreTxt.textContent = nombre;
-    if (avatarInicial) avatarInicial.textContent = nombre.trim().charAt(0).toUpperCase();
+    if (avatarInicial)
+      avatarInicial.textContent = nombre.trim().charAt(0).toUpperCase();
   }
   if (rol_key && perfilRolTxt) {
     const label =
@@ -303,8 +310,7 @@ function mostrarEstadoPerfil(texto, tipo = 'ok') {
   perfilEstado.classList.add(tipo);
 }
 
-
-formMiembro?.addEventListener('submit', async (e) => {
+formMiembro?.addEventListener('submit', async e => {
   e.preventDefault();
   const f = new FormData(formMiembro);
   const nombre = f.get('nombre');
@@ -319,7 +325,10 @@ formMiembro?.addEventListener('submit', async (e) => {
       userId = u?.user?.id || null;
     }
   } catch (err) {
-    console.warn('No se pudo leer usuario de Supabase Auth (se guarda como invitado):', err);
+    console.warn(
+      'No se pudo leer usuario de Supabase Auth (se guarda como invitado):',
+      err
+    );
   }
 
   const payload = {
@@ -366,7 +375,10 @@ formMiembro?.addEventListener('submit', async (e) => {
       'error'
     );
   } else {
-    mostrarEstadoPerfil(`Registro guardado correctamente como ${labelRol}.`, 'ok');
+    mostrarEstadoPerfil(
+      `Registro guardado correctamente como ${labelRol}.`,
+      'ok'
+    );
   }
 
   formMiembro.reset();
@@ -434,7 +446,7 @@ const fileInput = document.getElementById('fileRec');
 
 fileInput?.addEventListener('change', async () => {
   const file = fileInput.files[0];
-  if (!file) return;
+  if (!file || !sb?.storage) return;
 
   const path = `${Date.now()}-${file.name}`;
 
@@ -467,7 +479,9 @@ fileInput?.addEventListener('change', async () => {
   listarRecursos();
 });
 
-async function listarRecursos () {
+async function listarRecursos() {
+  if (!sb?.from) return;
+
   const { data, error } = await sb
     .from('recursos')
     .select('*')
@@ -499,7 +513,7 @@ async function listarRecursos () {
 // ====== Avisos (UI log) ======
 const avisosList = document.getElementById('avisosList');
 
-function logAviso ({ title = 'Aviso', body = '' }) {
+function logAviso({ title = 'Aviso', body = '' }) {
   if (!avisosList) return;
   const li = document.createElement('li');
   li.className = 'notice-item';
@@ -510,8 +524,8 @@ function logAviso ({ title = 'Aviso', body = '' }) {
 }
 
 // ====== Paleta por usuario (Supabase) ======
-async function cargarPaletaUsuario (uid) {
-  if (!uid) return;
+async function cargarPaletaUsuario(uid) {
+  if (!uid || !sb?.from) return;
   try {
     const { data, error } = await sb
       .from('paletas_usuarios')
@@ -542,7 +556,7 @@ async function cargarPaletaUsuario (uid) {
 }
 
 // ====== Contenido público (inicio básico) ======
-async function cargarPublic () {
+async function cargarPublic() {
   try {
     await Promise.all([
       cargarEventosHome(),
@@ -591,45 +605,18 @@ if (sb?.auth?.onAuthStateChange) {
   cargarPublic();
 }
 
-
-// ====== Push / PWA ======
+// ====== Push / PWA (sin Firebase, solo PWA básica) ======
 const btnPermPush = document.getElementById('btnPermPush');
-btnPermPush?.addEventListener('click', () => setupPush());
+btnPermPush?.addEventListener('click', () => {
+  alert('Las notificaciones push se activarán en una próxima versión 🙂');
+});
 
-// Protegerse si Firebase no está inicializado
-let messaging = null;
-if (window.firebase && firebase.apps && firebase.apps.length) {
-  messaging = firebase.messaging(); // FCM solo si hay app inicializada
-} else {
-  console.warn('Firebase no inicializado; notificaciones desactivadas por ahora.');
-}
-
-async function setupPush () {
-  if (!messaging) {
-    console.warn('No hay instancia de messaging; omitiendo setupPush.');
-    return;
-  }
-  try {
-    await Notification.requestPermission();
-    const token = await messaging.getToken({ vapidKey: 'TU_VAPID_KEY' });
-    logAviso({
-      title: 'Notificaciones',
-      body: 'Permiso activado correctamente.'
-    });
-    console.log('FCM token', token);
-  } catch (err) {
-    console.error('FCM error', err);
-  }
-}
-
-// SW (usa rutas relativas si publicas en subcarpeta, p.ej. GitHub Pages)
+// Service worker principal (PWA)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
-      // Si usas GitHub Pages en /JuventudCnc/, es más seguro usar rutas relativas:
       await navigator.serviceWorker.register('./service-worker.js');
-      await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-      console.log('SW registrados');
+      console.log('SW registrado');
     } catch (e) {
       console.error('SW error', e);
     }
@@ -648,7 +635,8 @@ document.getElementById('fab')?.addEventListener('click', () => {
   }
 });
 
-async function cargarListaMiembros () {
+// ====== Lista de miembros ======
+async function cargarListaMiembros() {
   const lista = document.getElementById('listaMiembros');
   if (!lista) return;
 
@@ -693,8 +681,9 @@ async function cargarListaMiembros () {
     lista.appendChild(li);
   });
 }
+
 // ================== ANGIE ANIMADA TRAVIESA ==================
-(function initAngieTraviesa () {
+(function initAngieTraviesa() {
   const widget = document.getElementById('angieWidget');
   const textEl = document.getElementById('angieText');
   const btnClose = document.getElementById('angieClose');
@@ -705,8 +694,8 @@ async function cargarListaMiembros () {
 
   // Siempre retorna un nombre válido
   function obtenerNombreUsuario() {
-    const raw = document.getElementById("perfilNombreTexto")?.textContent;
-    return raw && raw.trim().length > 0 ? raw.trim() : "amigo";
+    const raw = document.getElementById('perfilNombreTexto')?.textContent;
+    return raw && raw.trim().length > 0 ? raw.trim() : 'amigo';
   }
 
   // --- Saludo inicial (antes del sistema) ---
@@ -720,12 +709,11 @@ async function cargarListaMiembros () {
       `Te estuve esperando, ${nombre} 💗💙`
     ];
 
-    widget.classList.add("angie-widget--visible");
+    widget.classList.add('angie-widget--visible');
     textEl.textContent =
       frasesIniciales[Math.floor(Math.random() * frasesIniciales.length)];
   }, 1800);
   // --- FIN saludo inicial ---
-
 
   // ⭐ Sistema principal de mensajes y travesuras
   const mensajesBase = {
@@ -765,7 +753,7 @@ async function cargarListaMiembros () {
     const pool = bloque.concat(extra);
 
     const msg = pool[Math.floor(Math.random() * pool.length)];
-    return msg.replace("{{nombre}}", nombre);
+    return msg.replace('{{nombre}}', nombre);
   }
 
   function mostrarAngie() {
@@ -781,7 +769,10 @@ async function cargarListaMiembros () {
     // Wiggle travieso
     if (Math.random() < 0.6) {
       widget.classList.add('angie-widget--wiggle');
-      setTimeout(() => widget.classList.remove('angie-widget--wiggle'), 3000);
+      setTimeout(
+        () => widget.classList.remove('angie-widget--wiggle'),
+        3000
+      );
     }
   }
 
