@@ -394,30 +394,47 @@
 
   <!-- Control Angie + tema + tokens + Supabase -->
   <script>
-    (function () {
-      const panel = document.getElementById('angie-panel');
-      const btn = document.getElementById('btnAngie');
-      const closeBtn = document.getElementById('closeAngiePanel');
-      const overlay = document.getElementById('overlay');
-      const themePicker = document.getElementById('themePicker');
+(function () {
+  const panel = document.getElementById("angie-panel");
+  const btn = document.getElementById("btnAngie");
+  const closeBtn = document.getElementById("closeAngiePanel");
+  const overlay = document.getElementById("overlay");
 
-      function openPanel() {
-        panel?.classList.add('open');
-        overlay?.classList.add('show');
-      }
-      function closePanel() {
-        panel?.classList.remove('open');
-        overlay?.classList.remove('show');
-      }
+  function openPanel() {
+    panel?.classList.add("open");
+    overlay?.classList.add("show");
+  }
+  function closePanel() {
+    panel?.classList.remove("open");
+    overlay?.classList.remove("show");
+  }
 
-      btn?.addEventListener('click', openPanel);
-      closeBtn?.addEventListener('click', closePanel);
-      overlay?.addEventListener('click', (e) => {
-        if (panel?.classList.contains('open')) {
-          e.stopPropagation();
-          closePanel();
-        }
-      });
+  // abrir /
+  btn?.addEventListener("click", openPanel);
+  closeBtn?.addEventListener("click", closePanel);
+  overlay?.addEventListener("click", (e) => {
+    if (panel?.classList.contains("open")) closePanel();
+  });
+
+  // 📌 Comunicación desde el iframe (Angie herramienta)
+  window.addEventListener("message", (ev) => {
+    if (!ev.data) return;
+
+    // 1) tokens visuales enviados por la herramienta
+    if (ev.data.type === "applyTokens") {
+      if (window.jcApplyTokens) {
+        window.jcApplyTokens(ev.data.tokens);
+      }
+    }
+
+    // 2) emoción enviada por la herramienta
+    if (ev.data.type === "angieEstado") {
+      if (window.angieSetEstado) {
+        window.angieSetEstado(ev.data.value);
+      }
+    }
+  });
+
 
       // Atajo: Ctrl+Alt+A abre/cierra Angie
       window.addEventListener('keydown', (e) => {

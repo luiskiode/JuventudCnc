@@ -674,8 +674,138 @@ async function cargarListaMiembros() {
     lista.appendChild(li);
   });
 }
+// ====== Angie: expresiones y frases ======
+const ANGIE_ESTADOS = {
+  feliz: {
+    img: 'assets/angie-feliz-saludo.png',
+    frases: [
+      '¡Holaaa! Qué bueno verte por aquí 😄',
+      'Hoy siento que va a ser un buen día 💫',
+      'Te ves más fuerte que ayer, ¿sabías? 💪'
+    ]
+  },
+  saludo: {
+    img: 'assets/angie-sonrisa-saludo.png',
+    frases: [
+      '¡Hey! ¿Listo para empezar algo épico?',
+      'Pasa, pasa, la casa es tuya 😌',
+      'Ya te estaba esperando por aquí 👀'
+    ]
+  },
+  rezando: {
+    img: 'assets/angie-rezando.png',
+    frases: [
+      'Un ratito de silencio también es oración 🙏',
+      'Si quieres, podemos ofrecer este rato por alguien 💛'
+    ]
+  },
+  enojada: {
+    img: 'assets/angie-enojada.png',
+    frases: [
+      'Oye, eso no estuvo nada bien 😤',
+      'Respira profundo… contamos hasta 5 y lo hablamos mejor, ¿sí?'
+    ]
+  },
+  traviesa: {
+    img: 'assets/angie-traviesa.png',
+    frases: [
+      'Mmm… sé que estás tramando algo, cuéntame 👀',
+      'Yo también tengo ideas locas a veces, tranqui 😏'
+    ]
+  },
+  confundida: {
+    img: 'assets/angie-confundida.png',
+    frases: [
+      'No entendí mucho, pero podemos verlo juntos 🤔',
+      'Si algo no te queda claro, pregunta. Aquí nadie nace sabiendo.'
+    ]
+  },
+  llorando: {
+    img: 'assets/angie-llorando.png',
+    frases: [
+      'Si hoy dolió, no significa que siempre será así 💔',
+      'Puedes llorar y aún así ser fuerte, ¿lo sabías? 💧'
+    ]
+  },
+  enamorada: {
+    img: 'assets/angie-enamorada.png',
+    frases: [
+      'Ayyy, qué bonito eso que acabas de leer/vivir 😍',
+      'Hay cosas que solo se entienden con el corazón 💖'
+    ]
+  },
+  sorprendida: {
+    img: 'assets/angie-sorprendida.png',
+    frases: [
+      '¡¿En serio?! Eso está espectacular ✨',
+      'Wow, no me esperaba eso 👀'
+    ]
+  },
+  vergonzosa: {
+    img: 'assets/angie-vergonzosa.png',
+    frases: [
+      'Yo también soy tímida a veces, te entiendo 🙈',
+      'Tranquilo, nadie te va a juzgar aquí 💗'
+    ]
+  },
+  cansada: {
+    img: 'assets/angie-cansada.png',
+    frases: [
+      'Se nota que te estás esforzando mucho… también puedes descansar 😮‍💨',
+      'Un respiro y seguimos, ¿trato hecho?'
+    ]
+  },
+  ok: {
+    img: 'assets/angie-ok.png',
+    frases: [
+      '¡Buen trabajo, crack! 👍',
+      'Estoy orgullosa de ti, en serio ✨'
+    ]
+  }
+};
 
-// ================== ANGIE ANIMADA TRAVIESA ==================
+function angieSetEstado(tipo) {
+  const widget = document.getElementById('angieWidget');
+  const imgEl = widget?.querySelector('.angie-avatar img, .angie-avatar');
+  const textEl = document.getElementById('angieText');
+
+  const estado = ANGIE_ESTADOS[tipo];
+  if (!widget || !textEl || !estado) return;
+  if (typeof angieSetEstado === 'function') {
+    if (tab === 'inicio' || tab === 'home') {
+      angieSetEstado('feliz');
+    } else if (tab === 'eventos') {
+      angieSetEstado('sorprendida');
+    } else if (tab === 'comunidad') {
+      angieSetEstado('saludo');
+    } else if (tab === 'recursos') {
+      angieSetEstado('confundida');
+    } else if (tab === 'perfil') {
+      angieSetEstado('vergonzosa');
+    } else if (tab === 'avisos') {
+      angieSetEstado('traviesa');
+    }
+  }
+}
+
+  const frases = estado.frases || [];
+  const frase =
+    frases.length > 0
+      ? frases[Math.floor(Math.random() * frases.length)]
+      : 'Hola 👋';
+
+  if (imgEl) {
+    // si es <img>, cambia src; si es div de fondo, podrías usar background-image
+    if (imgEl.tagName === 'IMG') {
+      imgEl.src = estado.img;
+    }
+  }
+
+  textEl.textContent = frase;
+  widget.classList.add('angie-widget--visible');
+
+
+// ====== Angie animada traviesa ======
 (function initAngieTraviesa() {
   const widget = document.getElementById('angieWidget');
   const textEl = document.getElementById('angieText');
@@ -685,28 +815,35 @@ async function cargarListaMiembros() {
 
   const STORAGE_KEY_HIDE = 'jc_angie_hide_until';
 
-  // Siempre retorna un nombre válido
   function obtenerNombreUsuario() {
     const raw = document.getElementById('perfilNombreTexto')?.textContent;
     return raw && raw.trim().length > 0 ? raw.trim() : 'amigo';
   }
 
-  // --- Saludo inicial (antes del sistema) ---
-  setTimeout(() => {
-    const nombre = obtenerNombreUsuario();
-    const frasesIniciales = [
-      `¡Hola ${nombre}! ¿Ya tomaste agüita hoy? 💧`,
-      `${nombre}, adivina... ¡Dios tiene un plan contigo! ✨`,
-      `Oye ${nombre}, vi que te esforzaste hoy 👀`,
-      `¡Hey! ¿Listo para un gran día? 😄`,
-      `Te estuve esperando, ${nombre} 💗💙`
-    ];
+  // Cerrar Angie por un rato
+  btnClose?.addEventListener('click', () => {
+    widget.classList.remove('angie-widget--visible');
+    const hideUntil = Date.now() + 60 * 60 * 1000; // 1 hora
+    localStorage.setItem(STORAGE_KEY_HIDE, String(hideUntil));
+  });
 
-    widget.classList.add('angie-widget--visible');
-    textEl.textContent =
-      frasesIniciales[Math.floor(Math.random() * frasesIniciales.length)];
-  }, 1800);
-  // --- FIN saludo inicial ---
+  // Saludo inicial según momento del día
+  setTimeout(() => {
+    const hideUntil = Number(localStorage.getItem(STORAGE_KEY_HIDE) || '0');
+    if (Date.now() < hideUntil) return;
+
+    const h = new Date().getHours();
+    let tipo = 'feliz';
+    if (h >= 6 && h < 12) tipo = 'saludo';
+    if (h >= 12 && h < 19) tipo = 'feliz';
+    if (h >= 19 || h < 6) tipo = 'rezando';
+
+    angieSetEstado(tipo);
+  }, 2000);
+
+  // API pública interna para usar en otras partes
+  window.angieSetEstado = angieSetEstado;
+})();
 
   // ⭐ Sistema principal de mensajes y travesuras
   const mensajesBase = {
@@ -733,12 +870,7 @@ async function cargarListaMiembros() {
     ]
   };
 
-  function momentoDelDia() {
-    const h = new Date().getHours();
-    if (h >= 6 && h < 12) return 'manana';
-    if (h >= 12 && h < 19) return 'tarde';
-    return 'noche';
-  }
+
 
   function elegirMensaje(nombre) {
     const bloque = mensajesBase[momentoDelDia()] || mensajesBase.tarde;
@@ -771,7 +903,7 @@ async function cargarListaMiembros() {
 
   function ocultarAngie() {
     widget.classList.remove('angie-widget--visible');
-    widget.classList.remove('angie-widget--wiggle');
+    widget.classLi  .remove('angie-widget--wiggle');
 
     // Se oculta por 30 minutos
     localStorage.setItem(
@@ -795,7 +927,8 @@ async function cargarListaMiembros() {
       }
     }
   });
-})();
+
+  
 // ====== Crear nuevo evento (form) ======
 const formEvento = document.getElementById('formEvento');
 const evEstado = document.getElementById('evEstado');
@@ -885,3 +1018,140 @@ formEvento?.addEventListener('submit', async e => {
     }
   }
 });
+
+/* ==========================
+   ANGIE: Expresiones + Paleta
+   ========================== */
+
+window.ANGIE_ESTADOS = {
+  feliz: {
+    img: "assets/angie-feliz-saludo.png",
+    frases: [
+      "¡Holaaa! Qué bueno verte 😄",
+      "Hoy puede ser un buen día 💫",
+      "Me alegra que estés aquí 💙"
+    ]
+  },
+  saludo: {
+    img: "assets/angie-sonrisa-saludo.png",
+    frases: [
+      "¿Listo para empezar algo épico?",
+      "¡Hey! Pasa, siéntete en casa 😌"
+    ]
+  },
+  traviesa: {
+    img: "assets/angie-traviesa.png",
+    frases: [
+      "Sé que tramas algo 👀",
+      "Yo también tengo ideas locas 😏"
+    ]
+  },
+  confundida: {
+    img: "assets/angie-confundida.png",
+    frases: [
+      "No entendí mucho… pero podemos verlo juntos 🤔",
+      "Pregunta sin miedo 💛"
+    ]
+  },
+  enojada: {
+    img: "assets/angie-enojada.png",
+    frases: [
+      "¡Oye! Eso no estuvo bien 😤",
+      "Respira… lo hablamos mejor, ¿sí?"
+    ]
+  },
+  llorando: {
+    img: "assets/angie-llorando.png",
+    frases: [
+      "Si hoy dolió, mañana sanará 💔",
+      "Puedes llorar y aun así ser fuerte 💧"
+    ]
+  },
+  enamorada: {
+    img: "assets/angie-enamorada.png",
+    frases: [
+      "Ayyy qué bonito 😍",
+      "El corazón también sabe hablar 💗"
+    ]
+  },
+  sorprendida: {
+    img: "assets/angie-sorprendida.png",
+    frases: [
+      "¿EN SERIO? 😲",
+      "Wow, no me esperaba eso"
+    ]
+  },
+  ok: {
+    img: "assets/angie-ok.png",
+    frases: [
+      "¡Buen trabajo! 👍",
+      "Estoy orgullosa de ti ✨"
+    ]
+  },
+  cansada: {
+    img: "assets/angie-cansada.png",
+    frases: [
+      "Uf… también puedes descansar 😮‍💨",
+      "Un respiro y seguimos"
+    ]
+  }
+};
+
+window.angieSetEstado = function (estado) {
+  const data = ANGIE_ESTADOS[estado];
+  if (!data) return;
+
+  const widget = document.getElementById("angieWidget");
+  const imgEl = widget.querySelector(".angie-avatar img");
+  const textEl = document.getElementById("angieText");
+
+  // Cambiar imagen
+  imgEl.src = data.img;
+
+  // Frase aleatoria
+  textEl.textContent =
+    data.frases[Math.floor(Math.random() * data.frases.length)];
+
+  widget.classList.add("angie-widget--visible");
+};
+
+/* ==========================
+   ANGIE: Cambiar según sección
+   ========================== */
+
+function angieSegunVista(tab) {
+  if (!window.angieSetEstado) return;
+
+  const mapa = {
+    inicio: "feliz",
+    eventos: "sorprendida",
+    comunidad: "saludo",
+    recursos: "confundida",
+    avisos: "traviesa",
+    "miembros-activos": "ok",
+    perfil: "vergonzosa"
+  };
+
+  window.angieSetEstado(mapa[tab] || "feliz");
+}
+
+const originalActivate = window.activate;
+window.activate = function (tab) {
+  originalActivate(tab);
+  angieSegunVista(tab);
+};
+
+/* ==========================
+   APLICAR TOKENS VISUALES
+   ========================== */
+window.jcApplyTokens = function (tokens) {
+  if (!tokens) return;
+  const root = document.documentElement;
+
+  Object.entries(tokens).forEach(([key, value]) => {
+    root.style.setProperty(key, value);
+  });
+
+  // Dar feedback visual con Angie
+  window.angieSetEstado("feliz");
+};

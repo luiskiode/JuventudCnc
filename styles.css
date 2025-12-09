@@ -1,75 +1,38 @@
-/* ===========================
-   PALETA Y RESET
-   Azul para hombres 💙
-   Rosado para mujeres 💗
-   =========================== */
-
 :root {
-  /* Paleta base */
+  /* Base neutrales */
   --neutral-900: #050816;
   --neutral-800: #0b1020;
   --neutral-700: #111827;
-  --border-subtle: rgba(148, 163, 184, 0.32);
+  --neutral-600: #1f2937;
+  --neutral-400: #9ca3af;
+  --neutral-200: #e5e7eb;
+  --neutral-100: #f3f4f6;
 
   /* Texto */
   --text-main: #f9fafb;
   --text-muted: #9ca3af;
 
-  /* Hombres (azules) */
-  --guy-main: #2563eb;
-  --guy-soft: rgba(37, 99, 235, 0.2);
+  /* Tokens dinámicos modificables por Angie */
+  --brand: #2563eb;      /* color principal */
+  --brand-2: #1d4ed8;    /* secundario */
+  --accent: #ec4899;     /* acento */
+  --accent-2: #f97316;   /* acento cálido */
 
-  /* Mujeres (rosados) */
-  --girl-main: #ec4899;
-  --girl-soft: rgba(236, 72, 153, 0.22);
+  /* Para fondos y tarjetas */
+  --card-bg: rgba(15,23,42,0.95);
+  --card-border: rgba(148,163,184,0.28);
+  --card-soft: rgba(255,255,255,0.05);
 
-  /* Mix (para compatibilidad con design-mode.js) */
-  --brand: #2563eb;
-  --brand-2: #1d4ed8;
-  --accent: #ec4899;
+  /* Para botones */
+  --btn-bg-1: var(--brand);
+  --btn-bg-2: var(--accent);
+  --btn-text: #ffffff;
 
-  /* Estados */
-  --danger: #ef4444;
-  --success: #22c55e;
+  /* Para badges */
+  --badge-bg: var(--card-soft);
+  --badge-text: var(--text-main);
 
-  /* Layout */
-  --radius-lg: 22px;
-  --radius-md: 16px;
-  --radius-pill: 999px;
-  --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.45);
-
-  /* Tokens para design-mode (botones) */
-  --btn-radius: 999px;
-  --btn-py: 10px;
-  --btn-px: 16px;
-  --btn-fw: 700;
-
-  color-scheme: dark;
-}
-
-/* Reset básico */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  height: 100%;
-}
-
-body.app-shell {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background:
-    radial-gradient(900px 700px at 10% -20%, rgba(236, 72, 153, 0.16), transparent),
-    radial-gradient(1000px 800px at 80% -10%, rgba(37, 99, 235, 0.2), transparent),
-    var(--neutral-900);
-  color: var(--text-main);
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+  /* Angie podrá manipular todos estos */
 }
 
 /* ===========================
