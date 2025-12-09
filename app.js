@@ -363,11 +363,11 @@ formMiembro?.addEventListener('submit', async e => {
   actualizarUIPerfil(perfilGuardado);
 
   const labelRol =
-    rol_key === 'moderador'
-      ? 'moderador (solicitud enviada)'
-      : rol_key === 'voluntario'
-      ? 'voluntario digital'
-      : 'miembro';
+  rol_key === 'moderador'
+    ? 'Moderador (solicitud)'
+    : rol_key === 'voluntario'
+    ? 'Voluntario digital'
+    : 'Miembro';
 
   if (huboErrorRemoto) {
     mostrarEstadoPerfil(
@@ -455,12 +455,21 @@ fileInput?.addEventListener('change', async () => {
     .upload(path, file, { upsert: false });
 
   if (upErr) {
-    alert('Error al subir');
+    alert('Error al subir archivo');
     console.error(upErr);
     return;
   }
 
-  const { data: u } = await sb.auth.getUser();
+  // Obtener user_id SOLO si Auth está disponible
+  let userId = null;
+  try {
+    if (sb?.auth?.getUser) {
+      const { data: u } = await sb.auth.getUser();
+      userId = u?.user?.id || null;
+    }
+  } catch (e) {
+    console.warn('No se pudo obtener usuario para recurso:', e);
+  }
 
   await sb.from('recursos').insert({
     titulo: file.name,
@@ -473,42 +482,18 @@ fileInput?.addEventListener('change', async () => {
       : 'otro',
     path,
     mime: file.type,
-    subido_por: u?.user?.id || null
+    subido_por: userId
   });
+
+  if (typeof logAviso === 'function') {
+    logAviso({
+      title: 'Recurso subido',
+      body: file.name
+    });
+  }
 
   listarRecursos();
 });
-
-async function listarRecursos() {
-  if (!sb?.from) return;
-
-  const { data, error } = await sb
-    .from('recursos')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(20);
-
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  const ul = document.getElementById('listaRecursos');
-  if (!ul) return;
-
-  ul.innerHTML = '';
-
-  for (const r of data || []) {
-    const { data: url } = sb.storage.from('recursos').getPublicUrl(r.path);
-    const li = document.createElement('li');
-    li.className = 'file-item';
-    li.innerHTML = `
-      <span>${r.titulo}</span>
-      <a class="btn small" href="${url.publicUrl}" target="_blank" rel="noopener noreferrer">Abrir</a>
-    `;
-    ul.appendChild(li);
-  }
-}
 
 // ====== Avisos (UI log) ======
 const avisosList = document.getElementById('avisosList');
@@ -623,12 +608,20 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// FAB demo
+// FAB: atajos reales
 document.getElementById('fab')?.addEventListener('click', () => {
   const active = document.querySelector('.tab.active')?.dataset.tab;
+
   if (active === 'eventos') {
-    alert('Crear nuevo evento (admin)');
+    // Lleva al formulario de nuevo evento
+    const form = document.getElementById('formEvento');
+    const titulo = document.getElementById('evTitulo');
+    if (form) {
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (titulo) titulo.focus();
+    }
   } else if (active === 'recursos') {
+    // Dispara el selector de archivo directamente
     document.getElementById('fileRec')?.click();
   } else {
     alert('Acción rápida');
@@ -803,3 +796,92 @@ async function cargarListaMiembros() {
     }
   });
 })();
+// ====== Crear nuevo evento (form) ======
+const formEvento = document.getElementById('formEvento');
+const evEstado = document.getElementById('evEstado');
+
+formEvento?.addEventListener('submit', async e => {
+  e.preventDefault();
+
+  if (!sb?.from) {
+    if (evEstado) {
+      evEstado.textContent = 'No se puede conectar al servidor por ahora.';
+      evEstado.classList.add('error');
+    }
+    return;
+  }
+
+  const tituloEl = document.getElementById('evTitulo');
+  const fechaEl = document.getElementById('evFecha');
+  const tipoEl = document.getElementById('evTipo');
+  const lugarEl = document.getElementById('evLugar');
+  const descEl = document.getElementById('evDescripcion');
+
+  const titulo = tituloEl?.value.trim();
+  const fechaRaw = fechaEl?.value;
+  const tipo = tipoEl?.value || null;
+  const lugar = lugarEl?.value?.trim() || null;
+  const descripcion = descEl?.value?.trim() || null;
+
+  if (!titulo || !fechaRaw) {
+    if (evEstado) {
+      evEstado.textContent = 'Completa al menos título y fecha.';
+      evEstado.classList.add('error');
+    }
+    return;
+  }
+
+  const fechaIso = new Date(fechaRaw).toISOString();
+
+  if (evEstado) {
+    evEstado.textContent = 'Guardando evento...';
+    evEstado.classList.remove('error');
+    evEstado.classList.add('ok');
+  }
+
+  try {
+    const { error } = await sb.from('eventos').insert({
+      titulo,
+      fecha: fechaIso,
+      tipo,
+      lugar,
+      descripcion
+    });
+
+    if (error) {
+      console.error('Error insertando evento:', error);
+      if (evEstado) {
+        evEstado.textContent =
+          'No se pudo guardar el evento. Intenta más tarde.';
+        evEstado.classList.add('error');
+      }
+      return;
+    }
+
+    if (formEvento instanceof HTMLFormElement) formEvento.reset();
+
+    if (evEstado) {
+      evEstado.textContent = 'Evento creado correctamente 🙌';
+      evEstado.classList.remove('error');
+      evEstado.classList.add('ok');
+    }
+
+    if (typeof logAviso === 'function') {
+      logAviso({
+        title: 'Nuevo evento',
+        body: `${titulo} (${tipo || 'general'})`
+      });
+    }
+
+    const filtro = document.getElementById('filtroTipo');
+    const tipoFiltro = filtro?.value || '';
+    cargarEventos({ destinoId: 'eventList', tipo: tipoFiltro });
+    cargarEventosHome();
+  } catch (err) {
+    console.error(err);
+    if (evEstado) {
+      evEstado.textContent = 'Error inesperado al guardar el evento.';
+      evEstado.classList.add('error');
+    }
+  }
+});

@@ -1,9 +1,10 @@
-const CACHE_NAME = 'juventud-cnc-v1';
+const CACHE_NAME = 'juventud-cnc-v3';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  '/assets/angie-widget-v2.png',
   './manifest.json'
 ];
 

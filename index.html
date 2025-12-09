@@ -119,26 +119,75 @@
       </section>
     </section>
 
-    <!-- EVENTOS -->
+        <!-- EVENTOS -->
     <section class="view" id="view-eventos" data-view="eventos" tabindex="-1">
       <section class="card">
         <header class="card-header">
-          <h2 class="with-emoji" data-emoji="📅">Eventos</h2>
-          <div class="filter-group">
-            <label for="filtroTipo" class="muted small">Filtrar</label>
-            <select id="filtroTipo">
-              <option value="">Todos</option>
-              <option value="reunión">Reunión</option>
-              <option value="formación">Formación</option>
-              <option value="retiro">Retiro</option>
-              <option value="vigilia">Vigilia</option>
-              <option value="voluntariado">Voluntariado</option>
-            </select>
+          <div>
+            <h2 class="with-emoji" data-emoji="📅">Eventos</h2>
+            <p class="muted small">Agenda parroquial y actividades del grupo.</p>
+          </div>
+          <div class="card-header-actions">
+            <div class="filter-group">
+              <label for="filtroTipo" class="muted small">Filtrar</label>
+              <select id="filtroTipo">
+                <option value="">Todos</option>
+                <option value="formacion">Formación</option>
+                <option value="servicio">Servicio</option>
+                <option value="convivencia">Convivencia</option>
+                <option value="oracion">Oración</option>
+              </select>
+            </div>
           </div>
         </header>
+        
+        <!-- NUEVO: formulario para crear eventos -->
+        <form id="formEvento" class="grid perfil-form" style="margin-top: 10px;">
+          <p class="small muted">
+            Crea nuevos eventos para el grupo. Más adelante se podrán aprobar y organizar mejor con el equipo.
+          </p>
+
+          <input
+            id="evTitulo"
+            name="titulo"
+            placeholder="Título del evento (reunión, retiro, vigilia...)"
+            required />
+
+          <div class="grid">
+            <input
+              id="evFecha"
+              name="fecha"
+              type="datetime-local"
+              required />
+            <select id="evTipo" name="tipo">
+              <option value="">Tipo (opcional)</option>
+              <option value="formacion">Formación</option>
+              <option value="servicio">Servicio</option>
+              <option value="convivencia">Convivencia</option>
+              <option value="oracion">Oración</option>
+            </select>
+          </div>
+
+          <input
+            id="evLugar"
+            name="lugar"
+            placeholder="Lugar (salón parroquial, capilla, barrio...)" />
+
+          <input
+            id="evDescripcion"
+            name="descripcion"
+            placeholder="Detalle breve del evento (opcional)" />
+
+          <button type="submit" class="btn small">Guardar evento</button>
+          <p id="evEstado" class="perfil-estado small" style="margin-top:6px;"></p>
+        </form>
+
+        <!-- Lista de eventos -->
         <ul id="eventList" class="event-list"></ul>
       </section>
     </section>
+
+   
 
     <!-- COMUNIDAD -->
     <section class="view" id="view-comunidad" data-view="comunidad" tabindex="-1">
@@ -336,11 +385,7 @@
     </div>
   </div>
 
- <div id="angieWidget" class="angie-widget">
-  <img src="./assets/angie-widget-v2.png" class="angie-avatar" />
-  <div id="angieText" class="angie-text"></div>
-  <button id="angieClose" class="angie-close">✖</button>
-</div>
+
 
 
 

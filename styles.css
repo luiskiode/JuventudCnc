@@ -767,7 +767,7 @@ input::placeholder {
 
 .perfil-subtext {
   margin: 4px 0 0;
-  color: var(--muted);
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -783,7 +783,7 @@ input::placeholder {
 .perfil-hint {
   margin-top: 6px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .perfil-resumen {
@@ -806,7 +806,7 @@ input::placeholder {
 .perfil-frase {
   font-style: italic;
   font-size: 14px;
-  color: var(--muted);
+  color: var(--text-muted);
 }
 
 .perfil-estado {
@@ -878,8 +878,13 @@ input::placeholder {
   width:64px;
   height:64px;
   border-radius:999px;
-  background: radial-gradient(circle at 30% 20%, rgba(244,114,182,.95), rgba(37,99,235,.95));
-  box-shadow:0 12px 24px rgba(15,23,42,.6);
+  /* Ahora Angie usa los mismos colores que chicos/chicas/mix */
+  background: radial-gradient(
+    circle at 30% 20%,
+    var(--girl-main, rgba(244,114,182,0.95)),
+    var(--guy-main, rgba(37,99,235,0.95))
+  );
+  box-shadow:0 12px 24px rgba(15,23,42,0.6);
   display:flex;
   align-items:flex-end;
   justify-content:center;
