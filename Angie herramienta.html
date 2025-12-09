@@ -1,392 +1,209 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Editor de Paleta (Angie · Juventud CNC)</title>
-<style>
-  :root{
-    /* Valores por defecto alineados con la app */
-    --brand: #2563eb;   /* principal (chicos) */
-    --brand-2: #1d4ed8; /* secundario */
-    --accent: #ec4899;  /* acento (chicas) */
-    --neutral-900:#050816;
-    --neutral-700:#111827;
-    --neutral-400:#9ca3af;
-    --neutral-100:#f3f4f6;
-  }
-  *{box-sizing:border-box}
-  body{
-    font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-    background:var(--neutral-100);
-    color:#020617;
-    margin:0;
-    padding:24px;
-  }
-  h1{margin:0 0 8px;font-size:20px}
-  h2{margin:16px 0 8px;font-size:16px}
-  p{margin:0 0 10px;font-size:13px;color:#4b5563}
-  .grid{display:grid;gap:16px}
-  .panel{
-    background:#fff;
-    border-radius:16px;
-    padding:16px;
-    box-shadow:0 6px 24px rgba(0,0,0,.08)
-  }
-  .row{
-    display:flex;
-    gap:12px;
-    align-items:center;
-    flex-wrap:wrap
-  }
-  label{min-width:150px;font-weight:600;font-size:13px}
-  input[type="color"]{
-    width:48px;
-    height:34px;
-    border:none;
-    background:none;
-    padding:0;
-    cursor:pointer;
-  }
-  .swatches{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-    gap:12px
-  }
-  .swatch{
-    border-radius:12px;
-    overflow:hidden;
-    border:1px solid #e5e7eb
-  }
-  .swatch .box{height:72px}
-  .swatch .meta{
-    padding:8px 10px;
-    font-size:11px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-  }
-  .preview{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:16px
-  }
-  .btn{
-    border:0;
-    border-radius:12px;
-    padding:8px 12px;
-    font-weight:700;
-    cursor:pointer;
-    font-size:12px;
-  }
-  .btn.primary{
-    background:var(--brand);
-    color:#fff
-  }
-  .btn.secondary{
-    background:var(--brand-2);
-    color:#020617
-  }
-  .btn.outline{
-    background:#fff;
-    border:1px solid #e5e7eb;
-    color:#020617;
-  }
-  .btn.pill{
-    border-radius:999px;
-    padding:6px 10px;
-    font-size:11px;
-  }
-  .card{
-    background:#fff;
-    border-radius:16px;
-    padding:16px;
-    border:1px solid #e5e7eb
-  }
-  .badge{
-    display:inline-block;
-    padding:5px 10px;
-    border-radius:999px;
-    background:var(--accent);
-    color:#042f2e;
-    font-weight:700;
-    font-size:11px;
-  }
-  textarea{
-    width:100%;
-    min-height:110px;
-    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
-    border-radius:12px;
-    border:1px solid #e5e7eb;
-    padding:8px;
-    font-size:11px;
-  }
-  .actions-row{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    margin-top:10px;
-  }
-  small{
-    font-size:11px;
-    color:#6b7280;
-  }
-  .preset-row{
-    display:flex;
-    flex-wrap:wrap;
-    gap:6px;
-    margin-bottom:10px;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>Angie · Herramienta de colores</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: light;
+    }
+    body {
+      margin: 0;
+      padding: 1rem;
+      background: #f9fafb;
+      color: #111827;
+    }
+    h1 {
+      font-size: 1.1rem;
+      margin: 0 0 0.75rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem 0.75rem;
+      margin-bottom: 1rem;
+    }
+    label {
+      font-size: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    input[type="color"] {
+      width: 100%;
+      height: 2rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 0;
+      background: #fff;
+    }
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid #e5e7eb;
+    }
+    .row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
+    }
+    .pill {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: white;
+      cursor: pointer;
+    }
+    .pill:hover {
+      border-color: #2563eb;
+    }
+    small {
+      font-size: 0.7rem;
+      color: #6b7280;
+    }
+    hr {
+      border: 0;
+      border-top: 1px solid #e5e7eb;
+      margin: 0.75rem 0;
+    }
+  </style>
 </head>
 <body>
-  <h1>Editor de Paleta</h1>
-  <p>
-    Elige colores o usa uno de los perfiles rápidos.  
-    Puedes <strong>copiar CSS</strong>, <strong>copiar JSON</strong> o
-    <strong>aplicar directo en Juventud CNC</strong> si estás dentro de la app.
-  </p>
+  <h1>🎨 Angie – Paleta y emociones</h1>
 
-  <div class="grid" style="grid-template-columns: 1.2fr 1fr">
-    <div class="panel">
-      <h2>Perfiles rápidos</h2>
-      <div class="preset-row">
-        <button class="btn pill outline" data-preset="chicos">Chicos 💙</button>
-        <button class="btn pill outline" data-preset="chicas">Chicas 💗</button>
-        <button class="btn pill outline" data-preset="mix">Mix 💙💗</button>
-        <button class="btn pill outline" data-preset="oscuro">Oscuro 🕯</button>
-        <button class="btn pill outline" data-preset="evento">Evento especial 🎉</button>
-      </div>
-
-      <h2>Colores base</h2>
-      <div class="row"><label>Principal (--brand)</label><input id="brand" type="color" value="#2563eb"></div>
-      <div class="row"><label>Secundario (--brand-2)</label><input id="brand2" type="color" value="#1d4ed8"></div>
-      <div class="row"><label>Acento (--accent)</label><input id="accent" type="color" value="#ec4899"></div>
-      <div class="row"><label>Fondo oscuro (--neutral-900)</label><input id="n900" type="color" value="#050816"></div>
-      <div class="row"><label>Oscuro medio (--neutral-700)</label><input id="n700" type="color" value="#111827"></div>
-      <div class="row"><label>Gris (--neutral-400)</label><input id="n400" type="color" value="#9ca3af"></div>
-      <div class="row"><label>Fondo claro (--neutral-100)</label><input id="n100" type="color" value="#f3f4f6"></div>
-
-      <h3>Variables CSS</h3>
-      <textarea id="cssVars" readonly></textarea>
-
-      <h3>Tokens (JSON)</h3>
-      <textarea id="jsonTokens" readonly></textarea>
-
-      <div class="actions-row">
-        <button class="btn primary" id="copyCss">Copiar CSS</button>
-        <button class="btn secondary" id="copyJson">Copiar JSON</button>
-        <button class="btn outline" id="applyApp">Aplicar en Juventud CNC</button>
-      </div>
-      <small id="statusMsg"></small>
+  <section>
+    <small>Cuando cambies un color, se aplica directo en Juventud CNC.</small>
+    <div class="grid" style="margin-top:0.5rem;">
+      <label>
+        Principal (brand)
+        <input type="color" id="brand" value="#2563eb" />
+      </label>
+      <label>
+        Secundario (brand-2)
+        <input type="color" id="brand2" value="#1d4ed8" />
+      </label>
+      <label>
+        Accent
+        <input type="color" id="accent" value="#ec4899" />
+      </label>
+      <label>
+        Fondo oscuro (900)
+        <input type="color" id="neutral900" value="#0f172a" />
+      </label>
+      <label>
+        Texto principal (700)
+        <input type="color" id="neutral700" value="#374151" />
+      </label>
+      <label>
+        Bordes (400)
+        <input type="color" id="neutral400" value="#9ca3af" />
+      </label>
+      <label>
+        Fondo tarjetas (100)
+        <input type="color" id="neutral100" value="#f3f4f6" />
+      </label>
     </div>
 
-    <div class="panel">
-      <h2>Vista previa</h2>
-      <div class="swatches" id="swatches"></div>
-      <div class="preview" style="margin-top:12px">
-        <div class="card">
-          <h3 style="color:var(--brand)">Título ejemplo</h3>
-          <p style="color:var(--neutral-700)">Texto de párrafo en gris oscuro.</p>
-          <span class="badge">Badge acento</span><br><br>
-          <button class="btn primary">Primario</button>
-          <button class="btn secondary">Secundario</button>
-        </div>
-        <div class="card" style="background:var(--neutral-900);color:#fff">
-          <h3 style="color:var(--brand-2)">Módulo oscuro</h3>
-          <p style="color:var(--neutral-100)">Ejemplo en tema dark.</p>
-          <button class="btn" style="background:var(--accent);color:#041">Acción</button>
-        </div>
-      </div>
+    <div class="row">
+      <button id="btnAplicar" class="btn-primary">Aplicar ahora</button>
+      <button id="btnReset" class="btn-ghost">Reset normal</button>
     </div>
-  </div>
+  </section>
 
-<script>
-const inputs = {
-  brand: document.getElementById('brand'),
-  brand2: document.getElementById('brand2'),
-  accent: document.getElementById('accent'),
-  n900: document.getElementById('n900'),
-  n700: document.getElementById('n700'),
-  n400: document.getElementById('n400'),
-  n100: document.getElementById('n100'),
-};
+  <hr />
 
-function getVals(){
-  return {
-    '--brand': inputs.brand.value,
-    '--brand-2': inputs.brand2.value,
-    '--accent': inputs.accent.value,
-    '--neutral-900': inputs.n900.value,
-    '--neutral-700': inputs.n700.value,
-    '--neutral-400': inputs.n400.value,
-    '--neutral-100': inputs.n100.value,
-  };
-}
+  <section>
+    <p style="margin:0 0 0.25rem;"><strong>Emociones de Angie</strong></p>
+    <small>Solo cambia la imagen y frase, no los colores.</small>
+    <div class="row" style="margin-top:0.5rem;">
+      <button class="pill" data-estado="saludo">👋 Saludo</button>
+      <button class="pill" data-estado="feliz">😊 Feliz</button>
+      <button class="pill" data-estado="orando">🙏 Orando</button>
+      <button class="pill" data-estado="enojada">😡 Enojada</button>
+      <button class="pill" data-estado="pensativa">🤔 Pensando</button>
+      <button class="pill" data-estado="llorando">😭 Llorando</button>
+      <button class="pill" data-estado="enamorada">😍 Enamorada</button>
+      <button class="pill" data-estado="cansada">🥱 Cansada</button>
+    </div>
+  </section>
 
-function sync(){
-  const vals = getVals();
-  const root = document.documentElement;
-  Object.entries(vals).forEach(([k,v])=>root.style.setProperty(k,v));
+  <script>
+    const inputs = Array.from(document.querySelectorAll('input[type="color"]'));
+    const btnAplicar = document.getElementById('btnAplicar');
+    const btnReset = document.getElementById('btnReset');
 
-  // CSS
-  document.getElementById('cssVars').value =
-    ':root{\n' + Object.entries(vals).map(([k,v])=>`  ${k}: ${v};`).join('\n') + '\n}';
+    function buildTokens() {
+      const tokens = {};
+      inputs.forEach((i) => {
+        tokens[i.id] = i.value;
+      });
+      return tokens;
+    }
 
-  // JSON tokens (estructura para design)
-  document.getElementById('jsonTokens').value = JSON.stringify({
-    color: {
-      brand: { value: vals['--brand'] },
-      brand2:{ value: vals['--brand-2'] },
-      accent:{ value: vals['--accent'] },
-      neutral: {
-        900:{ value: vals['--neutral-900'] },
-        700:{ value: vals['--neutral-700'] },
-        400:{ value: vals['--neutral-400'] },
-        100:{ value: vals['--neutral-100'] },
+    function sendTokens(tokens) {
+      if (!window.parent) return;
+      window.parent.postMessage({ type: 'applyTokens', tokens }, '*');
+      // Guardar solo para la herramienta
+      localStorage.setItem('angie_tokens_ui', JSON.stringify(tokens));
+    }
+
+    function syncTokens() {
+      const tokens = buildTokens();
+      sendTokens(tokens);
+    }
+
+    inputs.forEach((i) => {
+      i.addEventListener('input', syncTokens);
+    });
+
+    btnAplicar?.addEventListener('click', syncTokens);
+
+    btnReset?.addEventListener('click', () => {
+      document.getElementById('brand').value = '#2563eb';
+      document.getElementById('brand2').value = '#1d4ed8';
+      document.getElementById('accent').value = '#ec4899';
+      document.getElementById('neutral900').value = '#0f172a';
+      document.getElementById('neutral700').value = '#374151';
+      document.getElementById('neutral400').value = '#9ca3af';
+      document.getElementById('neutral100').value = '#f3f4f6';
+      syncTokens();
+    });
+
+    // Emociones de Angie -> avisar al padre
+    document.querySelectorAll('[data-estado]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const value = btn.dataset.estado;
+        if (!window.parent) return;
+        window.parent.postMessage({ type: 'angieEstado', value }, '*');
+      });
+    });
+
+    // Restaurar últimos colores usados en esta herramienta
+    (function restore() {
+      try {
+        const saved = localStorage.getItem('angie_tokens_ui');
+        if (!saved) return;
+        const tokens = JSON.parse(saved);
+        inputs.forEach((i) => {
+          if (tokens[i.id]) i.value = tokens[i.id];
+        });
+      } catch (e) {
+        console.error(e);
       }
-    }
-  }, null, 2);
-
-  renderSwatches(vals);
-
-  // Guardar últimos valores localmente (para que Angie recuerde)
-  localStorage.setItem('angie_last_palette', JSON.stringify(vals));
-}
-
-function renderSwatches(vals){
-  const c = document.getElementById('swatches');
-  c.innerHTML='';
-  Object.entries(vals).forEach(([k,v])=>{
-    const el = document.createElement('div');
-    el.className='swatch';
-    el.innerHTML = `<div class="box" style="background:${v}"></div>
-      <div class="meta"><strong>${k}</strong><code>${v}</code></div>`;
-    c.appendChild(el);
-  });
-}
-
-// Listeners de inputs
-Object.values(inputs).forEach(i=>i.addEventListener('input',sync));
-
-// Perfiles rápidos
-const presets = {
-  chicos: {
-    '--brand':'#2563eb',
-    '--brand-2':'#1d4ed8',
-    '--accent':'#60a5fa',
-    '--neutral-900':'#050816',
-    '--neutral-700':'#0f172a',
-    '--neutral-400':'#9ca3af',
-    '--neutral-100':'#f3f4f6',
-  },
-  chicas: {
-    '--brand':'#ec4899',
-    '--brand-2':'#db2777',
-    '--accent':'#f97316',
-    '--neutral-900':'#3b0d1f',
-    '--neutral-700':'#4a044e',
-    '--neutral-400':'#f9a8d4',
-    '--neutral-100':'#fdf2f8',
-  },
-  mix: {
-    '--brand':'#2563eb',
-    '--brand-2':'#1d4ed8',
-    '--accent':'#ec4899',
-    '--neutral-900':'#050816',
-    '--neutral-700':'#111827',
-    '--neutral-400':'#e5e7eb',
-    '--neutral-100':'#f9fafb',
-  },
-  oscuro:{
-    '--brand':'#0ea5e9',
-    '--brand-2':'#6366f1',
-    '--accent':'#f97316',
-    '--neutral-900':'#020617',
-    '--neutral-700':'#0b1120',
-    '--neutral-400':'#64748b',
-    '--neutral-100':'#111827',
-  },
-  evento:{
-    '--brand':'#22c55e',
-    '--brand-2':'#16a34a',
-    '--accent':'#eab308',
-    '--neutral-900':'#022c22',
-    '--neutral-700':'#064e3b',
-    '--neutral-400':'#a3e635',
-    '--neutral-100':'#ecfccb',
-  }
-};
-
-document.querySelectorAll('[data-preset]').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    const key = btn.dataset.preset;
-    const vals = presets[key];
-    if(!vals) return;
-    // aplicar a los inputs
-    inputs.brand.value = vals['--brand'];
-    inputs.brand2.value = vals['--brand-2'];
-    inputs.accent.value = vals['--accent'];
-    inputs.n900.value = vals['--neutral-900'];
-    inputs.n700.value = vals['--neutral-700'];
-    inputs.n400.value = vals['--neutral-400'];
-    inputs.n100.value = vals['--neutral-100'];
-    sync();
-  });
-});
-
-// Restaurar última paleta usada en Angie
-(function restoreLast(){
-  const raw = localStorage.getItem('angie_last_palette');
-  if(!raw) { sync(); return; }
-  try{
-    const vals = JSON.parse(raw);
-    if(vals['--brand']) inputs.brand.value = vals['--brand'];
-    if(vals['--brand-2']) inputs.brand2.value = vals['--brand-2'];
-    if(vals['--accent']) inputs.accent.value = vals['--accent'];
-    if(vals['--neutral-900']) inputs.n900.value = vals['--neutral-900'];
-    if(vals['--neutral-700']) inputs.n700.value = vals['--neutral-700'];
-    if(vals['--neutral-400']) inputs.n400.value = vals['--neutral-400'];
-    if(vals['--neutral-100']) inputs.n100.value = vals['--neutral-100'];
-  }catch(e){}
-  sync();
-})();
-
-// Copiar
-document.getElementById('copyCss').onclick = () => {
-  navigator.clipboard.writeText(document.getElementById('cssVars').value);
-  alert('Variables CSS copiadas.');
-};
-document.getElementById('copyJson').onclick = () => {
-  navigator.clipboard.writeText(document.getElementById('jsonTokens').value);
-  alert('Tokens JSON copiados.');
-};
-
-// Aplicar en la app (enviar tokens al padre)
-const statusMsg = document.getElementById('statusMsg');
-document.getElementById('applyApp').onclick = () => {
-  const vals = getVals();
-  const tokens = {
-    brand: vals['--brand'],
-    brand2: vals['--brand-2'],
-    accent: vals['--accent'],
-    neutral900: vals['--neutral-900'],
-    neutral700: vals['--neutral-700'],
-    neutral400: vals['--neutral-400'],
-    neutral100: vals['--neutral-100'],
-  };
-  try{
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ type: 'jc-apply-tokens', tokens }, '*');
-      statusMsg.textContent = 'Paleta enviada a Juventud CNC. Revisa la app para ver los cambios.';
-    } else {
-      statusMsg.textContent = 'No se detectó app padre. Usa esta herramienta dentro de Juventud CNC.';
-    }
-  } catch (e){
-    console.error(e);
-    statusMsg.textContent = 'Error al intentar enviar la paleta a la app.';
-  }
-};
-</script>
+    })();
+  </script>
 </body>
 </html>

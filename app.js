@@ -766,44 +766,31 @@ const ANGIE_ESTADOS = {
 
 function angieSetEstado(tipo) {
   const widget = document.getElementById('angieWidget');
-  const imgEl = widget?.querySelector('.angie-avatar img, .angie-avatar');
+  if (!widget) return;
+
+  const imgEl = widget.querySelector('.angie-avatar img');
   const textEl = document.getElementById('angieText');
+  if (!textEl) return;
 
-  const estado = ANGIE_ESTADOS[tipo];
-  if (!widget || !textEl || !estado) return;
-  if (typeof angieSetEstado === 'function') {
-    if (tab === 'inicio' || tab === 'home') {
-      angieSetEstado('feliz');
-    } else if (tab === 'eventos') {
-      angieSetEstado('sorprendida');
-    } else if (tab === 'comunidad') {
-      angieSetEstado('saludo');
-    } else if (tab === 'recursos') {
-      angieSetEstado('confundida');
-    } else if (tab === 'perfil') {
-      angieSetEstado('vergonzosa');
-    } else if (tab === 'avisos') {
-      angieSetEstado('traviesa');
-    }
-  }
-}
-
+  // Tomar el estado pedido o caer en "feliz" si no existe
+  const estado = ANGIE_ESTADOS[tipo] || ANGIE_ESTADOS.feliz;
   const frases = estado.frases || [];
+
   const frase =
     frases.length > 0
       ? frases[Math.floor(Math.random() * frases.length)]
       : 'Hola 👋';
 
-  if (imgEl) {
-    // si es <img>, cambia src; si es div de fondo, podrías usar background-image
-    if (imgEl.tagName === 'IMG') {
-      imgEl.src = estado.img;
-    }
+  if (imgEl && estado.img) {
+    imgEl.src = estado.img;
   }
 
   textEl.textContent = frase;
   widget.classList.add('angie-widget--visible');
+}
 
+// Hacer accesible desde otros scripts (iframe, etc.)
+window.angieSetEstado = angieSetEstado;
 
 // ====== Angie animada traviesa ======
 (function initAngieTraviesa() {
@@ -902,15 +889,15 @@ function angieSetEstado(tipo) {
   }
 
   function ocultarAngie() {
-    widget.classList.remove('angie-widget--visible');
-    widget.classLi  .remove('angie-widget--wiggle');
+  widget.classList.remove('angie-widget--visible');
+  widget.classList.remove('angie-widget--wiggle');
 
-    // Se oculta por 30 minutos
-    localStorage.setItem(
-      STORAGE_KEY_HIDE,
-      String(Date.now() + 30 * 60 * 1000)
-    );
-  }
+  // Se oculta por 30 minutos
+  localStorage.setItem(
+    STORAGE_KEY_HIDE,
+    String(Date.now() + 30 * 60 * 1000)
+  );
+}
 
   btnClose?.addEventListener('click', ocultarAngie);
 
@@ -1019,80 +1006,106 @@ formEvento?.addEventListener('submit', async e => {
   }
 });
 
-/* ==========================
+/*/* ==========================
    ANGIE: Expresiones + Paleta
    ========================== */
 
-window.ANGIE_ESTADOS = {
+const ANGIE_ESTADOS = {
   feliz: {
-    img: "assets/angie-feliz-saludo.png",
+    img: 'assets/angie-feliz-saludo.png',
     frases: [
-      "¡Holaaa! Qué bueno verte 😄",
-      "Hoy puede ser un buen día 💫",
-      "Me alegra que estés aquí 💙"
+      '¡Holaaa! Qué bueno verte 😄',
+      'Hoy puede ser un buen día 💫',
+      'Me alegra que estés aquí 💙'
     ]
   },
+
   saludo: {
-    img: "assets/angie-sonrisa-saludo.png",
+    img: 'assets/angie-sonrisa-saludo.png',
     frases: [
-      "¿Listo para empezar algo épico?",
-      "¡Hey! Pasa, siéntete en casa 😌"
+      '¿Listo para empezar algo épico?',
+      '¡Hey! Pasa, siéntete en casa 😌'
     ]
   },
+
+  rezando: {
+    img: 'assets/angie-rezando.png',
+    frases: [
+      'Hagamos una pausa cortita para ofrecerle esto a Dios 🙏',
+      'Cuando no sepas qué hacer, reza un poquito y seguimos.',
+      'No estás solo, siempre podemos poner esto en manos del Señor. 🙏'
+    ]
+  },
+
   traviesa: {
-    img: "assets/angie-traviesa.png",
+    img: 'assets/angie-traviesa.png',
     frases: [
-      "Sé que tramas algo 👀",
-      "Yo también tengo ideas locas 😏"
+      'Mmm… sé que estás tramando algo, cuéntame 👀',
+      'Yo también tengo ideas locas a veces, tranqui 😏'
     ]
   },
+
   confundida: {
-    img: "assets/angie-confundida.png",
+    img: 'assets/angie-confundida.png',
     frases: [
-      "No entendí mucho… pero podemos verlo juntos 🤔",
-      "Pregunta sin miedo 💛"
+      'No entendí mucho, pero podemos verlo juntos 🤔',
+      'Si algo no te queda claro, pregunta. Aquí nadie nace sabiendo 💛'
     ]
   },
+
   enojada: {
-    img: "assets/angie-enojada.png",
+    img: 'assets/angie-enojada.png',
     frases: [
-      "¡Oye! Eso no estuvo bien 😤",
-      "Respira… lo hablamos mejor, ¿sí?"
+      '¡Oye! Eso no estuvo bien 😤',
+      'Respira profundo… lo hablamos mejor, ¿sí?'
     ]
   },
+
   llorando: {
-    img: "assets/angie-llorando.png",
+    img: 'assets/angie-llorando.png',
     frases: [
-      "Si hoy dolió, mañana sanará 💔",
-      "Puedes llorar y aun así ser fuerte 💧"
+      'Si hoy dolió, mañana puede sanar 💔',
+      'Puedes llorar y aún así ser fuerte 💧'
     ]
   },
+
   enamorada: {
-    img: "assets/angie-enamorada.png",
+    img: 'assets/angie-enamorada.png',
     frases: [
-      "Ayyy qué bonito 😍",
-      "El corazón también sabe hablar 💗"
+      'Ayyy qué bonito 😍',
+      'El corazón también sabe hablar 💗'
     ]
   },
+
   sorprendida: {
-    img: "assets/angie-sorprendida.png",
+    img: 'assets/angie-sorprendida.png',
     frases: [
-      "¿EN SERIO? 😲",
-      "Wow, no me esperaba eso"
+      '¿EN SERIO? 😲',
+      'Wow, no me esperaba eso 👀'
     ]
   },
-  ok: {
-    img: "assets/angie-ok.png",
+
+  vergonzosa: {
+    img: 'assets/angie-vergonzosa.png',
     frases: [
-      "¡Buen trabajo! 👍",
-      "Estoy orgullosa de ti ✨"
+      'Yo también soy tímida a veces, te entiendo 🙈',
+      'Tranquilo, nadie te va a juzgar aquí 💗'
     ]
   },
+
   cansada: {
-    img: "assets/angie-cansada.png",
+    img: 'assets/angie-cansada.png',
     frases: [
-      "Uf… también puedes descansar 😮‍💨",
-      "Un respiro y seguimos"
+      'Uf… también puedes descansar 😮‍💨',
+      'Un respiro y seguimos, ¿trato hecho?'
+    ]
+  },
+
+  ok: {
+    img: 'assets/angie-ok.png',
+    frases: [
+      '¡Buen trabajo! 👍',
+      'Estoy orgullosa de ti ✨'
     ]
   }
 };
