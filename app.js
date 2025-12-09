@@ -859,47 +859,7 @@ window.angieSetEstado = angieSetEstado;
   setTimeout(saludoInicial, 2000);
 })();
 
-/* ==========================
-   ANGIE: Cambiar según sección
-   ========================== */
-
-function angieSegunVista(tab) {
-  if (!window.angieSetEstado) return;
-
-  const mapa = {
-    inicio: 'feliz',
-    eventos: 'sorprendida',
-    comunidad: 'saludo',
-    recursos: 'confundida',
-    avisos: 'traviesa',
-    'miembros-activos': 'ok',
-    perfil: 'vergonzosa'
-  };
-
-  window.angieSetEstado(mapa[tab] || 'feliz');
-}
-
-const originalActivate = window.activate || activate;
-window.activate = function (tab) {
-  originalActivate(tab);
-  const t = typeof tab === 'string' ? tab : tab?.dataset?.tab;
-  if (t) angieSegunVista(t);
-};
-
-/* ==========================
-   APLICAR TOKENS VISUALES
-   ========================== */
-window.jcApplyTokens = function (tokens) {
-  if (!tokens) return;
-  const root = document.documentElement;
-
-  Object.entries(tokens).forEach(([key, value]) => {
-    root.style.setProperty(key, value);
-  });
-
-  // Dar feedback visual con Angie
-  window.angieSetEstado('feliz');
-};
+  
   
 // ====== Crear nuevo evento (form) ======
 const formEvento = document.getElementById('formEvento');
