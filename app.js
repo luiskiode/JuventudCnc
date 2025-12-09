@@ -554,6 +554,37 @@ async function cargarPublic() {
   }
 }
 
+/* ==========================
+   RENDERIZAR RECURSOS PÚBLICOS
+   ========================== */
+
+function listarRecursos(lista) {
+  const contenedor = document.getElementById("listaRecursos");
+  if (!contenedor) return;
+
+  if (!lista || lista.length === 0) {
+    contenedor.innerHTML = `
+      <p class="texto-mutedo">Aún no hay recursos subidos.</p>
+    `;
+    return;
+  }
+
+  contenedor.innerHTML = lista
+    .map((item) => {
+      return `
+        <div class="recurso-item">
+          <div class="recurso-info">
+            <p class="recurso-nombre">${item.nombre}</p>
+            <p class="recurso-fecha">${new Date(item.created_at).toLocaleDateString()}</p>
+          </div>
+          <a class="btn-descargar" href="${item.url}" target="_blank">Descargar</a>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+
 // ====== Auth (Supabase) y roles ======
 if (sb?.auth?.onAuthStateChange) {
   sb.auth.onAuthStateChange(async (_event, session) => {
