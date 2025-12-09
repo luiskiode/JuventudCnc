@@ -404,12 +404,13 @@
   <script src="app.js" defer></script>
 
   <!-- Control Angie + tema + tokens + Supabase -->
-  <script>
+ <script>
 (function () {
   const panel = document.getElementById("angie-panel");
   const btn = document.getElementById("btnAngie");
   const closeBtn = document.getElementById("closeAngiePanel");
   const overlay = document.getElementById("overlay");
+  const themePicker = document.getElementById("themePicker");  // 👈 ESTA LÍNEA FALTABA
 
   function openPanel() {
     panel?.classList.add("open");
@@ -446,152 +447,150 @@
     }
   });
 
+  // Atajo: Ctrl+Alt+A abre/cierra Angie
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'a') {
+      if (panel?.classList.contains('open')) closePanel();
+      else openPanel();
+    }
+    if (e.key === 'Escape' && panel?.classList.contains('open')) {
+      closePanel();
+    }
+  });
 
-      // Atajo: Ctrl+Alt+A abre/cierra Angie
-      window.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'a') {
-          if (panel?.classList.contains('open')) closePanel();
-          else openPanel();
-        }
-        if (e.key === 'Escape' && panel?.classList.contains('open')) {
-          closePanel();
-        }
-      });
+  // Abrir Angie con ?angie=1
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('angie')) {
+    openPanel();
+  }
 
-      // Abrir Angie con ?angie=1
-      const params = new URLSearchParams(window.location.search);
-      if (params.has('angie')) {
-        openPanel();
-      }
+  // ========= APLICAR TOKENS =========
+  function applyTokens(tokens) {
+    if (!tokens || typeof tokens !== 'object') return;
+    const root = document.documentElement;
 
-      // ========= APLICAR TOKENS =========
-      function applyTokens(tokens) {
-        if (!tokens || typeof tokens !== 'object') return;
-        const root = document.documentElement;
+    if (tokens.brand) {
+      root.style.setProperty('--brand', tokens.brand);
+      root.style.setProperty('--guy-main', tokens.brand);
+    }
+    if (tokens.brand2) {
+      root.style.setProperty('--brand-2', tokens.brand2);
+    }
+    if (tokens.accent) {
+      root.style.setProperty('--accent', tokens.accent);
+      root.style.setProperty('--girl-main', tokens.accent);
+    }
+    if (tokens.neutral900) root.style.setProperty('--neutral-900', tokens.neutral900);
+    if (tokens.neutral700) root.style.setProperty('--neutral-700', tokens.neutral700);
+    if (tokens.neutral400) root.style.setProperty('--neutral-400', tokens.neutral400);
+    if (tokens.neutral100) root.style.setProperty('--neutral-100', tokens.neutral100);
+  }
 
-        if (tokens.brand) {
-          root.style.setProperty('--brand', tokens.brand);
-          root.style.setProperty('--guy-main', tokens.brand);
-        }
-        if (tokens.brand2) {
-          root.style.setProperty('--brand-2', tokens.brand2);
-        }
-        if (tokens.accent) {
-          root.style.setProperty('--accent', tokens.accent);
-          root.style.setProperty('--girl-main', tokens.accent);
-        }
-        if (tokens.neutral900) root.style.setProperty('--neutral-900', tokens.neutral900);
-        if (tokens.neutral700) root.style.setProperty('--neutral-700', tokens.neutral700);
-        if (tokens.neutral400) root.style.setProperty('--neutral-400', tokens.neutral400);
-        if (tokens.neutral100) root.style.setProperty('--neutral-100', tokens.neutral100);
-      }
+  // Hacer accesible para otros scripts
+  window.jcApplyTokens = applyTokens;
 
-      // Hacer accesible para otros scripts (app.js si lo necesitas)
-      window.jcApplyTokens = applyTokens;
+  // ========= AUTO-RESTABLECER PALETA GUARDADA =========
+  (function restoreTokensOnLoad() {
+    const saved = localStorage.getItem('jc_tokens');
+    if (!saved) return;
+    try {
+      const tokens = JSON.parse(saved);
+      applyTokens(tokens);
+      console.log('💾 Paleta personalizada restaurada desde localStorage.');
+    } catch (e) {
+      console.error('Error cargando jc_tokens:', e);
+    }
+  })();
 
-      // ========= AUTO-RESTABLECER PALETA GUARDADA =========
-      (function restoreTokensOnLoad() {
-        const saved = localStorage.getItem('jc_tokens');
-        if (!saved) return;
+  // ========= SELECTOR DE TEMA (chicos/chicas/mix/auto) =========
+  function applyThemeMode(mode) {
+    const root = document.documentElement;
+    if (mode === 'chicos') {
+      root.style.setProperty('--brand', '#2563eb');
+      root.style.setProperty('--brand-2', '#1d4ed8');
+      root.style.setProperty('--accent', '#60a5fa');
+      root.style.setProperty('--guy-main', '#2563eb');
+      root.style.setProperty('--girl-main', '#60a5fa');
+      localStorage.setItem('jc_theme_mode', 'chicos');
+    } else if (mode === 'chicas') {
+      root.style.setProperty('--brand', '#ec4899');
+      root.style.setProperty('--brand-2', '#db2777');
+      root.style.setProperty('--accent', '#f97316');
+      root.style.setProperty('--guy-main', '#ec4899');
+      root.style.setProperty('--girl-main', '#f97316');
+      localStorage.setItem('jc_theme_mode', 'chicas');
+    } else if (mode === 'mix') {
+      root.style.setProperty('--brand', '#2563eb');
+      root.style.setProperty('--brand-2', '#1d4ed8');
+      root.style.setProperty('--accent', '#ec4899');
+      root.style.setProperty('--guy-main', '#2563eb');
+      root.style.setProperty('--girl-main', '#ec4899');
+      localStorage.setItem('jc_theme_mode', 'mix');
+    } else {
+      // auto = respetar lo que esté en tokens
+      localStorage.setItem('jc_theme_mode', 'auto');
+    }
+  }
+
+  const savedMode = localStorage.getItem('jc_theme_mode') || 'auto';
+  if (themePicker) {
+    themePicker.value = savedMode;
+    if (savedMode !== 'auto') applyThemeMode(savedMode);
+    themePicker.addEventListener('change', (e) => {
+      applyThemeMode(e.target.value);
+    });
+  } else {
+    if (savedMode !== 'auto') applyThemeMode(savedMode);
+  }
+
+  // ========= ESCUCHAR A ANGIE Y GUARDAR EN SUPABASE =========
+  window.addEventListener('message', async (event) => {
+    const data = event.data;
+    if (!data || data.type !== 'jc-apply-tokens') return;
+
+    try {
+      const tokens = data.tokens;
+      if (!tokens || typeof tokens !== 'object') return;
+
+      // Guardar en localStorage
+      localStorage.setItem('jc_tokens', JSON.stringify(tokens));
+
+      // Aplicar directamente
+      applyTokens(tokens);
+
+      // Guardar en Supabase por usuario (si hay sesión)
+      const sb = window.supabaseClient;
+      if (sb && sb.auth) {
         try {
-          const tokens = JSON.parse(saved);
-          applyTokens(tokens);
-          console.log('💾 Paleta personalizada restaurada desde localStorage.');
-        } catch (e) {
-          console.error('Error cargando jc_tokens:', e);
-        }
-      })();
+          const { data: userRes, error: authErr } = await sb.auth.getUser();
+          if (!authErr && userRes?.user?.id) {
+            const uid = userRes.user.id;
+            const modo = localStorage.getItem('jc_theme_mode') || 'personalizado';
 
-      // ========= SELECTOR DE TEMA (chicos/chicas/mix/auto) =========
-      function applyThemeMode(mode) {
-        const root = document.documentElement;
-        if (mode === 'chicos') {
-          root.style.setProperty('--brand', '#2563eb');
-          root.style.setProperty('--brand-2', '#1d4ed8');
-          root.style.setProperty('--accent', '#60a5fa');
-          root.style.setProperty('--guy-main', '#2563eb');
-          root.style.setProperty('--girl-main', '#60a5fa');
-          localStorage.setItem('jc_theme_mode', 'chicos');
-        } else if (mode === 'chicas') {
-          root.style.setProperty('--brand', '#ec4899');
-          root.style.setProperty('--brand-2', '#db2777');
-          root.style.setProperty('--accent', '#f97316');
-          root.style.setProperty('--guy-main', '#ec4899');
-          root.style.setProperty('--girl-main', '#f97316');
-          localStorage.setItem('jc_theme_mode', 'chicas');
-        } else if (mode === 'mix') {
-          root.style.setProperty('--brand', '#2563eb');
-          root.style.setProperty('--brand-2', '#1d4ed8');
-          root.style.setProperty('--accent', '#ec4899');
-          root.style.setProperty('--guy-main', '#2563eb');
-          root.style.setProperty('--girl-main', '#ec4899');
-          localStorage.setItem('jc_theme_mode', 'mix');
-        } else {
-          // auto = respetar lo que esté en tokens
-          localStorage.setItem('jc_theme_mode', 'auto');
-        }
-      }
-
-      const savedMode = localStorage.getItem('jc_theme_mode') || 'auto';
-      if (themePicker) {
-        themePicker.value = savedMode;
-        if (savedMode !== 'auto') applyThemeMode(savedMode);
-        themePicker.addEventListener('change', (e) => {
-          applyThemeMode(e.target.value);
-        });
-      } else {
-        if (savedMode !== 'auto') applyThemeMode(savedMode);
-      }
-
-      // ========= ESCUCHAR A ANGIE Y GUARDAR EN SUPABASE =========
-      window.addEventListener('message', async (event) => {
-        const data = event.data;
-        if (!data || data.type !== 'jc-apply-tokens') return;
-
-        try {
-          const tokens = data.tokens;
-          if (!tokens || typeof tokens !== 'object') return;
-
-          // Guardar en localStorage
-          localStorage.setItem('jc_tokens', JSON.stringify(tokens));
-
-          // Aplicar directamente
-          applyTokens(tokens);
-
-          // Guardar en Supabase por usuario (si hay sesión)
-          const sb = window.supabaseClient;
-          if (sb && sb.auth) {
-            try {
-              const { data: userRes, error: authErr } = await sb.auth.getUser();
-              if (!authErr && userRes?.user?.id) {
-                const uid = userRes.user.id;
-                const modo = localStorage.getItem('jc_theme_mode') || 'personalizado';
-
-                await sb
-                  .from('paletas_usuarios') // crea esta tabla en Supabase
-                  .upsert(
-                    {
-                      user_id: uid,
-                      tokens,
-                      modo,
-                      updated_at: new Date().toISOString()
-                    },
-                    { onConflict: 'user_id' }
-                  );
-              }
-            } catch (e) {
-              console.error('Error guardando paleta en Supabase:', e);
-            }
+            await sb
+              .from('paletas_usuarios')
+              .upsert(
+                {
+                  user_id: uid,
+                  tokens,
+                  modo,
+                  updated_at: new Date().toISOString()
+                },
+                { onConflict: 'user_id' }
+              );
           }
-
-          alert('Paleta aplicada a Juventud CNC. Los cambios deberían verse de inmediato.');
-
         } catch (e) {
-          console.error('Error aplicando tokens de Angie:', e);
+          console.error('Error guardando paleta en Supabase:', e);
         }
-      });
-    })();
-  </script>
+      }
+
+      alert('Paleta aplicada a Juventud CNC. Los cambios deberían verse de inmediato.');
+    } catch (e) {
+      console.error('Error aplicando tokens de Angie:', e);
+    }
+  });
+})();
+</script>
 
   <script>
     // Mostrar botón de "Instalar app" cuando el navegador lo permita

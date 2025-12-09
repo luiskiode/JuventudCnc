@@ -1,6 +1,6 @@
 :root {
   /* Base neutrales */
-  --neutral-900: #050816;
+  --neutral-900: #020617;
   --neutral-800: #0b1020;
   --neutral-700: #111827;
   --neutral-600: #1f2937;
@@ -11,6 +11,8 @@
   /* Texto */
   --text-main: #f9fafb;
   --text-muted: #9ca3af;
+  --muted: var(--text-muted);
+  --text-100: var(--neutral-100);
 
   /* Tokens dinámicos modificables por Angie */
   --brand: #2563eb;      /* color principal */
@@ -18,21 +20,38 @@
   --accent: #ec4899;     /* acento */
   --accent-2: #f97316;   /* acento cálido */
 
-  /* Para fondos y tarjetas */
-  --card-bg: rgba(15,23,42,0.95);
-  --card-border: rgba(148,163,184,0.28);
-  --card-soft: rgba(255,255,255,0.05);
+  /* Paleta “chico / chica” para botones, badges y Angie */
+  --guy-main: #38bdf8;
+  --guy-soft: rgba(56, 189, 248, 0.16);
+  --girl-main: #f472b6;
+  --girl-soft: rgba(244, 114, 182, 0.18);
 
-  /* Para botones */
+  /* Para fondos y tarjetas */
+  --card-bg: rgba(15, 23, 42, 0.95);
+  --card-border: rgba(148, 163, 184, 0.28);
+  --card-soft: rgba(255, 255, 255, 0.05);
+
+  /* Botones */
   --btn-bg-1: var(--brand);
   --btn-bg-2: var(--accent);
   --btn-text: #ffffff;
+  --btn-radius: 999px;
+  --btn-px: 14px;
+  --btn-py: 8px;
+  --btn-fw: 600;
 
-  /* Para badges */
-  --badge-bg: var(--card-soft);
-  --badge-text: var(--text-main);
+  /* Radios / sombras */
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+  --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.7);
+}
 
-  /* Angie podrá manipular todos estos */
+/* Estilo base del body (para que no se vea “lavado”) */
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top, #020617, #020617 40%, #000);
+  color: var(--text-main);
 }
 
 /* ===========================
@@ -591,84 +610,7 @@ input::placeholder {
   cursor: pointer;
 }
 
-/* ===== Perfil / Mi perfil ===== */
-.perfil-card{
-  display:flex;
-  flex-direction:column;
-  gap:18px;
-}
 
-.perfil-header{
-  display:flex;
-  flex-wrap:wrap;
-  gap:16px;
-  align-items:center;
-}
-
-.perfil-avatar-wrapper{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:8px;
-}
-
-.perfil-avatar{
-  width:96px;
-  height:96px;
-  border-radius:999px;
-  background: radial-gradient(circle at 30% 20%, rgba(96,165,250,.9), rgba(15,23,42,1));
-  position:relative;
-  overflow:hidden;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow: 0 10px 24px rgba(0,0,0,.55);
-}
-
-.perfil-avatar span{
-  font-size:42px;
-}
-
-.perfil-avatar img{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:none; /* se activará con JS al tener foto */
-}
-
-.perfil-foto-btn{
-  background:transparent;
-  border:1px dashed rgba(148,163,184,.7);
-  padding-inline:12px;
-}
-
-.perfil-header-text{
-  flex:1;
-  min-width:200px;
-}
-
-.perfil-subtext{
-  margin:4px 0 0;
-  color:var(--muted);
-  font-size:13px;
-}
-
-.perfil-form{
-  margin-top:8px;
-}
-
-.perfil-form textarea{
-  resize:vertical;
-  min-height:80px;
-}
-
-.perfil-hint{
-  margin-top:6px;
-  font-size:12px;
-  color:var(--muted);
-}
 /* ==== PERFIL ==== */
 
 .perfil-card {
@@ -942,15 +884,7 @@ input::placeholder {
 }
 
 /* En pantallas muy pequeñas, moverla un poco */
-@media (max-width: 480px){
-  .angie-widget{
-    right:10px;
-    bottom:88px;
-  }
-}
-.angie-widget { opacity:0; transform: translateY(20px); transition:0.4s; }
-.angie-widget--visible { opacity:1; transform:translateY(0); }
-.angie-widget--wiggle { animation: wiggle 0.3s ease-in-out infinite alternate; }
+
 
 @keyframes wiggle {
   0% { transform: rotate(-2deg); }
