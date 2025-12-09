@@ -1,35 +1,35 @@
 :root {
   /* Base neutrales */
   --neutral-900: #020617;
-  --neutral-800: #0b1020;
-  --neutral-700: #111827;
-  --neutral-600: #1f2937;
+  --neutral-800: #020617;
+  --neutral-700: #0b1120;
+  --neutral-600: #111827;
   --neutral-400: #9ca3af;
   --neutral-200: #e5e7eb;
   --neutral-100: #f3f4f6;
 
-  /* Texto */
-  --text-main: #f9fafb;
+  /* Texto (más suave) */
+  --text-main: #e5e7eb;
   --text-muted: #9ca3af;
   --muted: var(--text-muted);
   --text-100: var(--neutral-100);
 
   /* Tokens dinámicos modificables por Angie */
-  --brand: #2563eb;      /* color principal */
+  --brand: #2563eb;      /* color principal (azul suave) */
   --brand-2: #1d4ed8;    /* secundario */
-  --accent: #ec4899;     /* acento */
+  --accent: #ec4899;     /* acento rosado */
   --accent-2: #f97316;   /* acento cálido */
 
   /* Paleta “chico / chica” para botones, badges y Angie */
   --guy-main: #38bdf8;
-  --guy-soft: rgba(56, 189, 248, 0.16);
+  --guy-soft: rgba(56, 189, 248, 0.18);
   --girl-main: #f472b6;
-  --girl-soft: rgba(244, 114, 182, 0.18);
+  --girl-soft: rgba(244, 114, 182, 0.22);
 
-  /* Para fondos y tarjetas */
-  --card-bg: rgba(15, 23, 42, 0.95);
-  --card-border: rgba(148, 163, 184, 0.28);
-  --card-soft: rgba(255, 255, 255, 0.05);
+  /* Para fondos y tarjetas (suavemente translúcidos) */
+  --card-bg: rgba(15, 23, 42, 0.9);
+  --card-border: rgba(148, 163, 184, 0.3);
+  --card-soft: rgba(15, 23, 42, 0.4);
 
   /* Botones */
   --btn-bg-1: var(--brand);
@@ -38,20 +38,66 @@
   --btn-radius: 999px;
   --btn-px: 14px;
   --btn-py: 8px;
-  --btn-fw: 600;
+  --btn-fw: 500; /* menos pesado, letras más suaves */
 
   /* Radios / sombras */
   --radius-lg: 18px;
   --radius-pill: 999px;
-  --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.7);
+  --shadow-soft: 0 20px 45px rgba(15, 23, 42, 0.85);
 }
 
 /* Estilo base del body (para que no se vea “lavado”) */
+html {
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
 body {
   margin: 0;
+  min-height: 100vh;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: radial-gradient(circle at top, #020617, #020617 40%, #000);
   color: var(--text-main);
+  background: #020617;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Fondo animado tipo Caritas */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -40px;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.18), transparent 55%),
+    radial-gradient(circle at 100% 0%, rgba(244, 114, 182, 0.22), transparent 55%),
+    radial-gradient(circle at 0% 100%, rgba(59, 130, 246, 0.2), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(34, 197, 94, 0.16), transparent 55%),
+    linear-gradient(135deg, #020617, #020617 40%, #000);
+  filter: saturate(1.2);
+  animation: bg-orbita 26s ease-in-out infinite alternate;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.95));
+}
+
+/* animación suave del fondo */
+@keyframes bg-orbita {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-40px, 20px, 0) scale(1.05);
+  }
+  100% {
+    transform: translate3d(40px, -30px, 0) scale(1.08);
+  }
 }
 
 /* ===========================
@@ -218,6 +264,19 @@ p {
 
 .muted {
   color: var(--text-muted);
+}
+p,
+li,
+span,
+.small,
+.texto-normal {
+  font-weight: 400;
+}
+
+/* títulos un poco más finos */
+h1, h2, h3 {
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .link {
