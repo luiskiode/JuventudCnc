@@ -960,6 +960,170 @@ input::placeholder {
   background: rgba(30, 64, 175, 0.85);
   border-color: rgba(191, 219, 254, 0.9);
 }
+/* ================== CHAT JUVENTUD CNC (tipo WhatsApp) ================== */
 
+.jc-chat {
+  position: fixed;
+  left: 12px;
+  bottom: 86px; /* por encima de las tabs */
+  width: 270px;
+  max-height: 260px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 23, 42, 0.97);
+  border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  overflow: hidden;
+  z-index: 68;
+  font-size: 11px;
+}
+
+.jc-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 9px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.18),
+    rgba(244, 114, 182, 0.18)
+  );
+}
+
+.jc-chat-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.dot-online {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+}
+
+.jc-chat-toggle {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.jc-chat-body {
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+/* Mensaje */
+
+.jc-chat-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.jc-chat-avatar {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0b1120;
+}
+
+.jc-chat-bubble {
+  max-width: 195px;
+  padding: 5px 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.96);
+}
+
+.jc-chat-name {
+  font-weight: 600;
+  margin-bottom: 1px;
+  font-size: 11px;
+}
+
+.jc-chat-text {
+  font-size: 11px;
+}
+
+/* Colores por personaje */
+
+.from-mia .jc-chat-avatar {
+  background: var(--girl-soft);
+  color: #fce7f3;
+}
+
+.from-mia .jc-chat-bubble {
+  border-color: var(--girl-main);
+}
+
+.from-ciro .jc-chat-avatar {
+  background: var(--guy-soft);
+  color: #dbeafe;
+}
+
+.from-ciro .jc-chat-bubble {
+  border-color: var(--guy-main);
+}
+
+.from-angie .jc-chat-avatar {
+  background: rgba(236, 72, 153, 0.25);
+  color: #f9a8d4;
+}
+
+.from-angie .jc-chat-bubble {
+  border-color: var(--accent);
+}
+
+.from-system .jc-chat-avatar {
+  background: rgba(148, 163, 184, 0.4);
+  color: #020617;
+}
+
+.from-system .jc-chat-bubble {
+  border-style: dashed;
+  border-color: rgba(148, 163, 184, 0.7);
+}
+
+/* Modo colapsado */
+
+.jc-chat--collapsed .jc-chat-body {
+  display: none;
+}
+
+.jc-chat--collapsed {
+  max-height: none;
+}
+
+.jc-chat--collapsed .jc-chat-toggle {
+  transform: rotate(180deg);
+}
+
+/* Responsive: en pantallas muy pequeñas, que no estorbe tanto */
+
+@media (max-width: 480px) {
+  .jc-chat {
+    width: 85%;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
 
 

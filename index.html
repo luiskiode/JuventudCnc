@@ -316,6 +316,7 @@
     <!-- RECURSOS -->
     <section class="view" id="view-recursos" data-view="recursos" tabindex="-1">
       <section class="card" id="recursos">
+        <div id="listaRecursos"></div>
         <header class="card-header">
           <h2 class="with-emoji" data-emoji="📂">Recursos</h2>
           <label class="btn small adminOnly" hidden>
@@ -398,6 +399,20 @@
 
 </div>
 
+   <!-- Chat tipo WhatsApp: Angie, Mia y Ciro -->
+  <section class="jc-chat" id="jcChat" aria-label="Chat Juventud CNC">
+    <header class="jc-chat-header">
+      <div class="jc-chat-title">
+        <span class="dot-online"></span>
+        Juventud CNC · Chat
+      </div>
+      <button type="button" id="jcChatToggle" class="jc-chat-toggle" aria-label="Minimizar chat">▾</button>
+    </header>
+
+    <div class="jc-chat-body" id="jcChatBody">
+      <!-- Los mensajes se insertan por JS -->
+    </div>
+  </section>
 
 
   <!-- App principal -->

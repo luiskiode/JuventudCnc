@@ -1023,3 +1023,208 @@ window.jcApplyTokens = function (tokens) {
   // Dar feedback visual con Angie
   window.angieSetEstado("feliz");
 };
+/* ==========================
+   CHAT NOVELA JUVENTUD CNC
+   ========================== */
+
+const jcChatBody = document.getElementById('jcChatBody');
+const jcChatWidget = document.getElementById('jcChat');
+const jcChatToggle = document.getElementById('jcChatToggle');
+
+/**
+ * Config de personajes
+ */
+const JC_CHAR_INFO = {
+  mia:   { name: 'Mia',   initial: 'M'  },
+  ciro:  { name: 'Ciro',  initial: 'C'  },
+  angie: { name: 'Angie', initial: 'A'  },
+  system:{ name: 'Sistema', initial: '★'}
+};
+
+/**
+ * Añade un mensaje al chat
+ * @param {{from: 'mia'|'ciro'|'angie'|'system', text: string, estado?: string}} msg
+ */
+function jcChatAddMessage(msg) {
+  if (!jcChatBody) return;
+
+  const info = JC_CHAR_INFO[msg.from] || JC_CHAR_INFO.system;
+
+  const row = document.createElement('div');
+  row.className = `jc-chat-msg from-${msg.from}`;
+
+  row.innerHTML = `
+    <div class="jc-chat-avatar">${info.initial}</div>
+    <div class="jc-chat-bubble">
+      <div class="jc-chat-name">${info.name}</div>
+      <div class="jc-chat-text">${msg.text}</div>
+    </div>
+  `;
+
+  jcChatBody.appendChild(row);
+  jcChatBody.scrollTop = jcChatBody.scrollHeight;
+
+  // Opcional: sincronizar emociones con otros widgets
+  if (msg.from === 'angie' && typeof window.angieSetEstado === 'function' && msg.estado) {
+    window.angieSetEstado(msg.estado);
+  }
+  // Más adelante puedes conectar aquí a Mia y Ciro si creas sus widgets
+}
+
+/**
+ * Escenas por vista/tab.
+ * Cada escena solo se dispara una vez por sesión.
+ */
+const JC_CHAT_SCENES = {
+  inicio: [
+    {
+      from: 'mia',
+      text: '¡Hola! Soy Mia, coordino Juventud CNC. Qué bueno tenerte por aquí 💗',
+      delay: 400
+    },
+    {
+      from: 'ciro',
+      text: 'Y yo soy Ciro, monaguillo oficial. Si hay algo de servicio, ¡me apunto de una! 😄',
+      delay: 900
+    },
+    {
+      from: 'angie',
+      text: 'Yo soy Angie, me encanta servir y acompañarte en todo esto. ¿Listo para algo épico? ✨',
+      estado: 'feliz',
+      delay: 1400
+    }
+  ],
+
+  eventos: [
+    {
+      from: 'mia',
+      text: 'En esta parte verás los próximos eventos. Revisa qué día puedes sumarte 🙌',
+      delay: 400
+    },
+    {
+      from: 'ciro',
+      text: 'Yo ya marqué la misa del sábado y la convivencia. Si quieres, vamos juntos 💙',
+      delay: 1100
+    },
+    {
+      from: 'angie',
+      text: 'Si creas un evento nuevo, avísame… me encanta llenar la agenda 😏',
+      estado: 'traviesa',
+      delay: 1700
+    }
+  ],
+
+  comunidad: [
+    {
+      from: 'mia',
+      text: 'Aquí se irá armando todo lo de comunidad: noticias, retos y cositas para compartir 💬',
+      delay: 400
+    },
+    {
+      from: 'angie',
+      text: 'Mientras tanto, puedes ir soñando con qué quieres aportar al grupo 😉',
+      estado: 'vergonzosa',
+      delay: 1100
+    }
+  ],
+
+  perfil: [
+    {
+      from: 'mia',
+      text: 'En “Mi perfil” puedes dejar tu nombre y una frase que te represente. Eso nos ayuda a conocerte mejor 📝',
+      delay: 400
+    },
+    {
+      from: 'ciro',
+      text: 'Si pones que quieres ser voluntario digital, prometo no llenar tu WhatsApp de tareas… bueno, intentaré 😂',
+      delay: 1300
+    }
+  ],
+
+  recursos: [
+    {
+      from: 'angie',
+      text: 'Esta parte será como una biblioteca: cantos, guías, materiales. Paciencia, vamos por fases 📂',
+      estado: 'ok',
+      delay: 400
+    },
+    {
+      from: 'mia',
+      text: 'Cuando subas algo, piensa siempre: “¿Ayuda a acercar a alguien a Dios?” 💭',
+      delay: 1200
+    }
+  ],
+
+  avisos: [
+    {
+      from: 'ciro',
+      text: 'Aquí se anuncian las cosas importantes. No lo ignores, que luego dices que nadie te avisó 😌',
+      delay: 400
+    },
+    {
+      from: 'mia',
+      text: 'Tranquilo, no saturaremos. Solo lo necesario para caminar juntos 💗',
+      delay: 1200
+    }
+  ],
+
+  'miembros-activos': [
+    {
+      from: 'angie',
+      text: 'Mira cuánta gente ya está sumándose al equipo. ¡No estamos solos en esto! 👥',
+      estado: 'feliz',
+      delay: 400
+    },
+    {
+      from: 'ciro',
+      text: 'Algún día tendremos que hacer una pizza gigante con todos los nombres de esa lista, te lo juro 🍕',
+      delay: 1200
+    }
+  ]
+};
+
+/**
+ * Reproduce una escena asociada a una vista/tab.
+ * Solo una vez por sesión (usa sessionStorage).
+ */
+function jcChatPlayScene(viewKey) {
+  const scene = JC_CHAT_SCENES[viewKey];
+  if (!scene || !jcChatWidget) return;
+
+  const storageKey = `jc_chat_scene_${viewKey}`;
+  if (sessionStorage.getItem(storageKey) === '1') {
+    return; // ya se mostró esta escena en esta sesión
+  }
+  sessionStorage.setItem(storageKey, '1');
+
+  let totalDelay = 0;
+  scene.forEach(msg => {
+    const stepDelay = typeof msg.delay === 'number' ? msg.delay : 800;
+    totalDelay += stepDelay;
+    setTimeout(() => jcChatAddMessage(msg), totalDelay);
+  });
+}
+
+// Toggle minimizar/maximizar
+jcChatToggle?.addEventListener('click', () => {
+  jcChatWidget?.classList.toggle('jc-chat--collapsed');
+});
+
+/**
+ * Hook: interceptar cambios de pestaña para disparar escenas
+ * Sobrescribimos la función activate original.
+ */
+if (typeof activate === 'function') {
+  const _origActivate = activate;
+  activate = function(tab) {
+    // ejecutar lógica original
+    _origActivate(tab);
+
+    // determinar clave de vista
+    const t = typeof tab === 'string' ? tab : tab?.dataset?.tab;
+    if (t) {
+      jcChatPlayScene(t);
+    }
+  };
+  window.activate = activate;
+}
