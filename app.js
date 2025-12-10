@@ -1228,3 +1228,12 @@ if (typeof activate === 'function') {
   };
   window.activate = activate;
 }
+// ====== Disparar escena inicial del chat al cargar ======
+(function () {
+  if (typeof jcChatPlayScene !== 'function') return;
+  const initialTab = (location.hash || '#inicio').replace('#', '');
+  // pequeño delay para asegurarnos de que el DOM ya está listo
+  setTimeout(() => {
+    jcChatPlayScene(initialTab || 'inicio');
+  }, 600);
+})();
