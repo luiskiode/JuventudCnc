@@ -839,6 +839,56 @@ input::placeholder {
   pointer-events:auto;
 }
 
+/* Widgets adicionales para Mia y Ciro (apilados sobre Angie) */
+
+.mia-widget,
+.ciro-widget {
+  position: fixed;
+  right: 18px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  transform: translateY(140%) scale(.9);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 67; /* un poco por debajo de Angie para que no se crucen raro */
+}
+
+/* Alturas: Ciro arriba, Mia en medio, Angie abajo (ya está en bottom: 86px) */
+.mia-widget {
+  bottom: 230px;
+}
+
+.ciro-widget {
+  bottom: 370px;
+}
+
+/* Estados visibles (mismo efecto pop que Angie) */
+.mia-widget--visible,
+.ciro-widget--visible {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+  animation: angie-pop 420ms ease-out;
+}
+
+/* Colores de burbuja adaptados a cada uno */
+.mia-widget .angie-bubble {
+  border-color: var(--girl-main, #ec4899);
+}
+
+.mia-widget .angie-name {
+  color: var(--girl-main, #ec4899);
+}
+
+.ciro-widget .angie-bubble {
+  border-color: var(--guy-main, #2563eb);
+}
+
+.ciro-widget .angie-name {
+  color: var(--guy-main, #2563eb);
+}
+
 .angie-avatar{
   width:64px;
   height:64px;

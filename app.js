@@ -838,6 +838,147 @@ function angieSetEstado(tipo) {
 // Hacer accesible desde otros scripts (iframe, etc.)
 window.angieSetEstado = angieSetEstado;
 
+/* ==========================
+   MIA y CIRO: mini widgets
+   ========================== */
+
+const MIA_ESTADOS = {
+  saludo: {
+    img: 'assets/mia-feliz-saludo.png',
+    frases: [
+      'Bienvenido, esta es tu casa 💗',
+      'Qué alegría que estés aquí, de verdad.'
+    ]
+  },
+  reflexiva: {
+    img: 'assets/mia-reflexiva.png',
+    frases: [
+      'A veces hay que hacer pausita y pensar qué queremos de verdad 💭',
+      'No corras, también está bien ir paso a paso.'
+    ]
+  },
+  apoyo: {
+    img: 'assets/mia-apoyo.png',
+    frases: [
+      'No tienes que poder con todo solo, aquí caminamos juntos 🤝',
+      'Si hoy fue pesado, igual cuenta como avance.'
+    ]
+  },
+  preocupada: {
+    img: 'assets/mia-preocupada.png',
+    frases: [
+      'Si algo te está doliendo, háblalo con alguien de confianza 🕊️',
+      'No ignores lo que sientes, también importa.'
+    ]
+  },
+  feliz: {
+    img: 'assets/mia-feliz-saludo.png',
+    frases: [
+      'Me emociona ver lo que Dios puede hacer contigo ✨',
+      'Sigamos construyendo algo bonito, ¿sí?'
+    ]
+  }
+};
+
+function miaSetEstado(tipo) {
+  const widget = document.getElementById('miaWidget');
+  if (!widget) return;
+
+  const imgEl = widget.querySelector('.angie-avatar img');
+  const textEl = document.getElementById('miaText');
+  if (!textEl) return;
+
+  // Si no se envía tipo o no existe, elegimos uno al azar
+  let estado = tipo && MIA_ESTADOS[tipo];
+  if (!estado) {
+    const keys = Object.keys(MIA_ESTADOS);
+    estado = MIA_ESTADOS[keys[Math.floor(Math.random() * keys.length)]];
+  }
+
+  const frases = estado.frases || [];
+  const frase =
+    frases.length > 0
+      ? frases[Math.floor(Math.random() * frases.length)]
+      : 'Estoy aquí para ayudarte 💗';
+
+  if (imgEl && estado.img) {
+    imgEl.src = estado.img;
+  }
+  textEl.textContent = frase;
+  widget.classList.add('mia-widget--visible');
+}
+
+window.miaSetEstado = miaSetEstado;
+
+const CIRO_ESTADOS = {
+  saludo: {
+    img: 'assets/ciro-feliz-saludo.png',
+    frases: [
+      '¡Ey! Yo soy Ciro, cualquier cosa de servicio me apunto 😄',
+      'Qué bueno que te sumes al equipo.'
+    ]
+  },
+  concentrado: {
+    img: 'assets/ciro-concentrado.png',
+    frases: [
+      'Si organizamos bien las cosas, todo se siente más ligero 💪',
+      'Tranquilo, vamos uno por uno con los pendientes.'
+    ]
+  },
+  timido: {
+    img: 'assets/ciro-timido.png',
+    frases: [
+      'Yo también me hago el fuerte, pero a veces me da nervios 😅',
+      'Si estás dudando, igual puedes probar poco a poco.'
+    ]
+  },
+  decidido: {
+    img: 'assets/ciro-decidido.png',
+    frases: [
+      'Cuando dices “sí” de verdad, Dios mueve un montón de cosas 🔥',
+      'Hoy es un buen día para empezar algo nuevo.'
+    ]
+  },
+  broma: {
+    img: 'assets/ciro-broma.png',
+    frases: [
+      'Prometo no llenar tu WhatsApp de mensajes... bueno, casi 😂',
+      'Si no te ríes, al menos lo intenté, ¿ya?'
+    ]
+  }
+};
+
+function ciroSetEstado(tipo) {
+  const widget = document.getElementById('ciroWidget');
+  if (!widget) return;
+
+  const imgEl = widget.querySelector('.angie-avatar img');
+  const textEl = document.getElementById('ciroText');
+  if (!textEl) return;
+
+  let estado = tipo && CIRO_ESTADOS[tipo];
+  if (!estado) {
+    const keys = Object.keys(CIRO_ESTADOS);
+    estado = CIRO_ESTADOS[keys[Math.floor(Math.random() * keys.length)]];
+  }
+
+  const frases = estado.frases || [];
+  const frase =
+    frases.length > 0
+      ? frases[Math.floor(Math.random() * frases.length)]
+      : 'Aquí estoy, listo para servir contigo 🙌';
+
+  if (imgEl && estado.img) {
+    imgEl.src = estado.img;
+  }
+  textEl.textContent = frase;
+  widget.classList.add('ciro-widget--visible');
+}
+
+window.ciroSetEstado = ciroSetEstado;
+
+
+
 // ====== Angie animada traviesa (saludo inicial / cerrar) ======
 (function initAngieTraviesa() {
   const widget = document.getElementById('angieWidget');
@@ -1064,11 +1205,19 @@ function jcChatAddMessage(msg) {
   jcChatBody.appendChild(row);
   jcChatBody.scrollTop = jcChatBody.scrollHeight;
 
-  // Opcional: sincronizar emociones con otros widgets
-  if (msg.from === 'angie' && typeof window.angieSetEstado === 'function' && msg.estado) {
-    window.angieSetEstado(msg.estado);
+    // Opcional: sincronizar emociones con otros widgets
+  if (msg.from === 'angie' && typeof window.angieSetEstado === 'function') {
+    window.angieSetEstado(msg.estado || 'feliz');
   }
-  // Más adelante puedes conectar aquí a Mia y Ciro si creas sus widgets
+
+  if (msg.from === 'mia' && typeof window.miaSetEstado === 'function') {
+    // si la escena trae msg.estado se respeta, si no, Mia elige una emoción al azar
+    window.miaSetEstado(msg.estado);
+  }
+
+  if (msg.from === 'ciro' && typeof window.ciroSetEstado === 'function') {
+    window.ciroSetEstado(msg.estado);
+  }
 }
 
 /**

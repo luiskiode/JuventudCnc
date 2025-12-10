@@ -370,29 +370,87 @@
     </iframe>
   </aside>
 
-
- <!-- Angie asistente traviesa -->
-<div class="angie-widget" id="angieWidget" aria-live="polite">
-
-  <!-- Avatar -->
-  <div class="angie-avatar">
-    <img src="assets/angie-feliz-saludo.png" 
-         alt="Angie, asistente juvenil" 
-         id="angieAvatarImg" />
+  <!-- Widgets de Ciro, Mia y Angie -->
+  <!-- Ciro -->
+  <div class="angie-widget ciro-widget" id="ciroWidget" aria-live="polite">
+    <div class="angie-avatar">
+      <img
+        src="assets/ciro-feliz-saludo.png"
+        alt="Ciro, monaguillo del grupo"
+        id="ciroAvatarImg"
+      />
+    </div>
+    <div class="angie-bubble">
+      <div class="angie-bubble-header">
+        <span class="angie-name">Ciro</span>
+        <button
+          type="button"
+          class="angie-close"
+          id="ciroClose"
+          aria-label="Ocultar mensaje de Ciro"
+        >
+          ×
+        </button>
+      </div>
+      <p class="angie-text" id="ciroText">
+        Estoy atento a lo que necesites. ¡Servir también es una forma de amar! 🙌
+      </p>
+    </div>
   </div>
-  
 
-  <!-- Widget Mia -->
-<div class="mia-widget">
-  <img class="mia-avatar" src="assets/mia-elegant-shy.png" alt="Mia">
-  <div class="mia-bubble">Estoy organizando todo con cariño 💗</div>
-</div>
+  <!-- Mia -->
+  <div class="angie-widget mia-widget" id="miaWidget" aria-live="polite">
+    <div class="angie-avatar">
+      <img
+        src="assets/mia-feliz-saludo.png"
+        alt="Mia, coordinadora de Juventud CNC"
+        id="miaAvatarImg"
+      />
+    </div>
+    <div class="angie-bubble">
+      <div class="angie-bubble-header">
+        <span class="angie-name">Mia</span>
+        <button
+          type="button"
+          class="angie-close"
+          id="miaClose"
+          aria-label="Ocultar mensaje de Mia"
+        >
+          ×
+        </button>
+      </div>
+      <p class="angie-text" id="miaText">
+        Soy Mia, coordino el grupo. Vamos a cuidar este espacio juntos 💗
+      </p>
+    </div>
+  </div>
 
-<!-- Widget Ciro -->
-<div class="ciro-widget">
-  <img class="ciro-avatar" src="assets/ciro-happy.png" alt="Ciro">
-  <div class="ciro-bubble">¡Listo para servir cuando quieras! 🙏💪</div>
-</div>
+  <!-- Angie asistente traviesa -->
+  <div class="angie-widget" id="angieWidget" aria-live="polite">
+    <div class="angie-avatar">
+      <img
+        src="assets/angie-feliz-saludo.png"
+        alt="Angie, voluntaria traviesa que acompaña a Juventud CNC"
+        id="angieAvatarImg"
+      />
+    </div>
+    <div class="angie-bubble">
+      <div class="angie-bubble-header">
+        <span class="angie-name">Angie</span>
+        <button
+          type="button"
+          class="angie-close"
+          id="angieClose"
+          aria-label="Ocultar mensaje de Angie"
+        >
+          ×
+        </button>
+      </div>
+      <p class="angie-text" id="angieText">
+        Hola amigo, estoy aquí para acompañarte en Juventud CNC 💗
+      </p>
+    </div>
+  </div>
 
 
   <!-- Burbuja de diálogo -->
