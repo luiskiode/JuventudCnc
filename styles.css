@@ -818,7 +818,8 @@ input::placeholder {
 
 .angie-widget{
   position:fixed;
-  right:18px;
+  left:18px;                    /* 👉 ahora Angie vive a la izquierda */
+  right:auto;
   bottom:86px; /* por encima del FAB y tabs */
   display:flex;
   align-items:flex-end;
@@ -828,7 +829,7 @@ input::placeholder {
   pointer-events:none;
   z-index:70;
   transition:
-    transform .45s cubic-bezier(.17,.67,.33,1.35),
+    transform .45s cubic-bezier(.17,67,33,1.35),
     opacity .35s ease-out;
 }
 
@@ -879,14 +880,14 @@ input::placeholder {
 .angie-bubble::before{
   content:"";
   position:absolute;
-  right:-6px;
+  left:-6px;                    /* 👉 ahora la colita sale hacia la izquierda */
   bottom:14px;
   width:12px;
   height:12px;
   background:inherit;
-  border-left:1px solid rgba(148,163,184,.6);
-  border-bottom:1px solid rgba(148,163,184,.6);
-  transform:rotate(45deg);
+  border-right:1px solid rgba(148,163,184,0.6);
+  border-bottom:1px solid rgba(148,163,184,0.6);
+  transform:rotate(-45deg);
 }
 
 .angie-bubble-header{
@@ -964,8 +965,8 @@ input::placeholder {
 
 .jc-chat {
   position: fixed;
-  left: 12px;
-  bottom: 86px; /* por encima de las tabs */
+  right: 12px;            /* 👉 ahora vive a la derecha */
+  bottom: 86px;           /* por encima de las tabs */
   width: 270px;
   max-height: 260px;
   display: flex;
@@ -1122,8 +1123,88 @@ input::placeholder {
   .jc-chat {
     width: 85%;
     left: 50%;
-    transform: translateX(-50%);
+    right: auto;                 /* para que no haya conflicto con right */
+    transform: translateX(-50%); /* centrado en pantallas pequeñas */
   }
 }
+/* ====================== MIA WIDGET ====================== */
 
+.mia-widget {
+  position: fixed;
+  left: 18px;
+  bottom: 200px;        /* un poco arriba de Angie */
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 70;
+}
 
+.mia-avatar {
+  width: 60px;
+  height: 60px;
+}
+
+.mia-bubble {
+  background: rgba(244, 114, 182, 0.25);
+  border: 1px solid var(--girl-main);
+  padding: 8px 12px;
+  border-radius: 14px;
+  max-width: 180px;
+  font-size: 13px;
+  color: var(--text-main);
+  position: relative;
+}
+
+.mia-bubble::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  bottom: 14px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border-right: 1px solid var(--girl-main);
+  border-bottom: 1px solid var(--girl-main);
+  transform: rotate(-45deg);
+}
+
+/* ====================== CIRO WIDGET ====================== */
+
+.ciro-widget {
+  position: fixed;
+  left: 18px;
+  bottom: 320px;        /* más arriba aún */
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 70;
+}
+
+.ciro-avatar {
+  width: 60px;
+  height: 60px;
+}
+
+.ciro-bubble {
+  background: rgba(56, 189, 248, 0.25);
+  border: 1px solid var(--guy-main);
+  padding: 8px 12px;
+  border-radius: 14px;
+  max-width: 180px;
+  font-size: 13px;
+  color: var(--text-main);
+  position: relative;
+}
+
+.ciro-bubble::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  bottom: 14px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border-right: 1px solid var(--guy-main);
+  border-bottom: 1px solid var(--guy-main);
+  transform: rotate(-45deg);
+}

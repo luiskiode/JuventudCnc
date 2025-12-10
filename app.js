@@ -1237,3 +1237,13 @@ if (typeof activate === 'function') {
     jcChatPlayScene(initialTab || 'inicio');
   }, 600);
 })();
+
+function miaConsejo(text, face = "shy") {
+  document.querySelector(".mia-bubble").innerText = text;
+  document.querySelector(".mia-avatar").src = `assets/mia-elegant-${face}.png`;
+}
+
+function ciroConsejo(text, face = "happy") {
+  document.querySelector(".ciro-bubble").innerText = text;
+  document.querySelector(".ciro-avatar").src = `assets/ciro-${face}.png`;
+}
