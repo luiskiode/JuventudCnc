@@ -849,12 +849,6 @@ const MIA_ESTADOS = {
   apoyo:     { img: "assets/mia-casual-love.png",       msg: "Aquí estoy contigo, sigue adelante 💖" },
   preocupada:{ img: "assets/mia-casual-confused.png",   msg: "Hmm… algo me dice que debemos revisar esto." }
 };
-  saludo:    { img: 'assets/mia-casual-wink.png',       msg: "¡Hola! ¿Listo para avanzar con alegría?" },
-  feliz:     { img: 'assets/mia-casual-wink.png',       msg: "Hoy siento mucha energía bonita ✨" },
-  reflexiva: { img: 'assets/mia-casual-sad.png',        msg: "Estoy pensando… a veces necesitamos respirar." },
-  apoyo:     { img: 'assets/mia-casual-love.png',       msg: "Aquí estoy contigo, sigue adelante 💖" },
-  preocupada:{ img: 'assets/mia-casual-confused.png',   msg: "Hmm… algo me dice que debemos revisar esto." }
-};
 
 function miaSetEstado(tipo) {
   const widget = document.getElementById('miaWidget');
@@ -887,13 +881,6 @@ function miaSetEstado(tipo) {
 window.miaSetEstado = miaSetEstado;
 
 const CIRO_ESTADOS = {
-  saludo:     { img: "assets/ciro-happy.png",          msg: "¡Holaaa! ¡Vamos con fuerza!" },
-  feliz:      { img: "assets/ciro-happy.png",          msg: "¡Estoy súper contento por cómo va todo!" },
-  decidido:   { img: "assets/ciro-excited.png",        msg: "¡Vamos, yo te sigo! 💪🔥" },
-  concentrado:{ img: "assets/ciro-calm.png",           msg: "Dame un segundo… estoy concentrándome…" },
-  timido:     { img: "assets/ciro-worried.png",        msg: "Eh… jeje… bueno… ya sabes…" },
-  broma:      { img: "assets/ciro-happy-pray.png",     msg: "JAJA no te preocupes, todo bajo control 😇" }
-};
   saludo:     { img: 'assets/ciro-happy.png',          msg: "¡Holaaa! ¡Vamos con fuerza!" },
   feliz:      { img: 'assets/ciro-happy.png',          msg: "¡Estoy súper contento por cómo va todo!" },
   decidido:   { img: 'assets/ciro-excited.png',        msg: "¡Vamos, yo te sigo! 💪🔥" },
@@ -901,6 +888,7 @@ const CIRO_ESTADOS = {
   timido:     { img: 'assets/ciro-worried.png',        msg: "Eh… jeje… bueno… ya sabes…" },
   broma:      { img: 'assets/ciro-happy-pray.png',     msg: "JAJA no te preocupes, todo bajo control 😇" }
 };
+
 
 function ciroSetEstado(tipo) {
   const widget = document.getElementById('ciroWidget');
