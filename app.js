@@ -848,7 +848,7 @@ const MIA_ESTADOS = {
   reflexiva: { img: "assets/mia-casual-sad.png",        msg: "Estoy pensando… a veces necesitamos respirar." },
   apoyo:     { img: "assets/mia-casual-love.png",       msg: "Aquí estoy contigo, sigue adelante 💖" },
   preocupada:{ img: "assets/mia-casual-confused.png",   msg: "Hmm… algo me dice que debemos revisar esto." }
-};
+}
 
 function miaSetEstado(tipo) {
   const widget = document.getElementById('miaWidget');
