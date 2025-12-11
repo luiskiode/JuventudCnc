@@ -843,41 +843,17 @@ window.angieSetEstado = angieSetEstado;
    ========================== */
 
 const MIA_ESTADOS = {
-  saludo: {
-    img: 'assets/mia-feliz-saludo.png',
-    frases: [
-      'Bienvenido, esta es tu casa 💗',
-      'Qué alegría que estés aquí, de verdad.'
-    ]
-  },
-  reflexiva: {
-    img: 'assets/mia-reflexiva.png',
-    frases: [
-      'A veces hay que hacer pausita y pensar qué queremos de verdad 💭',
-      'No corras, también está bien ir paso a paso.'
-    ]
-  },
-  apoyo: {
-    img: 'assets/mia-apoyo.png',
-    frases: [
-      'No tienes que poder con todo solo, aquí caminamos juntos 🤝',
-      'Si hoy fue pesado, igual cuenta como avance.'
-    ]
-  },
-  preocupada: {
-    img: 'assets/mia-preocupada.png',
-    frases: [
-      'Si algo te está doliendo, háblalo con alguien de confianza 🕊️',
-      'No ignores lo que sientes, también importa.'
-    ]
-  },
-  feliz: {
-    img: 'assets/mia-feliz-saludo.png',
-    frases: [
-      'Me emociona ver lo que Dios puede hacer contigo ✨',
-      'Sigamos construyendo algo bonito, ¿sí?'
-    ]
-  }
+  saludo:    { img: "assets/mia-casual-wink.png",       msg: "¡Hola! ¿Listo para avanzar con alegría?" },
+  feliz:     { img: "assets/mia-casual-wink.png",       msg: "Hoy siento mucha energía bonita ✨" },
+  reflexiva: { img: "assets/mia-casual-sad.png",        msg: "Estoy pensando… a veces necesitamos respirar." },
+  apoyo:     { img: "assets/mia-casual-love.png",       msg: "Aquí estoy contigo, sigue adelante 💖" },
+  preocupada:{ img: "assets/mia-casual-confused.png",   msg: "Hmm… algo me dice que debemos revisar esto." }
+};
+  saludo:    { img: 'assets/mia-casual-wink.png',       msg: "¡Hola! ¿Listo para avanzar con alegría?" },
+  feliz:     { img: 'assets/mia-casual-wink.png',       msg: "Hoy siento mucha energía bonita ✨" },
+  reflexiva: { img: 'assets/mia-casual-sad.png',        msg: "Estoy pensando… a veces necesitamos respirar." },
+  apoyo:     { img: 'assets/mia-casual-love.png',       msg: "Aquí estoy contigo, sigue adelante 💖" },
+  preocupada:{ img: 'assets/mia-casual-confused.png',   msg: "Hmm… algo me dice que debemos revisar esto." }
 };
 
 function miaSetEstado(tipo) {
@@ -911,41 +887,19 @@ function miaSetEstado(tipo) {
 window.miaSetEstado = miaSetEstado;
 
 const CIRO_ESTADOS = {
-  saludo: {
-    img: 'assets/ciro-feliz-saludo.png',
-    frases: [
-      '¡Ey! Yo soy Ciro, cualquier cosa de servicio me apunto 😄',
-      'Qué bueno que te sumes al equipo.'
-    ]
-  },
-  concentrado: {
-    img: 'assets/ciro-concentrado.png',
-    frases: [
-      'Si organizamos bien las cosas, todo se siente más ligero 💪',
-      'Tranquilo, vamos uno por uno con los pendientes.'
-    ]
-  },
-  timido: {
-    img: 'assets/ciro-timido.png',
-    frases: [
-      'Yo también me hago el fuerte, pero a veces me da nervios 😅',
-      'Si estás dudando, igual puedes probar poco a poco.'
-    ]
-  },
-  decidido: {
-    img: 'assets/ciro-decidido.png',
-    frases: [
-      'Cuando dices “sí” de verdad, Dios mueve un montón de cosas 🔥',
-      'Hoy es un buen día para empezar algo nuevo.'
-    ]
-  },
-  broma: {
-    img: 'assets/ciro-broma.png',
-    frases: [
-      'Prometo no llenar tu WhatsApp de mensajes... bueno, casi 😂',
-      'Si no te ríes, al menos lo intenté, ¿ya?'
-    ]
-  }
+  saludo:     { img: "assets/ciro-happy.png",          msg: "¡Holaaa! ¡Vamos con fuerza!" },
+  feliz:      { img: "assets/ciro-happy.png",          msg: "¡Estoy súper contento por cómo va todo!" },
+  decidido:   { img: "assets/ciro-excited.png",        msg: "¡Vamos, yo te sigo! 💪🔥" },
+  concentrado:{ img: "assets/ciro-calm.png",           msg: "Dame un segundo… estoy concentrándome…" },
+  timido:     { img: "assets/ciro-worried.png",        msg: "Eh… jeje… bueno… ya sabes…" },
+  broma:      { img: "assets/ciro-happy-pray.png",     msg: "JAJA no te preocupes, todo bajo control 😇" }
+};
+  saludo:     { img: 'assets/ciro-happy.png',          msg: "¡Holaaa! ¡Vamos con fuerza!" },
+  feliz:      { img: 'assets/ciro-happy.png',          msg: "¡Estoy súper contento por cómo va todo!" },
+  decidido:   { img: 'assets/ciro-excited.png',        msg: "¡Vamos, yo te sigo! 💪🔥" },
+  concentrado:{ img: 'assets/ciro-calm.png',           msg: "Dame un segundo… estoy concentrándome…" },
+  timido:     { img: 'assets/ciro-worried.png',        msg: "Eh… jeje… bueno… ya sabes…" },
+  broma:      { img: 'assets/ciro-happy-pray.png',     msg: "JAJA no te preocupes, todo bajo control 😇" }
 };
 
 function ciroSetEstado(tipo) {
