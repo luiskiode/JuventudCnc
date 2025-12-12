@@ -1,5 +1,9 @@
+/* ==========================================================
+   ROOT + VARIABLES
+   ========================================================== */
+
 :root {
-  /* Base neutrales */
+  /* Neutrales */
   --neutral-900: #020617;
   --neutral-800: #020617;
   --neutral-700: #0b1120;
@@ -8,28 +12,26 @@
   --neutral-200: #e5e7eb;
   --neutral-100: #f3f4f6;
 
-  /* Texto (más suave) */
+  /* Texto */
   --text-main: #e5e7eb;
   --text-muted: #9ca3af;
-  --muted: var(--text-muted);
-  --text-100: var(--neutral-100);
 
-  /* Tokens dinámicos modificables por Angie */
-  --brand: #2563eb;      /* color principal (azul suave) */
-  --brand-2: #1d4ed8;    /* secundario */
-  --accent: #ec4899;     /* acento rosado */
-  --accent-2: #f97316;   /* acento cálido */
+  /* Dinámicos (Angie) */
+  --brand: #2563eb;
+  --brand-2: #1d4ed8;
+  --accent: #ec4899;
+  --accent-2: #f97316;
 
-  /* Paleta “chico / chica” para botones, badges y Angie */
+  /* Paleta chico/chica */
   --guy-main: #38bdf8;
   --guy-soft: rgba(56, 189, 248, 0.18);
   --girl-main: #f472b6;
   --girl-soft: rgba(244, 114, 182, 0.22);
 
-  /* Para fondos y tarjetas (suavemente translúcidos) */
+  /* Tarjetas */
   --card-bg: rgba(15, 23, 42, 0.9);
-  --card-border: rgba(148, 163, 184, 0.3);
-  --card-soft: rgba(15, 23, 42, 0.4);
+  --card-border: rgba(148, 163, 184, 0.26);
+  --card-soft: rgba(15, 23, 42, 0.45);
 
   /* Botones */
   --btn-bg-1: var(--brand);
@@ -38,15 +40,21 @@
   --btn-radius: 999px;
   --btn-px: 14px;
   --btn-py: 8px;
-  --btn-fw: 500; /* menos pesado, letras más suaves */
+  --btn-fw: 500;
 
-  /* Radios / sombras */
+  /* Formas */
   --radius-lg: 18px;
   --radius-pill: 999px;
-  --shadow-soft: 0 20px 45px rgba(15, 23, 42, 0.85);
+  --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.55);
+
+  /* Widgets */
+  --widget-z: 120;
 }
 
-/* Estilo base del body (para que no se vea “lavado”) */
+/* ==========================================================
+   BASE
+   ========================================================== */
+
 html {
   height: 100%;
   -webkit-font-smoothing: antialiased;
@@ -59,24 +67,26 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text-main);
   background: #020617;
-  position: relative;
   overflow-x: hidden;
+  position: relative;
 }
 
-/* Fondo animado tipo Caritas */
+/* ============================
+   FONDO DINÁMICO (OPTIMIZADO)
+   ============================ */
+
 body::before {
   content: "";
   position: fixed;
-  inset: -40px;
+  inset: -20px;
   z-index: -2;
   background:
-    radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.18), transparent 55%),
-    radial-gradient(circle at 100% 0%, rgba(244, 114, 182, 0.22), transparent 55%),
-    radial-gradient(circle at 0% 100%, rgba(59, 130, 246, 0.2), transparent 55%),
-    radial-gradient(circle at 100% 100%, rgba(34, 197, 94, 0.16), transparent 55%),
-    linear-gradient(135deg, #020617, #020617 40%, #000);
-  filter: saturate(1.2);
-  animation: bg-orbita 26s ease-in-out infinite alternate;
+    radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.15), transparent 55%),
+    radial-gradient(circle at 100% 0%, rgba(244, 114, 182, 0.18), transparent 55%),
+    radial-gradient(circle at 0% 100%, rgba(59, 130, 246, 0.17), transparent 55%),
+    linear-gradient(135deg, #020617, #000);
+  animation: bg-flow 22s ease-in-out infinite alternate;
+  filter: saturate(1.15);
 }
 
 body::after {
@@ -84,174 +94,126 @@ body::after {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.95));
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.94));
 }
 
-/* animación suave del fondo */
-@keyframes bg-orbita {
-  0% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-40px, 20px, 0) scale(1.05);
-  }
-  100% {
-    transform: translate3d(40px, -30px, 0) scale(1.08);
-  }
+@keyframes bg-flow {
+  0% { transform: translate3d(0,0,0) scale(1); }
+  50% { transform: translate3d(-20px, 10px, 0) scale(1.03); }
+  100% { transform: translate3d(25px, -10px, 0) scale(1.04); }
 }
 
-/* ===========================
-   TOPBAR Y LAYOUT
-   =========================== */
+/* ==========================================================
+   TOPBAR
+   ========================================================== */
 
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 40;
+  z-index: 90;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: linear-gradient(
-      to bottom,
-      rgba(15, 23, 42, 0.96),
-      rgba(15, 23, 42, 0.88)
-    );
-  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
-  backdrop-filter: blur(14px);
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
 }
 
 .topbar-title {
   margin: 0;
   font-size: 17px;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
 }
 
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
+/* Botones superiores */
 .icon-btn {
-  appearance: none;
   border: none;
-  background: radial-gradient(circle at 20% 20%, rgba(236, 72, 153, 0.16), transparent);
+  background: radial-gradient(circle at 20% 20%, rgba(236, 72, 153, 0.18), transparent);
   padding: 8px;
   border-radius: 999px;
-  color: var(--text-main);
   cursor: pointer;
+  color: var(--text-main);
   font-size: 18px;
 }
 
-/* Contenedor principal */
+/* ==========================================================
+   CONTENEDOR / VISTAS
+   ========================================================== */
+
 .container {
-  flex: 1;
   width: 100%;
   max-width: 960px;
   margin: 0 auto;
-  padding: 16px 12px 80px;
+  padding: 18px 14px calc(70px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
 }
 
-/* Vistas (tabs) */
+/* FIX: evitar montado en móvil */
 .view {
-  display: none;
-  gap: 16px;
-  flex-direction: column;
+  display: none !important;
+  width: 100%;
 }
 
 .view.active {
-  display: flex;
+  display: block !important;
 }
 
-/* ===========================
+/* ==========================================================
    CARDS
-   =========================== */
+   ========================================================== */
 
 .card {
-  background: radial-gradient(circle at 0% 0%, rgba(15, 23, 42, 0.6), transparent),
-              rgba(15, 23, 42, 0.96);
+  background: linear-gradient(
+    to bottom right,
+    rgba(15, 23, 42, 0.92),
+    rgba(15, 23, 42, 0.85)
+  );
   border-radius: var(--radius-lg);
   padding: 16px 14px;
+  border: 1px solid var(--card-border);
   box-shadow: var(--shadow-soft);
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  backdrop-filter: blur(10px);
 }
 
 .card-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.card-header h2,
-.card-header h3 {
-  margin: 0;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .card-body {
   font-size: 14px;
 }
 
-.card-body h3 {
-  margin: 0 0 6px;
-}
+/* ==========================================================
+   HERO
+   ========================================================== */
 
-/* Hero */
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.3fr);
+  grid-template-columns: 2fr 1fr;
   gap: 12px;
-  align-items: center;
   background: linear-gradient(135deg, var(--brand), var(--accent));
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(248, 250, 252, 0.22);
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,0.14);
+  animation: heroGlow 6s ease-in-out infinite alternate;
 }
 
-.hero-content h2 {
-  margin: 0 0 6px;
-  font-size: 18px;
+@keyframes heroGlow {
+  0% { filter: brightness(1); }
+  100% { filter: brightness(1.2); }
 }
 
-.hero-content p {
-  margin: 0 0 10px;
-  font-size: 14px;
-}
+/* ==========================================================
+   TIPOGRAFÍA
+   ========================================================== */
 
-.hero-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.hero-icons {
-  position: relative;
-  font-size: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hero-gradient-bubbles {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 25% 30%, rgba(248, 250, 252, 0.38), transparent),
-    radial-gradient(circle at 70% 70%, rgba(15, 23, 42, 0.4), transparent);
-  filter: blur(12px);
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-/* ===========================
-   TIPOGRAFÍA Y ENLACES
-   =========================== */
-
-h1,
-h2,
-h3 {
-  font-weight: 700;
+h1, h2, h3 {
+  font-weight: 600;
+  margin: 0;
 }
 
 p {
@@ -265,171 +227,59 @@ p {
 .muted {
   color: var(--text-muted);
 }
-p,
-li,
-span,
-.small,
-.texto-normal {
-  font-weight: 400;
-}
 
-/* títulos un poco más finos */
-h1, h2, h3 {
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.link {
-  font-size: 13px;
-  color: var(--girl-main);
-  text-decoration: none;
-}
-
-.link:hover {
-  text-decoration: underline;
-}
-
-/* Emojis decorativos en títulos */
 .with-emoji[data-emoji]::before {
   content: attr(data-emoji) " ";
   margin-right: 6px;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
 }
 
-/* ===========================
-   COMPONENTES
-   =========================== */
+/* ==========================================================
+   BOTONES, INPUTS, CHIPS
+   ========================================================== */
 
-/* Badges / Chips */
-.badge,
-.chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-pill);
-  padding: 4px 10px;
-  font-size: 11px;
-  border: 1px solid transparent;
-}
-
-.badge {
-  background: rgba(15, 23, 42, 0.85);
-  color: var(--text-main);
-}
-
-.badge-mix {
-  border-color: rgba(248, 250, 252, 0.22);
-}
-
-.badge-guy {
-  background: var(--guy-soft);
-  border-color: var(--guy-main);
-  color: #dbeafe;
-}
-
-.badge-girl {
-  background: var(--girl-soft);
-  border-color: var(--girl-main);
-  color: #fce7f3;
-}
-
-/* Chips */
-.grid-compact {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 8px;
-}
-
-.chip {
-  background: rgba(15, 23, 42, 0.85);
-  border-color: rgba(148, 163, 184, 0.5);
-  color: var(--text-main);
-  cursor: pointer;
-}
-
-.chip-guy {
-  border-color: var(--guy-main);
-  background: var(--guy-soft);
-}
-
-.chip-girl {
-  border-color: var(--girl-main);
-  background: var(--girl-soft);
-}
-
-/* Botones */
 .btn {
-  appearance: none;
+  border: none;
   border-radius: var(--btn-radius);
   padding: var(--btn-py) var(--btn-px);
-  border: none;
   background: linear-gradient(135deg, var(--guy-main), var(--girl-main));
-  color: #f9fafb;
-  font-weight: var(--btn-fw);
-  font-size: 13px;
+  color: #fff;
   cursor: pointer;
+  font-size: 13px;
+  font-weight: var(--btn-fw);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
 }
 
-.btn.small {
-  padding: 6px 10px;
-  font-size: 11px;
-}
+.btn.small { padding: 6px 10px; font-size: 11px; }
 
-/* Grids y flex */
-.grid {
-  display: grid;
-  gap: 8px;
-}
-
-.flex {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-/* Formularios */
 input,
 select {
   width: 100%;
+  padding: 9px 12px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(148,163,184,0.4);
   border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  padding: 8px 10px;
-  background: rgba(15, 23, 42, 0.9);
   color: var(--text-main);
-  font-size: 13px;
 }
 
-input::placeholder {
-  color: rgba(148, 163, 184, 0.9);
-}
+/* ==========================================================
+   EVENTOS / LISTAS
+   ========================================================== */
 
-/* Listas de eventos / archivos / avisos */
-.event-list,
-.file-list,
-.notice-list {
+.event-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 8px;
-  font-size: 13px;
+  gap: 10px;
 }
 
-.event-item,
-.file-item,
-.notice-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
+.event-item {
+  padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15,23,42,0.92);
+  border: 1px solid rgba(148,163,184,0.3);
 }
 
 .event-title {
@@ -441,592 +291,347 @@ input::placeholder {
   color: var(--text-muted);
 }
 
-/* Tabs (menú inferior) */
+/* ==========================================================
+   TABS (MENÚ INFERIOR)
+   ========================================================== */
+
 .tabs {
   position: fixed;
+  bottom: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  z-index: 50;
+  z-index: 95;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  padding: 6px 6px 8px;
+  padding: 6px 8px 10px;
   background: rgba(15, 23, 42, 0.96);
-  border-top: 1px solid rgba(148, 163, 184, 0.4);
   backdrop-filter: blur(14px);
+  border-top: 1px solid rgba(148,163,184,0.28);
 }
 
 .tab {
-  appearance: none;
-  border-radius: 999px;
   border: none;
   background: transparent;
-  padding: 6px 4px;
-  font-size: 11px;
+  padding: 6px;
+  font-size: 12px;
   color: var(--text-muted);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
   cursor: pointer;
-}
-
-.tab span {
-  font-size: 10px;
+  transition: 0.18s ease;
 }
 
 .tab.active {
   background: linear-gradient(135deg, var(--guy-soft), var(--girl-soft));
-  color: #f9fafb;
+  color: #fff;
+  border-radius: 12px;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(56,189,248,0.2);
 }
 
-/* FAB */
+/* ==========================================================
+   FAB
+   ========================================================== */
+
 .fab {
   position: fixed;
-  right: 16px;
+  right: 18px;
   bottom: 82px;
-  z-index: 55;
-  width: 46px;
-  height: 46px;
+  z-index: 120;
+  width: 48px;
+  height: 48px;
   border-radius: 999px;
   border: none;
-  background: radial-gradient(circle at 20% 20%, #f9fafb, #e5e7eb);
-  color: #111827;
+  background: linear-gradient(135deg, #fff, #e5e7eb);
+  color: #111;
   font-size: 22px;
   cursor: pointer;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
 }
 
-/* Drawer lateral */
+/* ==========================================================
+   DRAWER
+   ========================================================== */
+
 .drawer {
   position: fixed;
   inset: 0 auto 0 0;
   width: 260px;
-  max-width: 80%;
-  background: rgba(15, 23, 42, 0.98);
-  border-right: 1px solid rgba(148, 163, 184, 0.3);
   transform: translateX(-100%);
-  transition: transform 0.22s ease-out;
-  z-index: 60;
-  display: flex;
-  flex-direction: column;
+  background: rgba(15,23,42,0.98);
+  border-right: 1px solid rgba(148,163,184,0.3);
+  transition: transform 0.22s;
+  z-index: 110;
 }
 
-.drawer.open {
-  transform: translateX(0);
-}
-
-.drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 14px 10px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
-}
-
-.drawer-header h2 {
-  margin: 0;
-  font-size: 16px;
-}
-
-.drawer-nav {
-  padding: 10px 10px 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.drawer-nav a {
-  padding: 8px 10px;
-  border-radius: 12px;
-  text-decoration: none;
-  color: var(--text-main);
-  font-size: 14px;
-}
-
-.drawer-nav a:hover {
-  background: rgba(37, 99, 235, 0.18);
-}
-
-.drawer-footer {
-  margin-top: auto;
-  padding: 10px;
-  font-size: 11px;
-  color: var(--text-muted);
-}
+.drawer.open { transform: translateX(0); }
 
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.8);
+  display: none;
+  background: rgba(0,0,0,0.45);
   backdrop-filter: blur(2px);
-  z-index: 55;
-  display: none;
+  z-index: 100;
 }
 
-.overlay.show {
-  display: block;
+.overlay.show { display: block; }
+
+/* ==========================================================
+   Z-INDEX MASTER LAYER PARA BOTS
+   (Los bots SIEMPRE deben estar encima de todo)
+   ========================================================== */
+:root {
+  --z-bots: 200;
+  --z-angie: 205;
+  --z-mia: 210;
+  --z-ciro: 215;
 }
 
-/* ===========================
-   PANEL ANGIE (sidepanel)
-   =========================== */
+/* ==========================================================
+   POSICIÓN Y APARICIÓN GENERAL DE WIDGETS
+   ========================================================== */
 
-.sidepanel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(420px, 100%);
-  background: rgba(15, 23, 42, 0.98);
-  border-left: 1px solid rgba(148, 163, 184, 0.5);
-  box-shadow: -18px 0 40px rgba(0, 0, 0, 0.7);
-  z-index: 70;
-  display: none;
-  flex-direction: column;
-}
-
-.sidepanel.open {
-  display: flex;
-}
-
-.sidepanel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.5);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.sidepanel-iframe {
-  border: none;
-  width: 100%;
-  height: 100%;
-}
-
-/* ===========================
-   ACCESIBILIDAD
-   =========================== */
-
-.tab:focus-visible,
-.btn:focus-visible,
-.icon-btn:focus-visible,
-.chip:focus-visible {
-  outline: 3px solid var(--guy-main);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.4);
-}
-
-/* Reduce motion */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
-/* ===========================
-   RESPONSIVE
-   =========================== */
-
-@media (max-width: 640px) {
-  .hero {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .hero-icons {
-    display: none;
-  }
-
-  .sidepanel {
-    width: 100%;
-  }
-}
-
-.theme-picker {
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-  background: rgba(15, 23, 42, 0.9);
-  color: var(--text-main);
-  font-size: 11px;
-  padding: 4px 8px;
-}
-.btn-install {
-  position: fixed;
-  left: 16px;
-  bottom: 82px;
-  z-index: 56;
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: none;
-  background: rgba(15, 23, 42, 0.95);
-  color: #e5e7eb;
-  font-size: 12px;
-  font-weight: 600;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  cursor: pointer;
-}
-
-
-/* ==== PERFIL ==== */
-
-.perfil-card {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.perfil-header {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
-}
-
-.perfil-avatar-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.perfil-avatar {
-  width: 96px;
-  height: 96px;
-  border-radius: 999px;
-  background: radial-gradient(circle at 30% 20%, rgba(96,165,250,.95), rgba(15,23,42,1));
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 24px rgba(0,0,0,.55);
-}
-
-.perfil-avatar span {
-  font-size: 42px;
-}
-
-.perfil-avatar img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: none;
-}
-
-.perfil-foto-btn {
-  background: transparent;
-  border: 1px dashed rgba(148,163,184,.7);
-  padding-inline: 12px;
-}
-
-.perfil-header-text {
-  flex: 1;
-  min-width: 200px;
-}
-
-.perfil-subtext {
-  margin: 4px 0 0;
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-.perfil-form {
-  margin-top: 8px;
-}
-
-.perfil-form textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.perfil-hint {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.perfil-resumen {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
-}
-
-.perfil-nombre {
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.perfil-rol {
-  font-size: 13px;
-  color: var(--accent, var(--brand));
-}
-
-.perfil-frase {
-  font-style: italic;
-  font-size: 14px;
-  color: var(--text-muted);
-}
-
-.perfil-estado {
-  font-size: 13px;
-  border-radius: 999px;
-  padding: 6px 10px;
-  background: rgba(148,163,184,.08);
-  color: var(--muted);
-}
-
-.perfil-estado.ok {
-  background: rgba(34,197,94,.15);
-  color: #22c55e;
-}
-
-.perfil-estado.error {
-  background: rgba(248,113,113,.15);
-  color: #f97373;
-}
-.user-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.user-list li {
-  padding: 12px;
-  border-bottom: 1px solid rgba(150,150,150,0.15);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.user-list .estado-activo {
-  color: #22c55e;
-  font-weight: 600;
-}
-
-.user-list .estado-inactivo {
-  color: #ef4444;
-  font-weight: 600;
-}
-
-/* ================== ANGIE WIDGET ================== */
-
-.angie-widget{
-  position:fixed;
-  left:18px;                    /* 👉 ahora Angie vive a la izquierda */
-  right:auto;
-  bottom:86px; /* por encima del FAB y tabs */
-  display:flex;
-  align-items:flex-end;
-  gap:8px;
-  transform:translateY(140%) scale(.9);
-  opacity:0;
-  pointer-events:none;
-  z-index:70;
-  transition:
-    transform .45s cubic-bezier(.17,67,33,1.35),
-    opacity .35s ease-out;
-}
-
-.angie-widget--visible{
-  transform:translateY(0) scale(1);
-  opacity:1;
-  pointer-events:auto;
-}
-
-/* Widgets adicionales para Mia y Ciro (apilados sobre Angie) */
-
+.angie-widget,
 .mia-widget,
 .ciro-widget {
   position: fixed;
-  right: 18px;
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  transform: translateY(140%) scale(.9);
+  transform: translateY(130%) scale(.88);
   opacity: 0;
   pointer-events: none;
-  z-index: 67; /* un poco por debajo de Angie para que no se crucen raro */
+  transition: transform .4s ease, opacity .35s ease-out;
 }
 
-/* Alturas: Ciro arriba, Mia en medio, Angie abajo (ya está en bottom: 86px) */
-.mia-widget {
-  bottom: 230px;
-}
-
-.ciro-widget {
-  bottom: 370px;
-}
-
-/* Estados visibles (mismo efecto pop que Angie) */
+/* Estados visibles */
+.angie-widget--visible,
 .mia-widget--visible,
 .ciro-widget--visible {
   transform: translateY(0) scale(1);
   opacity: 1;
   pointer-events: auto;
-  animation: angie-pop 420ms ease-out;
 }
 
-/* Colores de burbuja adaptados a cada uno */
-.mia-widget .angie-bubble {
-  border-color: var(--girl-main, #ec4899);
+/* Ubicaciones individuales */
+.angie-widget {
+  left: 16px;
+  bottom: 86px;
+  z-index: var(--z-angie);
 }
 
-.mia-widget .angie-name {
-  color: var(--girl-main, #ec4899);
+.mia-widget {
+  right: 16px;
+  bottom: 175px;
+  z-index: var(--z-mia);
 }
 
-.ciro-widget .angie-bubble {
-  border-color: var(--guy-main, #2563eb);
+.ciro-widget {
+  right: 16px;
+  bottom: 285px;
+  z-index: var(--z-ciro);
 }
 
-.ciro-widget .angie-name {
-  color: var(--guy-main, #2563eb);
+/* ==========================================================
+   AVATARES CON PERSONALIDAD DIFERENCIADA
+   ========================================================== */
+
+.bot-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  padding: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  box-shadow: 0 12px 24px rgba(0,0,0,.55);
 }
 
-.angie-avatar{
-  width:64px;
-  height:64px;
-  border-radius:999px;
-  /* Ahora Angie usa los mismos colores que chicos/chicas/mix */
-  background: radial-gradient(
-    circle at 30% 20%,
-    var(--girl-main, rgba(244,114,182,0.95)),
-    var(--guy-main, rgba(37,99,235,0.95))
-  );
-  box-shadow:0 12px 24px rgba(15,23,42,0.6);
-  display:flex;
-  align-items:flex-end;
-  justify-content:center;
-  padding:4px;
-  overflow:hidden;
-  animation: angie-pop 600ms ease-out forwards;
+/* Angie: tonos rosados/cálidos */
+.angie-avatar {
+  background: radial-gradient(circle at 30% 25%, #f472b6, #be185d);
 }
 
-.angie-avatar img{
-  width:100%;
-  height:100%;
-  object-fit:contain;
+/* Mia: pastel suave */
+.mia-avatar {
+  background: radial-gradient(circle at 30% 25%, #c084fc, #6b21a8);
 }
 
-/* Globito de mensaje */
-.angie-bubble{
-  max-width:260px;
-  padding:10px 12px;
-  border-radius:18px;
-  border:1px solid rgba(148,163,184,.6);
-  background:rgba(15,23,42,.96);
-  color:var(--text-100,#e5e7eb);
-  font-size:13px;
-  box-shadow:0 14px 30px rgba(15,23,42,.85);
-  position:relative;
+/* Ciro: tonos azules/energía */
+.ciro-avatar {
+  background: radial-gradient(circle at 30% 25%, #60a5fa, #1d4ed8);
 }
 
-.angie-bubble::before{
-  content:"";
-  position:absolute;
-  left:-6px;                    /* 👉 ahora la colita sale hacia la izquierda */
-  bottom:14px;
-  width:12px;
-  height:12px;
-  background:inherit;
-  border-right:1px solid rgba(148,163,184,0.6);
-  border-bottom:1px solid rgba(148,163,184,0.6);
-  transform:rotate(-45deg);
+.bot-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
-.angie-bubble-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
-  margin-bottom:4px;
+/* ==========================================================
+   BURBUJAS INDIVIDUALES (colores y estilo únicos)
+   ========================================================== */
+
+.bot-bubble {
+  max-width: 260px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, .96);
+  border: 1px solid rgba(148, 163, 184, .5);
+  color: var(--text-main);
+  font-size: 13px;
+  box-shadow: 0 14px 32px rgba(0,0,0,.8);
+  position: relative;
+  line-height: 1.35;
 }
 
-.angie-name{
-  font-weight:700;
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  color:var(--accent,#f472b6);
+/* colitas personalizadas */
+.angie-bubble::before,
+.mia-bubble::before,
+.ciro-bubble::before {
+  content: "";
+  position: absolute;
+  bottom: 14px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  transform: rotate(-45deg);
 }
 
-.angie-close{
-  border:0;
-  background:transparent;
-  color:#94a3b8;
-  cursor:pointer;
-  font-size:14px;
-  padding:0;
-}
-.angie-close:hover{
-  color:#e5e7eb;
+/* Angie: colita izquierda */
+.angie-bubble::before {
+  left: -6px;
+  border-right: 1px solid rgba(244,114,182,.6);
+  border-bottom: 1px solid rgba(244,114,182,.6);
 }
 
-.angie-text{
-  margin:0;
-  line-height:1.35;
+/* Mia: colita derecha pastel */
+.mia-bubble::before {
+  right: -6px;
+  border-left: 1px solid rgba(192,132,252,.6);
+  border-bottom: 1px solid rgba(192,132,252,.6);
 }
 
-/* Traviesas: pequeño balanceo */
-.angie-widget--wiggle .angie-avatar{
-  animation: angie-wiggle 900ms ease-in-out infinite;
+/* Ciro: colita derecha azul */
+.ciro-bubble::before {
+  right: -6px;
+  border-left: 1px solid rgba(96,165,250,.6);
+  border-bottom: 1px solid rgba(96,165,250,.6);
 }
 
-/* Animaciones */
-@keyframes angie-pop{
-  0%{ transform:translateY(20%) scale(.6); opacity:0; }
-  60%{ transform:translateY(-6%) scale(1.05); opacity:1; }
-  100%{ transform:translateY(0) scale(1); opacity:1; }
-}
+/* ==========================================================
+   CABECERAS PERSONALIZADAS
+   ========================================================== */
 
-@keyframes angie-wiggle{
-  0%{ transform:translateY(0) rotate(0deg); }
-  25%{ transform:translateY(-2px) rotate(-3deg); }
-  50%{ transform:translateY(0) rotate(3deg); }
-  75%{ transform:translateY(-1px) rotate(-2deg); }
-  100%{ transform:translateY(0) rotate(0deg); }
-}
-
-/* En pantallas muy pequeñas, moverla un poco */
-
-
-@keyframes wiggle {
-  0% { transform: rotate(-2deg); }
-  100% { transform: rotate(2deg); }
-}
-
-.perfil-logout-btn {
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(148, 163, 184, 0.6);
+.bot-name {
+  font-weight: 700;
   font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
 }
 
-.perfil-logout-btn:hover {
-  background: rgba(30, 64, 175, 0.85);
-  border-color: rgba(191, 219, 254, 0.9);
+.angie-name { color: #f472b6; }
+.mia-name   { color: #c084fc; }
+.ciro-name  { color: #60a5fa; }
+
+/* Cierre */
+.bot-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 14px;
 }
-/* ================== CHAT JUVENTUD CNC (tipo WhatsApp) ================== */
+
+.bot-close:hover { color: #e5e7eb; }
+
+/* ==========================================================
+   ANIMACIONES ESPECIALES POR PERSONALIDAD
+   ========================================================== */
+
+/* Aparición pop (general) */
+@keyframes bot-pop {
+  0%   { transform: translateY(20%) scale(.5); opacity: 0; }
+  60%  { transform: translateY(-6%) scale(1.08); opacity: 1; }
+  100% { transform: translateY(0)    scale(1);   opacity: 1; }
+}
+
+.angie-widget--visible .angie-avatar { animation: bot-pop .55s ease-out; }
+.mia-widget--visible   .mia-avatar   { animation: bot-pop .55s ease-out; }
+.ciro-widget--visible  .ciro-avatar  { animation: bot-pop .55s ease-out; }
+
+/* Micro-emoción extra: Angie wiggle */
+@keyframes angie-wiggle {
+  0%   { transform: rotate(0deg); }
+  25%  { transform: rotate(-3deg); }
+  50%  { transform: rotate(3deg); }
+  75%  { transform: rotate(-2deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.angie-widget--wiggle .angie-avatar {
+  animation: angie-wiggle 1s ease-in-out infinite;
+}
+
+/* Mia latido suave */
+@keyframes mia-heart {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.mia-widget--visible .mia-avatar {
+  animation: mia-heart 1.6s ease-in-out infinite;
+}
+
+/* Ciro vibración energética */
+@keyframes ciro-energy {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  50% { transform: translateX(2px); }
+  75% { transform: translateX(-1px); }
+  100% { transform: translateX(0); }
+}
+
+.ciro-widget--visible .ciro-avatar {
+  animation: ciro-energy .6s ease-in-out infinite;
+}
+
+/* ==========================================================
+   RESPONSO MOBILE
+   ========================================================== */
+
+@media (max-width: 480px) {
+  .mia-widget { bottom: 150px; }
+  .ciro-widget { bottom: 240px; }
+}
+
+/* ==========================================================
+   CHAT JUVENTUD CNC – versión final compatible
+   ========================================================== */
 
 .jc-chat {
   position: fixed;
-  right: 12px;            /* 👉 ahora vive a la derecha */
-  bottom: 86px;           /* por encima de las tabs */
+  right: 12px;
+  bottom: 86px;
   width: 270px;
   max-height: 260px;
   display: flex;
   flex-direction: column;
-  background: rgba(15, 23, 42, 0.97);
+  background: rgba(15,23,42,0.97);
   border-radius: 18px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.75);
-  border: 1px solid rgba(148, 163, 184, 0.5);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.75);
+  border: 1px solid rgba(148,163,184,0.5);
   overflow: hidden;
-  z-index: 68;
+  z-index: 180;   /* 👉 ahora debajo de los bots (200–215) */
   font-size: 11px;
 }
 
@@ -1035,11 +640,11 @@ input::placeholder {
   align-items: center;
   justify-content: space-between;
   padding: 6px 9px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+  border-bottom: 1px solid rgba(148,163,184,0.4);
   background: linear-gradient(
     135deg,
-    rgba(56, 189, 248, 0.18),
-    rgba(244, 114, 182, 0.18)
+    rgba(56,189,248,0.18),
+    rgba(244,114,182,0.18)
   );
 }
 
@@ -1055,7 +660,7 @@ input::placeholder {
   height: 7px;
   border-radius: 999px;
   background: #22c55e;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+  box-shadow: 0 0 8px rgba(34,197,94,0.8);
 }
 
 .jc-chat-toggle {
@@ -1075,7 +680,9 @@ input::placeholder {
   overflow-y: auto;
 }
 
-/* Mensaje */
+/* ==========================================================
+   MENSAJES
+   ========================================================== */
 
 .jc-chat-msg {
   display: flex;
@@ -1100,8 +707,8 @@ input::placeholder {
   max-width: 195px;
   padding: 5px 8px;
   border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(148,163,184,0.4);
+  background: rgba(15,23,42,0.96);
 }
 
 .jc-chat-name {
@@ -1115,7 +722,6 @@ input::placeholder {
 }
 
 /* Colores por personaje */
-
 .from-mia .jc-chat-avatar {
   background: var(--girl-soft);
   color: #fce7f3;
@@ -1135,7 +741,7 @@ input::placeholder {
 }
 
 .from-angie .jc-chat-avatar {
-  background: rgba(236, 72, 153, 0.25);
+  background: rgba(236,72,153,0.25);
   color: #f9a8d4;
 }
 
@@ -1144,117 +750,40 @@ input::placeholder {
 }
 
 .from-system .jc-chat-avatar {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(148,163,184,0.4);
   color: #020617;
 }
 
 .from-system .jc-chat-bubble {
   border-style: dashed;
-  border-color: rgba(148, 163, 184, 0.7);
+  border-color: rgba(148,163,184,0.7);
 }
 
-/* Modo colapsado */
+/* ==========================================================
+   MODO COLAPSADO
+   ========================================================== */
+
+.jc-chat--collapsed {
+  max-height: 36px;
+}
 
 .jc-chat--collapsed .jc-chat-body {
   display: none;
-}
-
-.jc-chat--collapsed {
-  max-height: none;
 }
 
 .jc-chat--collapsed .jc-chat-toggle {
   transform: rotate(180deg);
 }
 
-/* Responsive: en pantallas muy pequeñas, que no estorbe tanto */
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
 
 @media (max-width: 480px) {
   .jc-chat {
     width: 85%;
     left: 50%;
-    right: auto;                 /* para que no haya conflicto con right */
-    transform: translateX(-50%); /* centrado en pantallas pequeñas */
+    transform: translateX(-50%);
+    bottom: 82px;
   }
-}
-/* ====================== MIA WIDGET ====================== */
-
-.mia-widget {
-  position: fixed;
-  left: 18px;
-  bottom: 200px;        /* un poco arriba de Angie */
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  z-index: 70;
-}
-
-.mia-avatar {
-  width: 60px;
-  height: 60px;
-}
-
-.mia-bubble {
-  background: rgba(244, 114, 182, 0.25);
-  border: 1px solid var(--girl-main);
-  padding: 8px 12px;
-  border-radius: 14px;
-  max-width: 180px;
-  font-size: 13px;
-  color: var(--text-main);
-  position: relative;
-}
-
-.mia-bubble::before {
-  content: "";
-  position: absolute;
-  left: -6px;
-  bottom: 14px;
-  width: 12px;
-  height: 12px;
-  background: inherit;
-  border-right: 1px solid var(--girl-main);
-  border-bottom: 1px solid var(--girl-main);
-  transform: rotate(-45deg);
-}
-
-/* ====================== CIRO WIDGET ====================== */
-
-.ciro-widget {
-  position: fixed;
-  left: 18px;
-  bottom: 320px;        /* más arriba aún */
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  z-index: 70;
-}
-
-.ciro-avatar {
-  width: 60px;
-  height: 60px;
-}
-
-.ciro-bubble {
-  background: rgba(56, 189, 248, 0.25);
-  border: 1px solid var(--guy-main);
-  padding: 8px 12px;
-  border-radius: 14px;
-  max-width: 180px;
-  font-size: 13px;
-  color: var(--text-main);
-  position: relative;
-}
-
-.ciro-bubble::before {
-  content: "";
-  position: absolute;
-  left: -6px;
-  bottom: 14px;
-  width: 12px;
-  height: 12px;
-  background: inherit;
-  border-right: 1px solid var(--guy-main);
-  border-bottom: 1px solid var(--guy-main);
-  transform: rotate(-45deg);
 }
