@@ -26,7 +26,10 @@ function closeDrawer() {
 
 document.getElementById("openDrawer")?.addEventListener("click", openDrawer);
 document.getElementById("closeDrawer")?.addEventListener("click", closeDrawer);
-overlay?.addEventListener("click", closeDrawer);
+overlay?.addEventListener('click', () => {
+  closeDrawer();
+  window.jcCloseAngiePanel?.();
+});
 
 /* ============================================================
     SISTEMA SPA / TABS — REPARADO

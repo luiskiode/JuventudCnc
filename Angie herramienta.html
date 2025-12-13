@@ -85,7 +85,8 @@
   <h1>🎨 Angie – Paleta y emociones</h1>
 
   <section>
-    <small>Cuando cambies un color, se aplica directo en Juventud CNC.</small>
+    <small>Cambia un color y se aplicará directo en Juventud CNC.</small>
+
     <div class="grid" style="margin-top:0.5rem;">
       <label>
         Principal (brand)
@@ -93,27 +94,27 @@
       </label>
       <label>
         Secundario (brand-2)
-        <input type="color" id="brand2" value="#1d4ed8" />
+        <input type="color" id="brand-2" value="#1d4ed8" />
       </label>
       <label>
-        Accent
+        Acento (accent)
         <input type="color" id="accent" value="#ec4899" />
       </label>
       <label>
-        Fondo oscuro (900)
-        <input type="color" id="neutral900" value="#0f172a" />
+        Fondo oscuro (neutral-900)
+        <input type="color" id="neutral-900" value="#020617" />
       </label>
       <label>
-        Texto principal (700)
-        <input type="color" id="neutral700" value="#374151" />
+        Texto suave (neutral-700)
+        <input type="color" id="neutral-700" value="#0b1120" />
       </label>
       <label>
-        Bordes (400)
-        <input type="color" id="neutral400" value="#9ca3af" />
+        Bordes (neutral-400)
+        <input type="color" id="neutral-400" value="#9ca3af" />
       </label>
       <label>
-        Fondo tarjetas (100)
-        <input type="color" id="neutral100" value="#f3f4f6" />
+        Fondo tarjetas (neutral-100)
+        <input type="color" id="neutral-100" value="#f3f4f6" />
       </label>
     </div>
 
@@ -127,83 +128,81 @@
 
   <section>
     <p style="margin:0 0 0.25rem;"><strong>Emociones de Angie</strong></p>
-    <small>Solo cambia la imagen y frase, no los colores.</small>
+    <small>Solo cambia imagen y frase en el widget.</small>
+
     <div class="row" style="margin-top:0.5rem;">
       <button class="pill" data-estado="saludo">👋 Saludo</button>
       <button class="pill" data-estado="feliz">😊 Feliz</button>
-      <button class="pill" data-estado="orando">🙏 Orando</button>
+      <button class="pill" data-estado="rezando">🙏 Rezando</button>
       <button class="pill" data-estado="enojada">😡 Enojada</button>
-      <button class="pill" data-estado="pensativa">🤔 Pensando</button>
+      <button class="pill" data-estado="confundida">🤔 Pensando</button>
       <button class="pill" data-estado="llorando">😭 Llorando</button>
       <button class="pill" data-estado="enamorada">😍 Enamorada</button>
       <button class="pill" data-estado="cansada">🥱 Cansada</button>
+      <button class="pill" data-estado="traviesa">😏 Traviesa</button>
     </div>
   </section>
 
   <script>
-    const inputs = Array.from(document.querySelectorAll('input[type="color"]'));
+    const inputs = [...document.querySelectorAll('input[type="color"]')];
     const btnAplicar = document.getElementById('btnAplicar');
-    const btnReset = document.getElementById('btnReset');
+    const btnReset   = document.getElementById('btnReset');
 
     function buildTokens() {
       const tokens = {};
-      inputs.forEach((i) => {
-        tokens[i.id] = i.value;
-      });
+      inputs.forEach(i => tokens[i.id] = i.value);
       return tokens;
     }
 
     function sendTokens(tokens) {
       if (!window.parent) return;
       window.parent.postMessage({ type: 'applyTokens', tokens }, '*');
-      // Guardar solo para la herramienta
       localStorage.setItem('angie_tokens_ui', JSON.stringify(tokens));
     }
 
     function syncTokens() {
-      const tokens = buildTokens();
-      sendTokens(tokens);
+      sendTokens(buildTokens());
     }
 
-    inputs.forEach((i) => {
-      i.addEventListener('input', syncTokens);
-    });
+    inputs.forEach(i => i.addEventListener('input', syncTokens));
+    btnAplicar.addEventListener('click', syncTokens);
 
-    btnAplicar?.addEventListener('click', syncTokens);
-
-    btnReset?.addEventListener('click', () => {
-      document.getElementById('brand').value = '#2563eb';
-      document.getElementById('brand2').value = '#1d4ed8';
-      document.getElementById('accent').value = '#ec4899';
-      document.getElementById('neutral900').value = '#0f172a';
-      document.getElementById('neutral700').value = '#374151';
-      document.getElementById('neutral400').value = '#9ca3af';
-      document.getElementById('neutral100').value = '#f3f4f6';
+    btnReset.addEventListener('click', () => {
+      const defaults = {
+        "brand": "#2563eb",
+        "brand-2": "#1d4ed8",
+        "accent": "#ec4899",
+        "neutral-900": "#020617",
+        "neutral-700": "#0b1120",
+        "neutral-400": "#9ca3af",
+        "neutral-100": "#f3f4f6"
+      };
+      for (const k in defaults) {
+        document.getElementById(k).value = defaults[k];
+      }
       syncTokens();
     });
 
-    // Emociones de Angie -> avisar al padre
-    document.querySelectorAll('[data-estado]').forEach((btn) => {
+    // Emociones
+    document.querySelectorAll('[data-estado]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const value = btn.dataset.estado;
-        if (!window.parent) return;
-        window.parent.postMessage({ type: 'angieEstado', value }, '*');
+        window.parent.postMessage(
+          { type: 'angieEstado', value: btn.dataset.estado },
+          '*'
+        );
       });
     });
 
-    // Restaurar últimos colores usados en esta herramienta
     (function restore() {
       try {
-        const saved = localStorage.getItem('angie_tokens_ui');
+        const saved = JSON.parse(localStorage.getItem('angie_tokens_ui'));
         if (!saved) return;
-        const tokens = JSON.parse(saved);
-        inputs.forEach((i) => {
-          if (tokens[i.id]) i.value = tokens[i.id];
+        inputs.forEach(i => {
+          if (saved[i.id]) i.value = saved[i.id];
         });
-      } catch (e) {
-        console.error(e);
-      }
+      } catch {}
     })();
   </script>
+
 </body>
 </html>

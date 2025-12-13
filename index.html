@@ -271,8 +271,6 @@
             <input id="fileRec" type="file" hidden />
           </label>
         </header>
-
-        <ul id="listaRecursos" class="file-list"></ul>
       </section>
     </section>
 
@@ -395,6 +393,9 @@
     closeBtn.addEventListener("click", closePanel);
     overlay.addEventListener("click", () => {
       if (panel.classList.contains("open")) closePanel();
+
+      window.jcCloseAngiePanel = closePanel;
+
     });
 
     window.addEventListener("message", (ev) => {
