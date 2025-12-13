@@ -812,3 +812,61 @@ select {
   font-weight:700;
   color:#22c55e;
 }
+/* ===========================
+   EVENTOS: orden y responsive
+   =========================== */
+
+.card-header { flex-wrap: wrap; }
+.card-header-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-left: auto;
+}
+
+#eventList, #eventListHome { margin-top: 10px; }
+
+.event-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.event-title { line-height: 1.2; }
+.event-meta { text-align: right; white-space: nowrap; }
+
+@media (max-width: 520px) {
+  .event-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .event-meta {
+    white-space: normal;
+    text-align: left;
+  }
+}
+
+/* ===========================
+   BOTS: evitar superposición
+   =========================== */
+
+/* En móvil, que chat no choque con widgets */
+@media (max-width: 480px) {
+  .jc-chat { bottom: 76px; }
+  .angie-widget { bottom: 76px; }
+  .mia-widget { bottom: 210px; }
+  .ciro-widget { bottom: 340px; }
+}
+
+/* Si quieres que “los assets estén en la burbuja” además del avatar */
+.angie-bubble .bot-sticker {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  object-fit: contain;
+  margin-left: auto;
+  opacity: 0.95;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,.35));
+}

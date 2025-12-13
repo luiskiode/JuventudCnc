@@ -262,17 +262,19 @@
 
     <!-- RECURSOS -->
     <section class="view" id="view-recursos" data-view="recursos">
-      <section class="card">
-        <header class="card-header">
-          <h2 class="with-emoji" data-emoji="📂">Recursos</h2>
+  <section class="card">
+    <header class="card-header">
+      <h2 class="with-emoji" data-emoji="📂">Recursos</h2>
 
-          <label class="btn small adminOnly" hidden>
-            Subir archivo
-            <input id="fileRec" type="file" hidden />
-          </label>
-        </header>
-      </section>
-    </section>
+      <label class="btn small adminOnly" hidden>
+        Subir archivo
+        <input id="fileRec" type="file" hidden />
+      </label>
+    </header>
+
+    <div id="listaRecursos" class="file-list"></div>
+  </section>
+</section>
 
     <!-- AVISOS -->
     <section class="view" id="view-avisos" data-view="avisos">
@@ -372,78 +374,70 @@
   <script src="app.js" defer></script>
 
   <!-- Panel Angie / Tokens -->
-  <script>
+ <script>
 (function () {
   const panel = document.getElementById("angie-panel");
   const btn = document.getElementById("btnAngie");
   const closeBtn = document.getElementById("closeAngiePanel");
   const overlay = document.getElementById("overlay");
 
+  function isDrawerOpen() {
+    return document.getElementById("drawer")?.classList.contains("open");
+  }
+  function syncOverlay() {
+    const on = isDrawerOpen() || panel.classList.contains("open");
+    overlay.classList.toggle("show", on);
+  }
+
   function openPanel() {
-    panel?.classList.add("open");
-    overlay?.classList.add("show");
+    panel.classList.add("open");
+    syncOverlay();
   }
-
   function closePanel() {
-    panel?.classList.remove("open");
-    // OJO: no apagamos overlay si el drawer está abierto
-    const drawerOpen = document.getElementById("drawer")?.classList.contains("open");
-    if (!drawerOpen) overlay?.classList.remove("show");
+    panel.classList.remove("open");
+    syncOverlay();
   }
 
-  function togglePanel() {
-    if (panel?.classList.contains("open")) closePanel();
-    else openPanel();
-  }
-
-  // ✅ Exportar para que app.js (o el overlay) pueda cerrar Angie siempre
-  window.jcOpenAngiePanel = openPanel;
+  // 🔥 esto debe existir SIEMPRE
   window.jcCloseAngiePanel = closePanel;
-  window.jcToggleAngiePanel = togglePanel;
 
-  // ✅ Botón correcto: 🎨 abre/cierra
-  btn?.addEventListener("click", togglePanel);
+  btn?.addEventListener("click", () => {
+    panel.classList.contains("open") ? closePanel() : openPanel();
+  });
   closeBtn?.addEventListener("click", closePanel);
 
-  // ✅ Overlay: si Angie está abierto, lo cierra (y el drawer lo cierra app.js)
   overlay?.addEventListener("click", () => {
-    if (panel?.classList.contains("open")) closePanel();
+    // overlay cierra lo que esté abierto (drawer lo maneja app.js también)
+    closePanel();
   });
 
-  // ✅ Atajos
-  window.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.altKey && e.key.toLowerCase() === "a") togglePanel();
-    if (e.key === "Escape" && panel?.classList.contains("open")) closePanel();
-  });
-
-  // ✅ Mensajes desde el iframe (herramienta)
   window.addEventListener("message", (ev) => {
-    const data = ev.data;
-    if (!data) return;
-
-    if (data.type === "applyTokens") {
-      // Guardar para persistencia en la app
-      try { localStorage.setItem("jc_tokens", JSON.stringify(data.tokens || {})); } catch {}
-      if (typeof window.jcApplyTokens === "function") window.jcApplyTokens(data.tokens);
+    if (!ev.data) return;
+    if (ev.data.type === "applyTokens" && window.jcApplyTokens) {
+      window.jcApplyTokens(ev.data.tokens);
     }
-
-    if (data.type === "angieEstado") {
-      if (typeof window.angieSetEstado === "function") window.angieSetEstado(data.value);
+    if (ev.data.type === "angieEstado" && window.angieSetEstado) {
+      window.angieSetEstado(ev.data.value);
+    }
+    // opcional: Mia modo elegante/casual desde herramienta si algún día lo agregas
+    if (ev.data.type === "miaModo" && window.miaSetModo) {
+      window.miaSetModo(ev.data.value);
     }
   });
 
-  // ✅ Restaurar tokens al cargar
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && panel.classList.contains("open")) closePanel();
+  });
+
+  // restaurar tokens (si existen)
   (function restoreTokensOnLoad() {
     try {
       const saved = localStorage.getItem("jc_tokens");
-      if (!saved) return;
-      const tokens = JSON.parse(saved);
-      if (typeof window.jcApplyTokens === "function") window.jcApplyTokens(tokens);
+      if (saved && window.jcApplyTokens) window.jcApplyTokens(JSON.parse(saved));
     } catch (e) {
-      console.error("Error restaurando jc_tokens:", e);
+      console.error(e);
     }
   })();
-
 })();
 </script>
 
