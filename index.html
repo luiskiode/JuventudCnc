@@ -373,79 +373,79 @@
 
   <!-- Panel Angie / Tokens -->
   <script>
-  (function () {
-    const panel = document.getElementById("angie-panel");
-    const btn = document.getElementById("btnAngie");
-    const closeBtn = document.getElementById("closeAngiePanel");
-    const overlay = document.getElementById("overlay");
-    const themePicker = document.getElementById("themePicker");
+(function () {
+  const panel = document.getElementById("angie-panel");
+  const btn = document.getElementById("btnAngie");
+  const closeBtn = document.getElementById("closeAngiePanel");
+  const overlay = document.getElementById("overlay");
 
-    function openPanel() {
-      panel.classList.add("open");
-      overlay.classList.add("show");
-    }
-    function closePanel() {
-      panel.classList.remove("open");
-      overlay.classList.remove("show");
-    }
+  function openPanel() {
+    panel?.classList.add("open");
+    overlay?.classList.add("show");
+  }
 
-    btn.addEventListener("click", openPanel);
-    closeBtn.addEventListener("click", closePanel);
-    overlay.addEventListener("click", () => {
-      if (panel.classList.contains("open")) closePanel();
+  function closePanel() {
+    panel?.classList.remove("open");
+    // OJO: no apagamos overlay si el drawer está abierto
+    const drawerOpen = document.getElementById("drawer")?.classList.contains("open");
+    if (!drawerOpen) overlay?.classList.remove("show");
+  }
 
-      window.jcCloseAngiePanel = closePanel;
+  function togglePanel() {
+    if (panel?.classList.contains("open")) closePanel();
+    else openPanel();
+  }
 
-    });
+  // ✅ Exportar para que app.js (o el overlay) pueda cerrar Angie siempre
+  window.jcOpenAngiePanel = openPanel;
+  window.jcCloseAngiePanel = closePanel;
+  window.jcToggleAngiePanel = togglePanel;
 
-    window.addEventListener("message", (ev) => {
-      if (!ev.data) return;
+  // ✅ Botón correcto: 🎨 abre/cierra
+  btn?.addEventListener("click", togglePanel);
+  closeBtn?.addEventListener("click", closePanel);
 
-      if (ev.data.type === "applyTokens" && window.jcApplyTokens) {
-        window.jcApplyTokens(ev.data.tokens);
-      }
+  // ✅ Overlay: si Angie está abierto, lo cierra (y el drawer lo cierra app.js)
+  overlay?.addEventListener("click", () => {
+    if (panel?.classList.contains("open")) closePanel();
+  });
 
-      if (ev.data.type === "angieEstado" && window.angieSetEstado) {
-        window.angieSetEstado(ev.data.value);
-      }
-    });
+  // ✅ Atajos
+  window.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.altKey && e.key.toLowerCase() === "a") togglePanel();
+    if (e.key === "Escape" && panel?.classList.contains("open")) closePanel();
+  });
 
-    window.addEventListener("keydown", (e) => {
-      if (e.ctrlKey && e.altKey && e.key.toLowerCase() === "a") {
-        panel.classList.contains("open") ? closePanel() : openPanel();
-      }
-      if (e.key === "Escape" && panel.classList.contains("open")) closePanel();
-    });
+  // ✅ Mensajes desde el iframe (herramienta)
+  window.addEventListener("message", (ev) => {
+    const data = ev.data;
+    if (!data) return;
 
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("angie")) openPanel();
-
-    function applyTokens(tokens) {
-      if (!tokens) return;
-      const root = document.documentElement;
-
-      Object.entries(tokens).forEach(([key, val]) => {
-        root.style.setProperty(`--${key}`, val);
-      });
+    if (data.type === "applyTokens") {
+      // Guardar para persistencia en la app
+      try { localStorage.setItem("jc_tokens", JSON.stringify(data.tokens || {})); } catch {}
+      if (typeof window.jcApplyTokens === "function") window.jcApplyTokens(data.tokens);
     }
 
-    window.jcApplyTokens = applyTokens;
+    if (data.type === "angieEstado") {
+      if (typeof window.angieSetEstado === "function") window.angieSetEstado(data.value);
+    }
+  });
 
-    (function restoreTokensOnLoad() {
-      try {
-        const saved = localStorage.getItem("jc_tokens");
-        if (saved) {
-          const tokens = JSON.parse(saved);
-          applyTokens(tokens);
-          console.log("💾 Paleta restaurada");
-        }
-      } catch (e) {
-        console.error("Error con jc_tokens:", e);
-      }
-    })();
-
+  // ✅ Restaurar tokens al cargar
+  (function restoreTokensOnLoad() {
+    try {
+      const saved = localStorage.getItem("jc_tokens");
+      if (!saved) return;
+      const tokens = JSON.parse(saved);
+      if (typeof window.jcApplyTokens === "function") window.jcApplyTokens(tokens);
+    } catch (e) {
+      console.error("Error restaurando jc_tokens:", e);
+    }
   })();
-  </script>
+
+})();
+</script>
 
 </body>
 </html>
