@@ -1528,3 +1528,23 @@ select {
     max-width: 520px;
   }
 }
+/* ==========================
+   FIX CHAT EN MÓVIL
+   ========================== */
+@media (max-width: 560px) {
+
+  .jc-chat {
+    left: 10px;
+    right: 10px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: 42vh;        /* 🔑 se adapta al alto del celular */
+    border-radius: 16px;
+  }
+
+  .jc-chat-body {
+    max-height: calc(42vh - 42px); /* header incluido */
+    overflow-y: auto;
+  }
+
+}
