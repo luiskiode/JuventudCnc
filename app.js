@@ -30,10 +30,29 @@
 
   try { localStorage.setItem("jc_build", JC_BUILD); } catch {}
 })();
+/* =========================
+     COMUNIDAD (init)
+     ========================= */
+  const comunidad = createComunidadModule({
+    sb,
+    $,
+    $$,
+    safeText,
+    fmtDateTime,
+    normalizeTab,
+    logAviso,
+    angieSetEstado,
+    miaSetEstado,
+    ciroSetEstado
+  });
+
+  comunidad.init();
 
 
 (() => {
   "use strict";
+
+
 
   /* =========================
      BOOT
@@ -119,6 +138,88 @@
     if (!overlay) return;
     overlay.classList.toggle("show", shouldShow);
   }
+  /* =========================
+   LOGIN (Magic Link por email)
+   ========================= */
+const btnLogin = document.getElementById("btnLogin");
+const loginModal = document.getElementById("loginModal");
+const loginClose = document.getElementById("loginClose");
+const loginForm = document.getElementById("loginForm");
+const loginEmail = document.getElementById("loginEmail");
+const loginEstado = document.getElementById("loginEstado");
+
+function openLoginModal() {
+  if (!loginModal) return;
+  loginModal.style.display = "flex";
+  loginModal.classList.add("show");
+  // overlay (si usas overlay global)
+  try {
+    state.angieOpen = true; // solo para que overlay se muestre con tu syncOverlay()
+    syncOverlay();
+    state.angieOpen = false;
+  } catch {}
+  loginEmail?.focus();
+}
+
+function closeLoginModal() {
+  if (!loginModal) return;
+  loginModal.classList.remove("show");
+  loginModal.style.display = "none";
+  try { syncOverlay(); } catch {}
+  if (loginEstado) loginEstado.textContent = "";
+}
+
+btnLogin?.addEventListener("click", () => openLoginModal());
+loginClose?.addEventListener("click", () => closeLoginModal());
+loginModal?.addEventListener("click", (e) => {
+  if (e.target === loginModal) closeLoginModal();
+});
+
+loginForm?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!sb?.auth?.signInWithOtp) {
+    if (loginEstado) loginEstado.textContent = "Auth no disponible.";
+    return;
+  }
+
+  const email = (loginEmail?.value || "").trim().toLowerCase();
+  if (!email) return;
+
+  if (loginEstado) loginEstado.textContent = "Enviando enlace…";
+
+  try {
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: location.origin + location.pathname
+      }
+    });
+
+    if (error) throw error;
+
+    if (loginEstado) loginEstado.textContent = "✅ Listo. Revisa tu correo y abre el enlace.";
+    angieSetEstado?.("ok");
+  } catch (err) {
+    console.error("Login error:", err);
+    if (loginEstado) loginEstado.textContent = `Error: ${err?.message || "no se pudo enviar"}`;
+    angieSetEstado?.("confundida");
+  }
+});
+
+// Cuando la sesión cambie, refrescamos perfil/comunidad
+if (sb?.auth?.onAuthStateChange) {
+  sb.auth.onAuthStateChange(async (_event, _session) => {
+    try {
+      // refresca perfil (tu función actual)
+      if (typeof cargarPerfil === "function") await cargarPerfil();
+    } catch {}
+
+    try {
+      // si existe el módulo comunidad (si lo creaste como const comunidad = ...)
+      if (typeof comunidad?.cargarFeed === "function") await comunidad.cargarFeed({ force: true });
+    } catch {}
+  });
+}
 
   function openDrawer() {
     if (!drawer) return;
@@ -1000,6 +1101,15 @@ elegant_relief: {
   }
 
   const JC_CHAT_SCENES = {
+
+
+    comunidad: [
+  { from: "mia", text: "Aquí compartimos retos, dinámicas y opiniones 💗", estado: "apoyo", delay: 400 },
+  { from: "ciro", text: "Respeto primero. Participa con fuerza y corazón 💪", estado: "calm", delay: 1100 },
+  { from: "angie", text: "¡Dale un ❤️ a lo que te inspire! 😏✨", estado: "traviesa", delay: 1700 }
+],
+
+
     inicio: [
       { from: "mia", text: "¡Hola! Soy Mia, coordino Juventud CNC. Te acompaño 💗", estado: "guiando", delay: 400 },
       { from: "ciro", text: "Y yo soy Ciro. Si hay que servir, ¡yo voy primero! 💪", estado: "excited", delay: 900 },
@@ -1117,23 +1227,7 @@ elegant_relief: {
   }
   window.logAviso = logAviso;
 
-    /* =========================
-     COMUNIDAD (init)
-     ========================= */
-  const comunidad = createComunidadModule({
-    sb,
-    $,
-    $$,
-    safeText,
-    fmtDateTime,
-    normalizeTab,
-    logAviso,
-    angieSetEstado,
-    miaSetEstado,
-    ciroSetEstado
-  });
-
-  comunidad.init();
+    
 
   /* =========================
      MIEMBROS
@@ -1645,89 +1739,6 @@ cargarPerfil();
 
 })();
 
-
-/* =========================
-   LOGIN (Magic Link por email)
-   ========================= */
-const btnLogin = document.getElementById("btnLogin");
-const loginModal = document.getElementById("loginModal");
-const loginClose = document.getElementById("loginClose");
-const loginForm = document.getElementById("loginForm");
-const loginEmail = document.getElementById("loginEmail");
-const loginEstado = document.getElementById("loginEstado");
-
-function openLoginModal() {
-  if (!loginModal) return;
-  loginModal.style.display = "flex";
-  loginModal.classList.add("show");
-  // overlay (si usas overlay global)
-  try {
-    state.angieOpen = true; // solo para que overlay se muestre con tu syncOverlay()
-    syncOverlay();
-    state.angieOpen = false;
-  } catch {}
-  loginEmail?.focus();
-}
-
-function closeLoginModal() {
-  if (!loginModal) return;
-  loginModal.classList.remove("show");
-  loginModal.style.display = "none";
-  try { syncOverlay(); } catch {}
-  if (loginEstado) loginEstado.textContent = "";
-}
-
-btnLogin?.addEventListener("click", () => openLoginModal());
-loginClose?.addEventListener("click", () => closeLoginModal());
-loginModal?.addEventListener("click", (e) => {
-  if (e.target === loginModal) closeLoginModal();
-});
-
-loginForm?.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  if (!sb?.auth?.signInWithOtp) {
-    if (loginEstado) loginEstado.textContent = "Auth no disponible.";
-    return;
-  }
-
-  const email = (loginEmail?.value || "").trim().toLowerCase();
-  if (!email) return;
-
-  if (loginEstado) loginEstado.textContent = "Enviando enlace…";
-
-  try {
-    const { error } = await sb.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: location.origin + location.pathname
-      }
-    });
-
-    if (error) throw error;
-
-    if (loginEstado) loginEstado.textContent = "✅ Listo. Revisa tu correo y abre el enlace.";
-    angieSetEstado?.("ok");
-  } catch (err) {
-    console.error("Login error:", err);
-    if (loginEstado) loginEstado.textContent = `Error: ${err?.message || "no se pudo enviar"}`;
-    angieSetEstado?.("confundida");
-  }
-});
-
-// Cuando la sesión cambie, refrescamos perfil/comunidad
-if (sb?.auth?.onAuthStateChange) {
-  sb.auth.onAuthStateChange(async (_event, _session) => {
-    try {
-      // refresca perfil (tu función actual)
-      if (typeof cargarPerfil === "function") await cargarPerfil();
-    } catch {}
-
-    try {
-      // si existe el módulo comunidad (si lo creaste como const comunidad = ...)
-      if (typeof comunidad?.cargarFeed === "function") await comunidad.cargarFeed({ force: true });
-    } catch {}
-  });
-}
 
 /* ==========================================================
    COMUNIDAD MODULE (posts + comentarios + corazones)
