@@ -30,11 +30,6 @@
 
   try { localStorage.setItem("jc_build", JC_BUILD); } catch {}
 })();
-
-
-  comunidad.init();
-
-
 (() => {
   "use strict";
 
@@ -469,7 +464,7 @@ if (sb?.auth?.onAuthStateChange) {
   });
 
   comunidad.init();
-  
+
   // exponer (por compat con overlay click)
   window.jcCloseAngieModal = jcCloseAngieModal;
 
