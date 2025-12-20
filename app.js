@@ -1408,13 +1408,12 @@
 }
 
 /* =========================
-   PERFIL (corregido + flujo)
-   - Intenta sesión anónima automática (si está habilitada)
+   PERFIL (LISTO)
+   - Auto sesión anónima (si está habilitada en Supabase)
    - Si ya está registrado: oculta formulario
    - Si no: muestra formulario
-   - Al guardar: oculta formulario + refresca estado
+   - Avatar: muestra inicial + opcional foto (dataURL local)
    ========================= */
-
 const formMiembro = document.getElementById("formMiembro");
 const perfilNombreTexto = document.getElementById("perfilNombreTexto");
 const perfilRolTexto = document.getElementById("perfilRolTexto");
@@ -1422,18 +1421,46 @@ const perfilFraseTexto = document.getElementById("perfilFraseTexto");
 const perfilEstado = document.getElementById("perfilEstado");
 const btnCerrarPerfil = document.getElementById("btnCerrarPerfil");
 
-// helper: asegura user id (con anon si aplica)
+// Avatar UI
+const perfilAvatar = document.getElementById("perfilAvatar");
+const perfilAvatarImg = document.getElementById("perfilAvatarImg");
+const perfilAvatarInitial = document.getElementById("perfilAvatarInitial");
+const perfilAvatarInput = document.getElementById("perfilAvatarInput");
+const btnAvatarClear = document.getElementById("btnAvatarClear");
+
+function setAvatarInitialFromName(name) {
+  const n = (name || "").trim();
+  const letter = n ? n[0].toUpperCase() : "👤";
+  if (perfilAvatarInitial) perfilAvatarInitial.textContent = letter;
+}
+
+function loadAvatarFromLocal() {
+  let url = "";
+  try { url = localStorage.getItem("jc_avatar_dataurl") || ""; } catch {}
+  if (perfilAvatarImg) perfilAvatarImg.src = url || "";
+  if (perfilAvatarImg) perfilAvatarImg.style.display = url ? "block" : "none";
+  if (perfilAvatarInitial) perfilAvatarInitial.style.display = url ? "none" : "grid";
+}
+
+function saveAvatarToLocal(dataUrl) {
+  try { localStorage.setItem("jc_avatar_dataurl", dataUrl || ""); } catch {}
+  loadAvatarFromLocal();
+}
+
 async function ensureUserId() {
   if (!sb?.auth?.getUser) return null;
 
+  // 1) ya hay sesión?
   let uRes = await sb.auth.getUser();
   let userId = uRes?.data?.user?.id || null;
 
+  // 2) si no, intenta anónimo (requiere habilitarlo en Supabase Auth)
   if (!userId && sb?.auth?.signInAnonymously) {
-    // ✅ sesión anónima automática para poder registrar miembro
-    await sb.auth.signInAnonymously();
-    uRes = await sb.auth.getUser();
-    userId = uRes?.data?.user?.id || null;
+    const { error } = await sb.auth.signInAnonymously();
+    if (!error) {
+      uRes = await sb.auth.getUser();
+      userId = uRes?.data?.user?.id || null;
+    }
   }
 
   return userId;
@@ -1445,38 +1472,66 @@ async function cargarPerfil() {
   try {
     const userId = await ensureUserId();
 
+    // Si NO hay userId, igual mostramos el form pero avisamos
     if (!userId) {
-      // sin sesión (o anon no habilitado)
-      if (perfilEstado) perfilEstado.textContent = "No se pudo iniciar sesión automática. (Activa Auth anónimo en Supabase).";
-      if (formMiembro) formMiembro.style.display = ""; // dejamos que vea el form, pero al guardar fallará
+      if (perfilEstado) perfilEstado.textContent =
+        "No se pudo iniciar sesión automática. Activa Auth anónimo en Supabase (Anonymous sign-ins).";
+      if (formMiembro) formMiembro.style.display = "";
       if (btnCerrarPerfil) btnCerrarPerfil.style.display = "none";
+      if (perfilNombreTexto) perfilNombreTexto.textContent = "Aún sin registrar";
+      if (perfilRolTexto) perfilRolTexto.textContent = "";
+      if (perfilFraseTexto) perfilFraseTexto.textContent = "Completa tu perfil para formar parte de la comunidad.";
+      setAvatarInitialFromName("");
+      loadAvatarFromLocal();
       angieSetEstado("confundida");
       return;
     }
 
-    const { data, error } = await sb.from("miembros").select("*").eq("user_id", userId).maybeSingle();
+    const { data, error } = await sb
+      .from("miembros")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
     if (error) throw error;
 
     if (data) {
-      // ===== YA ESTÁ REGISTRADO =====
-      if (perfilNombreTexto) perfilNombreTexto.textContent = data.nombre || "Miembro";
+      // ===== YA REGISTRADO =====
+      const nombre = data.nombre || "Miembro";
+      if (perfilNombreTexto) perfilNombreTexto.textContent = safeText(nombre);
       if (perfilRolTexto) perfilRolTexto.textContent = data.rol_key ? `Rol: ${data.rol_key}` : "";
-      if (perfilFraseTexto) perfilFraseTexto.textContent = data.frase || "";
-
+      if (perfilFraseTexto) perfilFraseTexto.textContent = safeText(data.frase || "");
       if (btnCerrarPerfil) btnCerrarPerfil.style.display = "inline-flex";
+
+      // oculta form
       if (formMiembro) formMiembro.style.display = "none";
+
+      // rellena form (por si luego habilitas "editar")
+      if (formMiembro) {
+        formMiembro.nombre.value = data.nombre || "";
+        formMiembro.edad.value = data.edad || "";
+        formMiembro.contacto.value = data.contacto || "";
+        formMiembro.ministerio.value = data.ministerio || "";
+        formMiembro.rol_key.value = data.rol_key || "miembro";
+        formMiembro.frase.value = data.frase || "";
+      }
+
+      setAvatarInitialFromName(nombre);
+      loadAvatarFromLocal();
 
       if (perfilEstado) perfilEstado.textContent = "";
     } else {
-      // ===== NO REGISTRADO AÚN =====
+      // ===== NO REGISTRADO =====
       if (formMiembro) formMiembro.style.display = "";
+      if (btnCerrarPerfil) btnCerrarPerfil.style.display = "none";
 
       if (perfilNombreTexto) perfilNombreTexto.textContent = "Aún sin registrar";
       if (perfilRolTexto) perfilRolTexto.textContent = "";
       if (perfilFraseTexto) perfilFraseTexto.textContent = "Completa tu perfil para formar parte de la comunidad.";
-
-      if (btnCerrarPerfil) btnCerrarPerfil.style.display = "none";
       if (perfilEstado) perfilEstado.textContent = "";
+
+      setAvatarInitialFromName(formMiembro?.nombre?.value || "");
+      loadAvatarFromLocal();
     }
   } catch (e) {
     console.error("Error cargarPerfil:", e);
@@ -1485,6 +1540,7 @@ async function cargarPerfil() {
   }
 }
 
+// Guardar perfil
 formMiembro?.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (perfilEstado) perfilEstado.textContent = "Guardando…";
@@ -1498,7 +1554,8 @@ formMiembro?.addEventListener("submit", async (e) => {
     const userId = await ensureUserId();
 
     if (!userId) {
-      if (perfilEstado) perfilEstado.textContent = "No se pudo iniciar sesión automática. (Activa Auth anónimo en Supabase).";
+      if (perfilEstado) perfilEstado.textContent =
+        "No se pudo iniciar sesión automática. Activa Auth anónimo en Supabase (Anonymous sign-ins).";
       angieSetEstado("confundida");
       return;
     }
@@ -1510,35 +1567,56 @@ formMiembro?.addEventListener("submit", async (e) => {
       contacto: formMiembro.contacto.value.trim(),
       ministerio: formMiembro.ministerio.value.trim(),
       rol_key: formMiembro.rol_key.value.trim(),
-      frase: formMiembro.frase.value.trim(),
+      frase: formMiembro.frase.value.trim()
     };
 
     const { error } = await sb.from("miembros").upsert(payload, { onConflict: "user_id" });
     if (error) throw error;
 
     if (perfilEstado) perfilEstado.textContent = "Perfil guardado ✅";
-    if (perfilNombreTexto) perfilNombreTexto.textContent = payload.nombre || "Miembro";
-    if (perfilRolTexto) perfilRolTexto.textContent = payload.rol_key ? `Rol: ${payload.rol_key}` : "";
-    if (perfilFraseTexto) perfilFraseTexto.textContent = payload.frase || "";
-
-    if (btnCerrarPerfil) btnCerrarPerfil.style.display = "inline-flex";
-
-    // ✅ flujo: ocultar formulario tras registrar
-    if (formMiembro) formMiembro.style.display = "none";
-
-    logAviso({ title: "Perfil actualizado", body: payload.nombre });
     miaSetEstado("apoyo");
     angieSetEstado("ok");
 
-    // refresca estado completo
+    // ocultar form ya registrado + refrescar
     await cargarPerfil();
+
+    // Si ya tienes el módulo de comunidad, en cuanto entres a Comunidad te habilitará el composer
+    // (porque ya existirá row en miembros)
   } catch (err) {
     console.error("Error guardar perfil:", err);
-    if (perfilEstado) perfilEstado.textContent = "Error guardando el perfil.";
+    // muestra el error real si viene de Supabase
+    if (perfilEstado) perfilEstado.textContent = `Error guardando: ${err?.message || "revisa consola"}`;
     angieSetEstado("confundida");
   }
 });
 
+// Avatar (opcional, local)
+perfilAvatarInput?.addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  // solo imagen
+  if (!file.type.startsWith("image/")) {
+    if (perfilEstado) perfilEstado.textContent = "Selecciona una imagen válida.";
+    return;
+  }
+
+  // to base64 dataURL (local, no supabase)
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = String(reader.result || "");
+    saveAvatarToLocal(dataUrl);
+    if (perfilEstado) perfilEstado.textContent = "Foto actualizada ✅ (local)";
+  };
+  reader.readAsDataURL(file);
+});
+
+btnAvatarClear?.addEventListener("click", () => {
+  saveAvatarToLocal("");
+  if (perfilEstado) perfilEstado.textContent = "Foto eliminada.";
+});
+
+// Cerrar sesión
 btnCerrarPerfil?.addEventListener("click", async () => {
   try {
     await sb?.auth?.signOut?.();
@@ -1547,71 +1625,19 @@ btnCerrarPerfil?.addEventListener("click", async () => {
   if (btnCerrarPerfil) btnCerrarPerfil.style.display = "none";
   if (perfilEstado) perfilEstado.textContent = "Sesión cerrada.";
 
-  // al cerrar sesión, mostramos el form de nuevo
+  // mostrar formulario otra vez
   if (formMiembro) formMiembro.style.display = "";
-
   if (perfilNombreTexto) perfilNombreTexto.textContent = "Aún sin registrar";
   if (perfilRolTexto) perfilRolTexto.textContent = "";
   if (perfilFraseTexto) perfilFraseTexto.textContent = "Completa tu perfil para formar parte de la comunidad.";
+  setAvatarInitialFromName("");
+  loadAvatarFromLocal();
 
   angieSetEstado("saludo");
 });
 
-  
-
-  // Botón perfil en topbar
-  document.getElementById("btnPerfil")?.addEventListener("click", () => activate("perfil"));
-
-  /* =========================
-     FAB / acciones rápidas
-     ========================= */
-  const fab = document.getElementById("fab");
-  fab?.addEventListener("click", () => {
-    const active = normalizeTab((location.hash || "#inicio").replace("#", ""));
-    if (active === "recursos") {
-      document.getElementById("fileRec")?.click();
-      angieSetEstado("traviesa");
-      return;
-    }
-    if (normalizeTab(active) === "judart") {
-      jcChatAddMessage({ from: "angie", text: "Judart pronto tendrá subida de arte 🎨✨", estado: "feliz" });
-      return;
-    }
-
-    alert("Acción rápida");
-  });
-
-  // Reemplazo: Notificaciones -> Judart
-  const btnPermPush = document.getElementById("btnPermPush");
-  btnPermPush?.addEventListener("click", () => {
-    activate("judart");
-    jcChatAddMessage({ from: "angie", text: "Bienvenido a Judart 🎨✨", estado: "feliz" });
-  });
-
-  /* =========================
-     Cargar todo lo público
-     ========================= */
-  async function cargarPublic() {
-    try {
-      await Promise.all([
-        cargarEventosHome(),
-        cargarMensajeSemanal(),
-        cargarEventos({ destinoId: "eventList", tipo: $("#filtroTipo")?.value || "" }),
-        listarRecursos()
-      ]);
-    } catch (e) {
-      console.error("Error en cargarPublic:", e);
-    }
-  }
-
-  // inicial
-  cargarPublic();
-
-  // cargar perfil (si hay auth)
-  cargarPerfil();
-
-  
-
+// Inicial
+cargarPerfil();
   
 
 })();

@@ -253,6 +253,11 @@
         <h2 class="with-emoji" data-emoji="👤">Mi perfil</h2>
 
         <div class="perfil-resumen">
+          <div class="perfil-avatar" id="perfilAvatar" aria-label="Foto de perfil">
+  <img id="perfilAvatarImg" alt="Foto de perfil" style="display:none" />
+  <span id="perfilAvatarInitial">👤</span>
+</div>        
+          
           <div>
             <strong id="perfilNombreTexto">Aún sin registrar</strong>
             <div id="perfilRolTexto" class="small muted"></div>
@@ -267,6 +272,12 @@
         </p>
 
         <p id="perfilEstado" class="small muted"></p>
+
+        <div class="perfil-avatar-tools">
+  <label class="btn small ghost" for="perfilAvatarInput">📷 Subir foto</label>
+  <input id="perfilAvatarInput" type="file" accept="image/*" style="display:none" />
+  <button id="btnAvatarClear" class="btn small ghost" type="button">Quitar</button>
+</div>
 
         <form id="formMiembro" class="grid perfil-form" aria-label="Formulario de perfil">
           <input name="nombre" placeholder="Nombre completo" required />
