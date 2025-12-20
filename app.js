@@ -1340,141 +1340,224 @@
      BOTs según vista
      ========================= */
   function botsSegunVista(tab) {
-    const t = normalizeTab(tab);
+  const t = normalizeTab(tab);
 
-    // si bots están apagados, ocultamos todo y salimos
-    if (!botsEnabled) {
-      hideBotsUI();
-      return;
-    }
+  if (!botsEnabled) {
+    hideBotsUI();
+    return;
+  }
 
-    const mapaAngie = {
-      inicio: "feliz",
-      eventos: "sorprendida",
-      comunidad: "saludo",
-      recursos: "confundida",
-      judart: "traviesa",
-      avisos: "traviesa", // compat
-      "miembros-activos": "ok",
-      perfil: "vergonzosa"
-    };
+  // --- solo 1 bot visible ---
+  const wAngie = document.getElementById("angieWidget");
+  const wMia   = document.getElementById("miaWidget");
+  const wCiro  = document.getElementById("ciroWidget");
 
-    // Mia elegante en perfil y cuando modal está abierto
-    if (t === "perfil" || state.angieOpen) {
-      miaSetModo("elegante");
-    } else {
-      miaSetModo("casual");
-    }
+  function showOnly(which) {
+    wAngie?.classList.toggle("angie-widget--visible", which === "angie");
+    wMia?.classList.toggle("mia-widget--visible", which === "mia");
+    wCiro?.classList.toggle("ciro-widget--visible", which === "ciro");
+  }
 
+  // Rotación por pestaña (cada vez que entras, cambia el bot)
+  const key = `jc_bot_turn_${t}`;
+  let turn = Number(sessionStorage.getItem(key) || "0");
+  turn = (turn + 1) % 3;
+  sessionStorage.setItem(key, String(turn));
+
+  const order = ["angie", "mia", "ciro"];
+  let activeBot = order[turn];
+
+  // Si estás en perfil, preferimos Mia (modo elegante) para guiar el registro
+  if (t === "perfil") activeBot = "mia";
+
+  // Estados por vista
+  const mapaAngie = {
+    inicio: "feliz",
+    eventos: "sorprendida",
+    comunidad: "saludo",
+    recursos: "confundida",
+    judart: "traviesa",
+    avisos: "traviesa",
+    "miembros-activos": "ok",
+    perfil: "vergonzosa"
+  };
+
+  // Mia elegante en perfil o cuando modal Angie está abierto
+  if (t === "perfil" || state.angieOpen) miaSetModo("elegante");
+  else miaSetModo("casual");
+
+  // Solo “habla” el bot visible (los demás se quedan ocultos)
+  if (activeBot === "angie") {
+    showOnly("angie");
     angieSetEstado(mapaAngie[t] || "feliz");
-
-    // Ciro reacciona por vista (sutil)
+  } else if (activeBot === "mia") {
+    showOnly("mia");
+    // Mia: guía según vista
+    miaSetEstado(t === "comunidad" ? "apoyo" : "guiando");
+  } else {
+    showOnly("ciro");
+    // Ciro reacciona por vista
     if (t === "eventos") ciroSetEstado("excited");
     else if (t === "judart" || t === "avisos") ciroSetEstado("stop");
     else if (t === "inicio") ciroSetEstado("feliz");
     else ciroSetEstado("calm");
-
-    // chat escena
-    jcChatPlayScene(t);
   }
 
-  /* =========================
-     PERFIL
-     ========================= */
-  const formMiembro = document.getElementById("formMiembro");
-  const perfilNombreTexto = document.getElementById("perfilNombreTexto");
-  const perfilRolTexto = document.getElementById("perfilRolTexto");
-  const perfilFraseTexto = document.getElementById("perfilFraseTexto");
-  const perfilEstado = document.getElementById("perfilEstado");
-  const btnCerrarPerfil = document.getElementById("btnCerrarPerfil");
+  // Chat escena se mantiene (ya sale secuencial con delays) :contentReference[oaicite:2]{index=2}
+  jcChatPlayScene(t);
+}
 
-  async function cargarPerfil() {
-    if (!sb?.auth?.getUser || !sb?.from) return;
+/* =========================
+   PERFIL (corregido + flujo)
+   - Intenta sesión anónima automática (si está habilitada)
+   - Si ya está registrado: oculta formulario
+   - Si no: muestra formulario
+   - Al guardar: oculta formulario + refresca estado
+   ========================= */
 
-    try {
-      const { data: u } = await sb.auth.getUser();
-      const userId = u?.user?.id;
-      if (!userId) return;
+const formMiembro = document.getElementById("formMiembro");
+const perfilNombreTexto = document.getElementById("perfilNombreTexto");
+const perfilRolTexto = document.getElementById("perfilRolTexto");
+const perfilFraseTexto = document.getElementById("perfilFraseTexto");
+const perfilEstado = document.getElementById("perfilEstado");
+const btnCerrarPerfil = document.getElementById("btnCerrarPerfil");
 
-      const { data, error } = await sb.from("miembros").select("*").eq("user_id", userId).maybeSingle();
-      if (error) throw error;
+// helper: asegura user id (con anon si aplica)
+async function ensureUserId() {
+  if (!sb?.auth?.getUser) return null;
 
-      if (data) {
-        if (perfilNombreTexto) perfilNombreTexto.textContent = safeText(data.nombre || "Registrado");
-        if (perfilRolTexto) perfilRolTexto.textContent = safeText(data.rol_key || "");
-        if (perfilFraseTexto) perfilFraseTexto.textContent = safeText(data.frase || "");
-        if (btnCerrarPerfil) btnCerrarPerfil.style.display = "";
+  let uRes = await sb.auth.getUser();
+  let userId = uRes?.data?.user?.id || null;
 
-        if (formMiembro) {
-          formMiembro.nombre.value = data.nombre || "";
-          formMiembro.edad.value = data.edad || "";
-          formMiembro.contacto.value = data.contacto || "";
-          formMiembro.ministerio.value = data.ministerio || "";
-          formMiembro.rol_key.value = data.rol_key || "miembro";
-          formMiembro.frase.value = data.frase || "";
-        }
-      }
-    } catch (e) {
-      console.error("Error cargarPerfil:", e);
-    }
+  if (!userId && sb?.auth?.signInAnonymously) {
+    // ✅ sesión anónima automática para poder registrar miembro
+    await sb.auth.signInAnonymously();
+    uRes = await sb.auth.getUser();
+    userId = uRes?.data?.user?.id || null;
   }
 
-  formMiembro?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (perfilEstado) perfilEstado.textContent = "Guardando…";
+  return userId;
+}
 
-    if (!sb?.auth?.getUser || !sb?.from) {
-      if (perfilEstado) perfilEstado.textContent = "No hay conexión al servidor.";
+async function cargarPerfil() {
+  if (!sb?.from) return;
+
+  try {
+    const userId = await ensureUserId();
+
+    if (!userId) {
+      // sin sesión (o anon no habilitado)
+      if (perfilEstado) perfilEstado.textContent = "No se pudo iniciar sesión automática. (Activa Auth anónimo en Supabase).";
+      if (formMiembro) formMiembro.style.display = ""; // dejamos que vea el form, pero al guardar fallará
+      if (btnCerrarPerfil) btnCerrarPerfil.style.display = "none";
+      angieSetEstado("confundida");
       return;
     }
 
-    try {
-      const { data: u } = await sb.auth.getUser();
-      const userId = u?.user?.id;
-      if (!userId) {
-        if (perfilEstado) perfilEstado.textContent = "Necesitas iniciar sesión (próximamente).";
-        angieSetEstado("confundida");
-        return;
-      }
+    const { data, error } = await sb.from("miembros").select("*").eq("user_id", userId).maybeSingle();
+    if (error) throw error;
 
-      const payload = {
-        user_id: userId,
-        nombre: formMiembro.nombre.value.trim(),
-        edad: Number(formMiembro.edad.value || 0),
-        contacto: formMiembro.contacto.value.trim(),
-        ministerio: formMiembro.ministerio.value.trim(),
-        rol_key: formMiembro.rol_key.value.trim(),
-        frase: formMiembro.frase.value.trim()
-      };
+    if (data) {
+      // ===== YA ESTÁ REGISTRADO =====
+      if (perfilNombreTexto) perfilNombreTexto.textContent = data.nombre || "Miembro";
+      if (perfilRolTexto) perfilRolTexto.textContent = data.rol_key ? `Rol: ${data.rol_key}` : "";
+      if (perfilFraseTexto) perfilFraseTexto.textContent = data.frase || "";
 
-      const { error } = await sb.from("miembros").upsert(payload, { onConflict: "user_id" });
-      if (error) throw error;
+      if (btnCerrarPerfil) btnCerrarPerfil.style.display = "inline-flex";
+      if (formMiembro) formMiembro.style.display = "none";
 
-      if (perfilEstado) perfilEstado.textContent = "Perfil guardado ✅";
-      if (perfilNombreTexto) perfilNombreTexto.textContent = payload.nombre;
-      if (perfilRolTexto) perfilRolTexto.textContent = payload.rol_key;
-      if (perfilFraseTexto) perfilFraseTexto.textContent = payload.frase;
+      if (perfilEstado) perfilEstado.textContent = "";
+    } else {
+      // ===== NO REGISTRADO AÚN =====
+      if (formMiembro) formMiembro.style.display = "";
 
-      btnCerrarPerfil && (btnCerrarPerfil.style.display = "");
+      if (perfilNombreTexto) perfilNombreTexto.textContent = "Aún sin registrar";
+      if (perfilRolTexto) perfilRolTexto.textContent = "";
+      if (perfilFraseTexto) perfilFraseTexto.textContent = "Completa tu perfil para formar parte de la comunidad.";
 
-      logAviso({ title: "Perfil actualizado", body: payload.nombre });
-      miaSetEstado("apoyo");
-      angieSetEstado("ok");
-    } catch (err) {
-      console.error("Error guardar perfil:", err);
-      if (perfilEstado) perfilEstado.textContent = "Error guardando el perfil.";
-      angieSetEstado("confundida");
+      if (btnCerrarPerfil) btnCerrarPerfil.style.display = "none";
+      if (perfilEstado) perfilEstado.textContent = "";
     }
-  });
+  } catch (e) {
+    console.error("Error cargarPerfil:", e);
+    if (perfilEstado) perfilEstado.textContent = "Error cargando perfil.";
+    angieSetEstado("confundida");
+  }
+}
 
-  btnCerrarPerfil?.addEventListener("click", async () => {
-    try {
-      await sb?.auth?.signOut?.();
-    } catch {}
-    if (btnCerrarPerfil) btnCerrarPerfil.style.display = "none";
-    if (perfilEstado) perfilEstado.textContent = "Sesión cerrada.";
-    angieSetEstado("saludo");
-  });
+formMiembro?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (perfilEstado) perfilEstado.textContent = "Guardando…";
+
+  if (!sb?.from) {
+    if (perfilEstado) perfilEstado.textContent = "No hay conexión al servidor.";
+    return;
+  }
+
+  try {
+    const userId = await ensureUserId();
+
+    if (!userId) {
+      if (perfilEstado) perfilEstado.textContent = "No se pudo iniciar sesión automática. (Activa Auth anónimo en Supabase).";
+      angieSetEstado("confundida");
+      return;
+    }
+
+    const payload = {
+      user_id: userId,
+      nombre: formMiembro.nombre.value.trim(),
+      edad: Number(formMiembro.edad.value || 0),
+      contacto: formMiembro.contacto.value.trim(),
+      ministerio: formMiembro.ministerio.value.trim(),
+      rol_key: formMiembro.rol_key.value.trim(),
+      frase: formMiembro.frase.value.trim(),
+    };
+
+    const { error } = await sb.from("miembros").upsert(payload, { onConflict: "user_id" });
+    if (error) throw error;
+
+    if (perfilEstado) perfilEstado.textContent = "Perfil guardado ✅";
+    if (perfilNombreTexto) perfilNombreTexto.textContent = payload.nombre || "Miembro";
+    if (perfilRolTexto) perfilRolTexto.textContent = payload.rol_key ? `Rol: ${payload.rol_key}` : "";
+    if (perfilFraseTexto) perfilFraseTexto.textContent = payload.frase || "";
+
+    if (btnCerrarPerfil) btnCerrarPerfil.style.display = "inline-flex";
+
+    // ✅ flujo: ocultar formulario tras registrar
+    if (formMiembro) formMiembro.style.display = "none";
+
+    logAviso({ title: "Perfil actualizado", body: payload.nombre });
+    miaSetEstado("apoyo");
+    angieSetEstado("ok");
+
+    // refresca estado completo
+    await cargarPerfil();
+  } catch (err) {
+    console.error("Error guardar perfil:", err);
+    if (perfilEstado) perfilEstado.textContent = "Error guardando el perfil.";
+    angieSetEstado("confundida");
+  }
+});
+
+btnCerrarPerfil?.addEventListener("click", async () => {
+  try {
+    await sb?.auth?.signOut?.();
+  } catch {}
+
+  if (btnCerrarPerfil) btnCerrarPerfil.style.display = "none";
+  if (perfilEstado) perfilEstado.textContent = "Sesión cerrada.";
+
+  // al cerrar sesión, mostramos el form de nuevo
+  if (formMiembro) formMiembro.style.display = "";
+
+  if (perfilNombreTexto) perfilNombreTexto.textContent = "Aún sin registrar";
+  if (perfilRolTexto) perfilRolTexto.textContent = "";
+  if (perfilFraseTexto) perfilFraseTexto.textContent = "Completa tu perfil para formar parte de la comunidad.";
+
+  angieSetEstado("saludo");
+});
+
+  
 
   // Botón perfil en topbar
   document.getElementById("btnPerfil")?.addEventListener("click", () => activate("perfil"));
@@ -1526,6 +1609,10 @@
 
   // cargar perfil (si hay auth)
   cargarPerfil();
+
+  
+
+  
 
 })();
 /* ==========================================================

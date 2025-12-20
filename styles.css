@@ -1430,3 +1430,51 @@ select {
   line-height: 1.35;
 }
 
+/* ==========================================================
+   MOBILE: TOPBAR + CHAT + WIDGETS (FIX)
+   ========================================================== */
+@media (max-width: 560px) {
+  .topbar {
+    gap: 10px;
+  }
+
+  .topbar-title {
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 42vw;
+  }
+
+  .topbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .theme-picker {
+    max-width: 150px;
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+
+  .icon-btn {
+    padding: 7px;
+    font-size: 18px;
+  }
+
+  /* Chat adaptativo */
+  .jc-chat {
+    right: 10px;
+    left: 10px;
+    width: auto;
+    bottom: 78px;
+    max-height: 34vh;
+  }
+
+  /* Evita que widgets se monten */
+  .angie-widget { left: 10px; bottom: 78px; }
+  .mia-widget   { right: 10px; bottom: 150px; }
+  .ciro-widget  { right: 10px; bottom: 230px; }
+}
