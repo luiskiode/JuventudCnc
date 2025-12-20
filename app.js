@@ -30,21 +30,7 @@
 
   try { localStorage.setItem("jc_build", JC_BUILD); } catch {}
 })();
-/* =========================
-     COMUNIDAD (init)
-     ========================= */
-  const comunidad = createComunidadModule({
-    sb,
-    $,
-    $$,
-    safeText,
-    fmtDateTime,
-    normalizeTab,
-    logAviso,
-    angieSetEstado,
-    miaSetEstado,
-    ciroSetEstado
-  });
+
 
   comunidad.init();
 
@@ -466,6 +452,24 @@ if (sb?.auth?.onAuthStateChange) {
     syncOverlay();
   }
 
+   /* =========================
+     COMUNIDAD (init) — dentro del IIFE
+     ========================= */
+  const comunidad = createComunidadModule({
+    sb,
+    $,
+    $$,
+    safeText,
+    fmtDateTime,
+    normalizeTab,
+    logAviso,
+    angieSetEstado,
+    miaSetEstado,
+    ciroSetEstado
+  });
+
+  comunidad.init();
+  
   // exponer (por compat con overlay click)
   window.jcCloseAngieModal = jcCloseAngieModal;
 
