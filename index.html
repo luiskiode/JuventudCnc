@@ -16,6 +16,14 @@
   <!-- Config -->
   <script src="supabase-config.js" defer></script>
 
+  <!-- automatico  -->
+<script>
+  window.JC_BUILD = "2025-12-20.02"; // cambia esto en cada release
+</script>
+
+<link rel="stylesheet" href="styles.css?v=2025-12-20.02" />
+<script src="app.js?v=2025-12-20.02" defer></script>
+
   <!-- Core -->
   <script src="app.js" defer></script>
 </head>
@@ -149,27 +157,96 @@
     </section>
 
     <!-- COMUNIDAD -->
-    <section class="view" data-view="comunidad" aria-label="Comunidad">
-      <section class="card">
+    <!-- COMUNIDAD -->
+<section class="view" data-view="comunidad" aria-label="Comunidad">
+  <section class="card">
+    <header class="card-header">
+      <div>
         <h2 class="with-emoji" data-emoji="👥">Comunidad</h2>
-        <p class="muted">Espacios de participación juvenil.</p>
+        <p class="muted small">Retos + dinámicas + foro. Solo miembros registrados publican, comentan y reaccionan ❤️</p>
+      </div>
+      <span id="comuLockBadge" class="badge badge-mix">🔒 Solo miembros</span>
+    </header>
 
-        <div class="grid" style="margin-top:12px; gap:10px">
-          <div class="card" style="padding:12px">
-            <h3 class="with-emoji" data-emoji="🤝">Servicio</h3>
-            <p class="small muted">Actividades para ayudar y acompañar.</p>
-          </div>
-          <div class="card" style="padding:12px">
-            <h3 class="with-emoji" data-emoji="📖">Formación</h3>
-            <p class="small muted">Guías, temas y crecimiento.</p>
-          </div>
-          <div class="card" style="padding:12px">
-            <h3 class="with-emoji" data-emoji="🙏">Oración</h3>
-            <p class="small muted">Momentos para pausar y ofrecer.</p>
-          </div>
+    <!-- Tabs -->
+    <div class="comu-tabs" role="tablist" aria-label="Categorías de comunidad">
+      <button class="comu-tab active" type="button" data-comu-cat="chicos" role="tab" aria-selected="true">💙 Retos chicos</button>
+      <button class="comu-tab" type="button" data-comu-cat="chicas" role="tab" aria-selected="false">💗 Retos chicas</button>
+      <button class="comu-tab" type="button" data-comu-cat="dinamicas" role="tab" aria-selected="false">🔄 Dinámicas</button>
+      <button class="comu-tab" type="button" data-comu-cat="foro" role="tab" aria-selected="false">💬 Foro</button>
+    </div>
+
+    <!-- Estado de acceso -->
+    <div id="comuGate" class="comu-gate muted small" style="margin-top:10px">
+      Cargando estado…
+    </div>
+
+    <!-- Crear publicación (solo miembros; se oculta por JS si no está logueado/registrado) -->
+    <div id="comuComposer" class="comu-composer" style="margin-top:12px; display:none">
+      <div class="comu-composer-head">
+        <strong>Publicar</strong>
+        <span class="muted small">Comparte una idea, reto o dinámica</span>
+      </div>
+
+      <form id="formComuPost" class="grid comu-form" aria-label="Crear publicación comunidad">
+        <input id="comuTitulo" maxlength="120" placeholder="Título (ej: Reto de la semana)" required />
+        <textarea id="comuContenido" rows="3" maxlength="4000" placeholder="Escribe tu publicación…" required></textarea>
+
+        <div class="comu-actions">
+          <button class="btn" type="submit">Publicar</button>
+          <button id="btnComuClear" class="btn ghost" type="button">Limpiar</button>
         </div>
-      </section>
-    </section>
+
+        <p id="comuEstado" class="small muted" style="margin:0"></p>
+      </form>
+    </div>
+
+    <!-- Feed -->
+    <div class="comu-feed" style="margin-top:14px">
+      <div class="comu-feed-head">
+        <h3 class="with-emoji" data-emoji="📰">Publicaciones</h3>
+        <button id="btnComuRefresh" class="btn small ghost" type="button">Actualizar</button>
+      </div>
+
+      <div id="comuList" class="comu-list">
+        <div class="muted small">Cargando publicaciones…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal comentarios -->
+  <div id="comuModal" class="jc-modal" style="display:none">
+    <div class="jc-modal-card" role="dialog" aria-modal="true" aria-label="Comentarios comunidad">
+      <header class="jc-modal-header">
+        <div>
+          <h3 id="comuModalTitle">Comentarios</h3>
+          <p id="comuModalMeta" class="muted small">—</p>
+        </div>
+        <button id="comuModalClose" class="icon-btn" type="button">✕</button>
+      </header>
+
+      <div class="jc-modal-body">
+        <div id="comuCommentsList" class="comu-comments"></div>
+
+        <!-- Form comentario -->
+        <div id="comuCommentComposer" class="comu-composer" style="margin-top:12px; display:none">
+          <form id="formComuComment" class="grid comu-form" aria-label="Agregar comentario">
+            <textarea id="comuCommentText" rows="2" maxlength="1500" placeholder="Escribe un comentario…" required></textarea>
+            <div class="comu-actions">
+              <button class="btn" type="submit">Comentar</button>
+              <button id="btnComuCommentClear" class="btn ghost" type="button">Limpiar</button>
+            </div>
+            <p id="comuCommentEstado" class="small muted" style="margin:0"></p>
+          </form>
+        </div>
+
+        <div id="comuCommentGate" class="muted small" style="margin-top:10px">
+          🔒 Regístrate para comentar.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
     <!-- PERFIL -->
     <section class="view" data-view="perfil" aria-label="Perfil">

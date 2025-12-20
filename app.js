@@ -2,6 +2,36 @@
    JUVENTUD CNC — app.js FINAL (panel Angie en botón + bots + msg + eventos)
    ============================================================ */
 
+
+   const JC_BUILD = window.JC_BUILD || "dev";
+
+(function autoUpdateOnNewBuild() {
+  let prev = null;
+  try { prev = localStorage.getItem("jc_build"); } catch {}
+
+  if (prev && prev !== JC_BUILD) {
+    // limpieza suave sin tocar tus datos importantes
+    try { sessionStorage.clear(); } catch {}
+
+    // si existe caches API (PWA / SW) intentamos limpiar
+    if ("caches" in window) {
+      caches.keys()
+        .then(keys => Promise.all(keys.map(k => caches.delete(k))))
+        .catch(() => {});
+    }
+
+    // fuerza recarga con query param (revienta cache duro de Safari)
+    const url = new URL(location.href);
+    url.searchParams.set("v", JC_BUILD);
+    try { localStorage.setItem("jc_build", JC_BUILD); } catch {}
+    location.replace(url.toString());
+    return;
+  }
+
+  try { localStorage.setItem("jc_build", JC_BUILD); } catch {}
+})();
+
+
 (() => {
   "use strict";
 
@@ -1084,6 +1114,24 @@
   }
   window.logAviso = logAviso;
 
+    /* =========================
+     COMUNIDAD (init)
+     ========================= */
+  const comunidad = createComunidadModule({
+    sb,
+    $,
+    $$,
+    safeText,
+    fmtDateTime,
+    normalizeTab,
+    logAviso,
+    angieSetEstado,
+    miaSetEstado,
+    ciroSetEstado
+  });
+
+  comunidad.init();
+
   /* =========================
      MIEMBROS
      ========================= */
@@ -1263,6 +1311,8 @@
 
     // cargas por vista
     botsSegunVista(t);
+
+    comunidad.onTab(t);
 
     if (t === "miembros-activos") cargarListaMiembros();
     if (t === "eventos") cargarEventos({ destinoId: "eventList", tipo: $("#filtroTipo")?.value || "" });
@@ -1478,3 +1528,575 @@
   cargarPerfil();
 
 })();
+/* ==========================================================
+   COMUNIDAD MODULE (posts + comentarios + corazones)
+   Requiere:
+   - window.supabaseClient (sb)
+   - helpers: $, $$, safeText, fmtDateTime (si no existen, el módulo trae fallback)
+   Tablas:
+   - posts_comunidad, comentarios_comunidad, reacciones_comunidad
+   RLS:
+   - ya configurado en Supabase
+   ========================================================== */
+function createComunidadModule(ctx = {}) {
+  const sb = ctx.sb || window.supabaseClient;
+
+  // helpers: usa los tuyos si existen, si no, fallback
+  const $ = ctx.$ || ((q, el = document) => el.querySelector(q));
+  const $$ = ctx.$$ || ((q, el = document) => Array.from(el.querySelectorAll(q)));
+  const safeText = ctx.safeText || ((s) => (typeof s === "string" ? s : s == null ? "" : String(s)));
+  const fmtDateTime =
+    ctx.fmtDateTime ||
+    ((d) =>
+      new Intl.DateTimeFormat("es-PE", {
+        timeZone: "America/Lima",
+        weekday: "short",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(d));
+
+  const normalizeTab = ctx.normalizeTab || ((t) => String(t || "inicio").trim());
+  const logAviso = ctx.logAviso || null;
+  const angieSetEstado = ctx.angieSetEstado || window.angieSetEstado;
+  const miaSetEstado = ctx.miaSetEstado || window.miaSetEstado;
+  const ciroSetEstado = ctx.ciroSetEstado || window.ciroSetEstado;
+
+  // Estado módulo
+  const state = {
+    inited: false,
+    cat: "chicos",
+    // auth / membresía
+    user: null,
+    miembro: null, // row de public.miembros
+    canWrite: false,
+
+    // modal
+    modalOpen: false,
+    modalPost: null,
+  };
+
+  // Cache DOM
+  const dom = {};
+
+  function cacheDom() {
+    dom.tabs = $$(".comu-tab");
+    dom.lockBadge = $("#comuLockBadge");
+    dom.gate = $("#comuGate");
+    dom.composer = $("#comuComposer");
+    dom.formPost = $("#formComuPost");
+    dom.titulo = $("#comuTitulo");
+    dom.contenido = $("#comuContenido");
+    dom.estado = $("#comuEstado");
+    dom.btnClear = $("#btnComuClear");
+    dom.btnRefresh = $("#btnComuRefresh");
+    dom.list = $("#comuList");
+
+    dom.modal = $("#comuModal");
+    dom.modalClose = $("#comuModalClose");
+    dom.modalTitle = $("#comuModalTitle");
+    dom.modalMeta = $("#comuModalMeta");
+    dom.commentsList = $("#comuCommentsList");
+
+    dom.commentComposer = $("#comuCommentComposer");
+    dom.commentGate = $("#comuCommentGate");
+    dom.formComment = $("#formComuComment");
+    dom.commentText = $("#comuCommentText");
+    dom.commentEstado = $("#comuCommentEstado");
+    dom.btnCommentClear = $("#btnComuCommentClear");
+  }
+
+  async function refreshAuthAndMiembro() {
+    state.user = null;
+    state.miembro = null;
+    state.canWrite = false;
+
+    if (!sb?.auth?.getSession || !sb?.from) {
+      setGate("⚠️ Sin conexión a Supabase.");
+      setComposerVisible(false);
+      setCommentComposerVisible(false);
+      return;
+    }
+
+    try {
+      const { data } = await sb.auth.getSession();
+      const user = data?.session?.user || null;
+      state.user = user;
+
+      if (!user?.id) {
+        setGate("👀 Estás en modo espectador. Regístrate en “Mi perfil” para publicar, comentar y reaccionar ❤️");
+        setComposerVisible(false);
+        setCommentComposerVisible(false);
+        return;
+      }
+
+      // Verificar si está en public.miembros (registrado)
+      const { data: miembro, error } = await sb
+        .from("miembros")
+        .select("id,nombre,rol_key,user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      state.miembro = miembro || null;
+      state.canWrite = !!miembro;
+
+      if (!miembro) {
+        setGate("🔒 Tu sesión está activa, pero aún no estás registrado como miembro. Ve a “Mi perfil” y guarda tu registro.");
+        setComposerVisible(false);
+        setCommentComposerVisible(false);
+        return;
+      }
+
+      const rol = miembro.rol_key ? ` (${miembro.rol_key})` : "";
+      setGate(`✅ Hola ${safeText(miembro.nombre)}${rol}. Puedes publicar, comentar y reaccionar ❤️`);
+      setComposerVisible(true);
+      // El composer de comentarios se maneja cuando se abre el modal
+    } catch (e) {
+      console.error("Comunidad: refreshAuthAndMiembro:", e);
+      setGate("⚠️ No se pudo validar tu acceso. Intenta recargar.");
+      setComposerVisible(false);
+      setCommentComposerVisible(false);
+    }
+  }
+
+  function setGate(msg) {
+    if (dom.gate) dom.gate.textContent = msg;
+  }
+
+  function setComposerVisible(on) {
+    if (dom.composer) dom.composer.style.display = on ? "block" : "none";
+  }
+
+  function setCommentComposerVisible(on) {
+    if (dom.commentComposer) dom.commentComposer.style.display = on ? "block" : "none";
+    if (dom.commentGate) dom.commentGate.style.display = on ? "none" : "block";
+  }
+
+  function setStatus(el, msg, isError = false) {
+    if (!el) return;
+    el.textContent = msg || "";
+    el.classList.toggle("error", !!isError);
+  }
+
+  function bindOnce() {
+    // Tabs
+    dom.tabs?.forEach((b) => {
+      b.addEventListener("click", async () => {
+        const cat = b.dataset.comuCat || "chicos";
+        setActiveCat(cat);
+        await cargarFeed();
+      });
+    });
+
+    // Refresh
+    dom.btnRefresh?.addEventListener("click", () => cargarFeed({ force: true }));
+
+    // Clear post
+    dom.btnClear?.addEventListener("click", () => {
+      if (dom.titulo) dom.titulo.value = "";
+      if (dom.contenido) dom.contenido.value = "";
+      setStatus(dom.estado, "");
+      angieSetEstado?.("ok");
+    });
+
+    // Submit post
+    dom.formPost?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await crearPost();
+    });
+
+    // Modal close
+    dom.modalClose?.addEventListener("click", closeModal);
+    // clic fuera (modal overlay)
+    dom.modal?.addEventListener("click", (e) => {
+      if (e.target === dom.modal) closeModal();
+    });
+    // ESC
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && state.modalOpen) closeModal();
+    });
+
+    // Clear comment
+    dom.btnCommentClear?.addEventListener("click", () => {
+      if (dom.commentText) dom.commentText.value = "";
+      setStatus(dom.commentEstado, "");
+      miaSetEstado?.("apoyo");
+    });
+
+    // Submit comment
+    dom.formComment?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await crearComentario();
+    });
+  }
+
+  function setActiveCat(cat) {
+    state.cat = (cat || "chicos").toLowerCase();
+
+    dom.tabs?.forEach((b) => {
+      const on = (b.dataset.comuCat || "") === state.cat;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+
+    // micro “mood” por categoría
+    if (state.cat === "chicos") ciroSetEstado?.("excited");
+    if (state.cat === "chicas") angieSetEstado?.("feliz");
+    if (state.cat === "dinamicas") miaSetEstado?.("guiando");
+    if (state.cat === "foro") angieSetEstado?.("saludo");
+  }
+
+  async function cargarFeed({ force = false } = {}) {
+    if (!dom.list) return;
+
+    dom.list.innerHTML = `<div class="muted small">Cargando publicaciones…</div>`;
+
+    if (!sb?.from) {
+      dom.list.innerHTML = `<div class="muted small">Sin conexión al servidor.</div>`;
+      return;
+    }
+
+    try {
+      // 1) Traer posts de la categoría
+      const { data: posts, error } = await sb
+        .from("posts_comunidad")
+        .select("id,autor_id,autor_nombre,categoria,titulo,contenido,created_at")
+        .eq("categoria", state.cat)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      const list = Array.isArray(posts) ? posts : [];
+      if (!list.length) {
+        dom.list.innerHTML = `<div class="muted small">Aún no hay publicaciones aquí. Sé el primero 😄</div>`;
+        return;
+      }
+
+      // 2) Traer reacciones (contadores) para esos posts
+      const postIds = list.map((p) => p.id).filter(Boolean);
+
+      let reactions = [];
+      if (postIds.length) {
+        const { data: r, error: rErr } = await sb
+          .from("reacciones_comunidad")
+          .select("post_id,user_id,tipo")
+          .in("post_id", postIds)
+          .eq("tipo", "heart");
+        if (rErr) throw rErr;
+        reactions = Array.isArray(r) ? r : [];
+      }
+
+      const counts = new Map(); // post_id -> count
+      const mine = new Set();   // post_id hearted by me
+      reactions.forEach((x) => {
+        counts.set(x.post_id, (counts.get(x.post_id) || 0) + 1);
+        if (state.user?.id && x.user_id === state.user.id) mine.add(x.post_id);
+      });
+
+      // 3) Render
+      dom.list.innerHTML = "";
+      list.forEach((p) => dom.list.appendChild(renderPostCard(p, counts.get(p.id) || 0, mine.has(p.id))));
+    } catch (e) {
+      console.error("Comunidad: cargarFeed:", e);
+      dom.list.innerHTML = `<div class="muted small">Error cargando publicaciones.</div>`;
+      angieSetEstado?.("confundida");
+    }
+  }
+
+  function renderPostCard(p, heartCount = 0, heartOn = false) {
+    const el = document.createElement("article");
+    el.className = "comu-post";
+
+    const d = p.created_at ? new Date(p.created_at) : null;
+    const meta = `${safeText(p.autor_nombre || "Miembro")} · ${d ? fmtDateTime(d) : ""}`;
+
+    el.innerHTML = `
+      <div class="comu-post-head">
+        <div>
+          <h4 class="comu-post-title">${escapeHtml(safeText(p.titulo || "Publicación"))}</h4>
+          <div class="comu-post-meta">${escapeHtml(meta)}</div>
+        </div>
+      </div>
+
+      <div class="comu-post-body">${escapeHtml(safeText(p.contenido || ""))}</div>
+
+      <div class="comu-post-actions">
+        <button class="comu-heart ${heartOn ? "on" : ""}" type="button" data-act="heart" data-id="${p.id}">
+          ❤️ <span data-heart-count>${heartCount}</span>
+        </button>
+
+        <button class="comu-comment-btn" type="button" data-act="comments" data-id="${p.id}">
+          💬 Comentarios
+        </button>
+      </div>
+    `;
+
+    el.querySelector('[data-act="heart"]')?.addEventListener("click", () => toggleHeart(p.id));
+    el.querySelector('[data-act="comments"]')?.addEventListener("click", () => openComments(p));
+
+    return el;
+  }
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  async function crearPost() {
+    if (!state.canWrite || !state.user?.id || !state.miembro) {
+      setStatus(dom.estado, "🔒 Debes estar registrado para publicar.", true);
+      angieSetEstado?.("confundida");
+      return;
+    }
+
+    const titulo = (dom.titulo?.value || "").trim();
+    const contenido = (dom.contenido?.value || "").trim();
+
+    if (!titulo || !contenido) {
+      setStatus(dom.estado, "Completa título y contenido.", true);
+      angieSetEstado?.("confundida");
+      return;
+    }
+
+    setStatus(dom.estado, "Publicando…");
+
+    try {
+      const payload = {
+        autor_id: state.user.id,
+        autor_nombre: state.miembro.nombre || "Miembro",
+        categoria: state.cat,
+        titulo,
+        contenido,
+      };
+
+      const { error } = await sb.from("posts_comunidad").insert(payload);
+      if (error) throw error;
+
+      setStatus(dom.estado, "Publicado ✅");
+      if (dom.titulo) dom.titulo.value = "";
+      if (dom.contenido) dom.contenido.value = "";
+
+      logAviso?.({ title: "Comunidad", body: "Nueva publicación creada ✅" });
+
+      // mood
+      ciroSetEstado?.("feliz");
+      angieSetEstado?.("ok");
+
+      await cargarFeed({ force: true });
+    } catch (e) {
+      console.error("Comunidad: crearPost:", e);
+      setStatus(dom.estado, "No se pudo publicar. Intenta nuevamente.", true);
+      angieSetEstado?.("enojada");
+    }
+  }
+
+  async function toggleHeart(postId) {
+    if (!state.canWrite || !state.user?.id) {
+      // espectador
+      logAviso?.({ title: "Comunidad", body: "🔒 Regístrate para reaccionar ❤️" });
+      angieSetEstado?.("saludo");
+      return;
+    }
+
+    if (!sb?.from) return;
+
+    try {
+      // ¿ya existe mi reacción?
+      const { data: existing, error: exErr } = await sb
+        .from("reacciones_comunidad")
+        .select("id")
+        .eq("post_id", postId)
+        .eq("user_id", state.user.id)
+        .eq("tipo", "heart")
+        .maybeSingle();
+
+      if (exErr) throw exErr;
+
+      if (existing?.id) {
+        // quitar
+        const { error: delErr } = await sb
+          .from("reacciones_comunidad")
+          .delete()
+          .eq("id", existing.id);
+
+        if (delErr) throw delErr;
+
+        miaSetEstado?.("apoyo");
+      } else {
+        // poner
+        const { error: insErr } = await sb
+          .from("reacciones_comunidad")
+          .insert({ post_id: postId, user_id: state.user.id, tipo: "heart" });
+
+        if (insErr) throw insErr;
+
+        angieSetEstado?.("vergonzosa");
+      }
+
+      // refrescar feed para actualizar contador/estado
+      await cargarFeed({ force: true });
+    } catch (e) {
+      console.error("Comunidad: toggleHeart:", e);
+      logAviso?.({ title: "Comunidad", body: "No se pudo reaccionar. Intenta otra vez." });
+      angieSetEstado?.("confundida");
+    }
+  }
+
+  async function openComments(post) {
+    state.modalPost = post;
+    state.modalOpen = true;
+
+    if (!dom.modal) return;
+
+    dom.modal.style.display = "flex";
+    dom.modal.classList.add("show");
+
+    const d = post.created_at ? new Date(post.created_at) : null;
+    if (dom.modalTitle) dom.modalTitle.textContent = safeText(post.titulo || "Comentarios");
+    if (dom.modalMeta) dom.modalMeta.textContent = `${safeText(post.autor_nombre || "Miembro")} · ${d ? fmtDateTime(d) : ""}`;
+
+    // gate: solo miembros comentan
+    setCommentComposerVisible(!!state.canWrite);
+
+    await cargarComentarios(post.id);
+  }
+
+  function closeModal() {
+    state.modalOpen = false;
+    state.modalPost = null;
+
+    if (!dom.modal) return;
+    dom.modal.classList.remove("show");
+    dom.modal.style.display = "none";
+
+    if (dom.commentsList) dom.commentsList.innerHTML = "";
+    setStatus(dom.commentEstado, "");
+    if (dom.commentText) dom.commentText.value = "";
+  }
+
+  async function cargarComentarios(postId) {
+    if (!dom.commentsList) return;
+
+    dom.commentsList.innerHTML = `<div class="muted small">Cargando comentarios…</div>`;
+
+    if (!sb?.from) {
+      dom.commentsList.innerHTML = `<div class="muted small">Sin conexión.</div>`;
+      return;
+    }
+
+    try {
+      const { data, error } = await sb
+        .from("comentarios_comunidad")
+        .select("id,autor_id,autor_nombre,contenido,created_at")
+        .eq("post_id", postId)
+        .order("created_at", { ascending: true })
+        .limit(200);
+
+      if (error) throw error;
+
+      const list = Array.isArray(data) ? data : [];
+      if (!list.length) {
+        dom.commentsList.innerHTML = `<div class="muted small">Aún no hay comentarios. Sé el primero 😊</div>`;
+        return;
+      }
+
+      dom.commentsList.innerHTML = "";
+      list.forEach((c) => dom.commentsList.appendChild(renderComment(c)));
+    } catch (e) {
+      console.error("Comunidad: cargarComentarios:", e);
+      dom.commentsList.innerHTML = `<div class="muted small">Error cargando comentarios.</div>`;
+    }
+  }
+
+  function renderComment(c) {
+    const el = document.createElement("div");
+    el.className = "comu-comment";
+    const d = c.created_at ? new Date(c.created_at) : null;
+
+    el.innerHTML = `
+      <div class="comu-comment-meta">
+        <strong>${escapeHtml(safeText(c.autor_nombre || "Miembro"))}</strong>
+        · ${escapeHtml(d ? fmtDateTime(d) : "")}
+      </div>
+      <div class="comu-comment-body">${escapeHtml(safeText(c.contenido || ""))}</div>
+    `;
+    return el;
+  }
+
+  async function crearComentario() {
+    if (!state.canWrite || !state.user?.id || !state.miembro || !state.modalPost?.id) {
+      setStatus(dom.commentEstado, "🔒 Debes estar registrado para comentar.", true);
+      miaSetEstado?.("guiando");
+      return;
+    }
+
+    const contenido = (dom.commentText?.value || "").trim();
+    if (!contenido) {
+      setStatus(dom.commentEstado, "Escribe un comentario.", true);
+      return;
+    }
+
+    setStatus(dom.commentEstado, "Comentando…");
+
+    try {
+      const payload = {
+        post_id: state.modalPost.id,
+        autor_id: state.user.id,
+        autor_nombre: state.miembro.nombre || "Miembro",
+        contenido,
+      };
+
+      const { error } = await sb.from("comentarios_comunidad").insert(payload);
+      if (error) throw error;
+
+      setStatus(dom.commentEstado, "Comentario agregado ✅");
+      if (dom.commentText) dom.commentText.value = "";
+
+      ciroSetEstado?.("feliz");
+
+      await cargarComentarios(state.modalPost.id);
+    } catch (e) {
+      console.error("Comunidad: crearComentario:", e);
+      setStatus(dom.commentEstado, "No se pudo comentar. Intenta de nuevo.", true);
+      angieSetEstado?.("confundida");
+    }
+  }
+
+  // API pública del módulo
+  async function init() {
+    if (state.inited) return;
+    state.inited = true;
+
+    cacheDom();
+    bindOnce();
+
+    // arrancar cat por defecto
+    setActiveCat(state.cat);
+
+    // refrescar auth/miembro
+    await refreshAuthAndMiembro();
+
+    // cargar feed inicial si ya estás en comunidad
+    // (si no, se cargará cuando cambies de vista)
+  }
+
+  async function onTab(tabName) {
+    const t = normalizeTab(tabName);
+    if (t !== "comunidad") return;
+
+    // cada vez que entras a comunidad, revalida acceso y carga feed
+    await refreshAuthAndMiembro();
+    await cargarFeed();
+  }
+
+  return { init, onTab, cargarFeed };
+}
+
