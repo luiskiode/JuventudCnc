@@ -718,22 +718,22 @@
         "¿Qué necesitas? Te acompaño."
       ]
     },
-    apoyo: {
-      img: "assets/mia-casual.png",
-      frases: [
-        "Bien, vamos avanzando 💗",
-        "Todo suma. Lo importante es seguir.",
-        "Te apoyo en lo que necesites."
-      ]
-    },
-    elegant_relief: {
-      img: "assets/mia-elegante.png",
-      frases: [
-        "Modo elegante. Orden + claridad ✨",
-        "Presentemos esto bonito.",
-        "Vamos a dejarlo impecable."
-      ]
-    }
+   apoyo: {
+  img: "assets/mia-casual-love.png",
+  frases: [
+    "Bien, vamos avanzando 💗",
+    "Todo suma. Lo importante es seguir.",
+    "Te apoyo en lo que necesites."
+  ]
+},
+elegant_relief: {
+  img: "assets/mia-elegant-relief.png",
+  frases: [
+    "Modo elegante. Orden + claridad ✨",
+    "Presentemos esto bonito.",
+    "Vamos a dejarlo impecable."
+  ]
+}
   };
 
   function miaSetEstado(tipo = "guiando") {
