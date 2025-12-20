@@ -1521,3 +1521,10 @@ select {
   align-items: center;
   flex-wrap: wrap;
 }
+
+@media (max-width: 560px) {
+  .jc-modal-card {
+    width: calc(100% - 20px);
+    max-width: 520px;
+  }
+}

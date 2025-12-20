@@ -80,6 +80,9 @@
       <!-- Angie -->
       <button id="btnAngie" class="icon-btn" type="button" title="Diseño Angie" aria-label="Diseño Angie">🎨</button>
 
+      <button id="btnLogin" class="icon-btn" type="button" title="Iniciar sesión" aria-label="Iniciar sesión">🔑</button>
+
+
       <!-- Perfil -->
       <button id="btnPerfil" class="icon-btn" type="button" data-tab="perfil" title="Mi perfil" aria-label="Mi perfil">👤</button>
     </div>
@@ -417,6 +420,32 @@
     </header>
     <div class="jc-chat-body" id="jcChatBody"></div>
   </section>
+
+
+  <!-- LOGIN MODAL -->
+<div id="loginModal" class="jc-modal" style="display:none">
+  <div class="jc-modal-card" role="dialog" aria-modal="true" aria-label="Iniciar sesión">
+    <header class="jc-modal-header">
+      <div>
+        <h3>🔑 Iniciar sesión</h3>
+        <p class="muted small">Te enviamos un enlace a tu correo (Magic Link).</p>
+      </div>
+      <button id="loginClose" class="icon-btn" type="button">✕</button>
+    </header>
+
+    <div class="jc-modal-body">
+      <form id="loginForm" class="grid perfil-form" aria-label="Formulario login">
+        <input id="loginEmail" type="email" placeholder="tu-correo@gmail.com" required />
+        <button class="btn" type="submit">Enviar enlace</button>
+        <p id="loginEstado" class="small muted" style="margin:0"></p>
+      </form>
+
+      <div class="muted small" style="margin-top:10px">
+        💡 Tip: si ya estás logueado, verás tu perfil sin formulario.
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
