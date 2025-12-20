@@ -35,24 +35,19 @@
 (() => {
   "use strict";
 
-  
-   /* =========================
+  /* =========================
      BOOT
      ========================= */
   const sb = window.supabaseClient;
 
   if (!sb) {
-    console.error("❌ Supabase no está listo (window.supabaseClient undefined). Revisa supabase-config.js y el orden de scripts.");
-    alert("Error crítico: Supabase no está cargado. Revisa la configuración.");
+    console.error("❌ Supabase no inicializado: window.supabaseClient undefined. Revisa supabase-config.js y el orden de scripts.");
+    alert("Error crítico: Supabase no está cargado.");
     throw new Error("Supabase client (sb) no definido");
   }
 
   const LOCALE = "es-PE";
   const TZ = "America/Lima";
-
-  if (!sb) {
-    console.error("⚠️ Supabase no está listo (window.supabaseClient undefined). Revisa supabase-config.js y el orden de scripts.");
-  }
 
   const $ = (q, el = document) => el.querySelector(q);
   const $$ = (q, el = document) => Array.from(el.querySelectorAll(q));
