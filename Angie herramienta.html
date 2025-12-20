@@ -85,38 +85,116 @@
   <h1>🎨 Angie – Paleta y emociones</h1>
 
   <section>
-    <small>Cambia un color y se aplicará directo en Juventud CNC.</small>
+  <small>Cambia un color y se aplicará directo en Juventud CNC.</small>
 
-    <div class="grid" style="margin-top:0.5rem;">
-      <label>
-        Principal (brand)
-        <input type="color" id="brand" value="#2563eb" />
-      </label>
-      <label>
-        Secundario (brand-2)
-        <input type="color" id="brand-2" value="#1d4ed8" />
-      </label>
-      <label>
-        Acento (accent)
-        <input type="color" id="accent" value="#ec4899" />
-      </label>
-      <label>
-        Fondo oscuro (neutral-900)
-        <input type="color" id="neutral-900" value="#020617" />
-      </label>
-      <label>
-        Texto suave (neutral-700)
-        <input type="color" id="neutral-700" value="#0b1120" />
-      </label>
-      <label>
-        Bordes (neutral-400)
-        <input type="color" id="neutral-400" value="#9ca3af" />
-      </label>
-      <label>
-        Fondo tarjetas (neutral-100)
-        <input type="color" id="neutral-100" value="#f3f4f6" />
-      </label>
-    </div>
+  <div class="grid" style="margin-top:0.5rem;">
+
+    <!-- Brand / base -->
+    <label>
+      Principal (brand)
+      <input type="color" id="brand" value="#2563eb" />
+    </label>
+
+    <label>
+      Secundario (brand-2)
+      <input type="color" id="brand-2" value="#1d4ed8" />
+    </label>
+
+    <label>
+      Acento (accent)
+      <input type="color" id="accent" value="#ec4899" />
+    </label>
+
+    <label>
+      Fondo oscuro (neutral-900)
+      <input type="color" id="neutral-900" value="#020617" />
+    </label>
+
+    <label>
+      Texto suave (neutral-700)
+      <input type="color" id="neutral-700" value="#0b1120" />
+    </label>
+
+    <label>
+      Bordes (neutral-400)
+      <input type="color" id="neutral-400" value="#9ca3af" />
+    </label>
+
+    <label>
+      Fondo tarjetas (neutral-100)
+      <input type="color" id="neutral-100" value="#f3f4f6" />
+    </label>
+
+    <hr style="border:none;border-top:1px solid rgba(148,163,184,.25);margin:12px 0">
+
+    <p style="margin:0 0 .25rem;"><strong>UI (barra / menú / overlay)</strong></p>
+
+    <label>
+      Topbar (topbar-bg)
+      <input type="color" id="topbar-bg" value="#0f172a" />
+    </label>
+
+    <label>
+      Tabs (tabs-bg)
+      <input type="color" id="tabs-bg" value="#0f172a" />
+    </label>
+
+    <label>
+      Drawer (drawer-bg)
+      <input type="color" id="drawer-bg" value="#0b1120" />
+    </label>
+
+    <label>
+      Overlay (overlay-bg)
+      <input type="color" id="overlay-bg" value="#000000" />
+    </label>
+
+    <label>
+      Glow botón (icon-glow)
+      <input type="color" id="icon-glow" value="#ec4899" />
+    </label>
+
+    <hr style="border:none;border-top:1px solid rgba(148,163,184,.25);margin:12px 0">
+
+    <p style="margin:0 0 .25rem;"><strong>Fondo animado</strong></p>
+
+    <label>
+      Radial A (bg-a)
+      <input type="color" id="bg-a" value="#38bdf8" />
+    </label>
+
+    <label>
+      Radial B (bg-b)
+      <input type="color" id="bg-b" value="#f472b6" />
+    </label>
+
+    <label>
+      Radial C (bg-c)
+      <input type="color" id="bg-c" value="#3b82f6" />
+    </label>
+
+    <label>
+      Base 1 (bg-base-1)
+      <input type="color" id="bg-base-1" value="#020617" />
+    </label>
+
+    <label>
+      Base 2 (bg-base-2)
+      <input type="color" id="bg-base-2" value="#000000" />
+    </label>
+
+    <label>
+      Velo A (veil-a)
+      <input type="color" id="veil-a" value="#0f172a" />
+    </label>
+
+    <label>
+      Velo B (veil-b)
+      <input type="color" id="veil-b" value="#0b1120" />
+    </label>
+
+  </div>
+</section>
 
     <div class="row">
       <button id="btnAplicar" class="btn-primary">Aplicar ahora</button>
@@ -183,15 +261,14 @@
       syncTokens();
     });
 
-    // Emociones
-    document.querySelectorAll('[data-estado]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        window.parent.postMessage(
-          { type: 'angieEstado', value: btn.dataset.estado },
-          '*'
-        );
-      });
-    });
+    // Emociones (enviar "estado" y "value" para compat)
+document.querySelectorAll('[data-estado]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const estado = btn.dataset.estado;
+    window.parent.postMessage({ type: 'angieEstado', estado, value: estado }, '*');
+  });
+});
+    
 
     (function restore() {
       try {
