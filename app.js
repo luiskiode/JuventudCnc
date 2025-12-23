@@ -556,203 +556,234 @@ if (sb?.auth?.onAuthStateChange) {
      EVENTOS: Home y lista
      ========================= */
   async function cargarEventosHome() {
-    const ul = $("#eventListHome");
-    if (!ul) return;
+  const ul = $("#eventListHome");
+  if (!ul) return;
 
-    ul.innerHTML = "<li class='muted small'>Cargando…</li>";
+  ul.innerHTML = "<li class='muted small'>Cargando…</li>";
 
-    if (!sb?.from) {
-      ul.innerHTML = "<li class='muted small'>No hay conexión al servidor.</li>";
+  if (!sb?.from) {
+    ul.innerHTML = "<li class='muted small'>Sin conexión al servidor.</li>";
+    return;
+  }
+
+  try {
+    const nowISO = new Date().toISOString();
+
+    const { data, error } = await sb
+      .from("eventos")
+      .select("id,titulo,fecha,lugar,tipo")
+      .gte("fecha", nowISO)              // ✅ solo próximos
+      .order("fecha", { ascending: true })
+      .limit(5);
+
+    if (error) throw error;
+
+    const list = Array.isArray(data) ? data : [];
+    if (!list.length) {
+      ul.innerHTML = "<li class='muted small'>No hay eventos próximos aún.</li>";
       return;
     }
 
-    try {
-      const { data, error } = await sb
-        .from("eventos")
-        .select("id,titulo,fecha,lugar,tipo")
-        .order("fecha", { ascending: true })
-        .limit(5);
+    ul.innerHTML = "";
+    list.forEach((ev) => {
+      const li = document.createElement("li");
+      li.className = "event-item";
+      const d = ev.fecha ? new Date(ev.fecha) : null;
 
-      if (error) throw error;
-
-      const list = Array.isArray(data) ? data : [];
-      if (!list.length) {
-        ul.innerHTML = "<li class='muted small'>Aún no hay eventos.</li>";
-        return;
-      }
-
-      ul.innerHTML = "";
-      list.forEach((ev) => {
-        const li = document.createElement("li");
-        li.className = "event-item";
-        const d = ev.fecha ? new Date(ev.fecha) : null;
-
-        li.innerHTML = `
-          <div>
-            <div class="event-title"><strong>${safeText(ev.titulo || "Evento")}</strong></div>
-            <div class="muted small">${safeText(ev.lugar || "")}</div>
-          </div>
-          <div class="event-meta muted small">${d ? fmtDateTime(d) : ""}</div>
-        `;
-        ul.appendChild(li);
-      });
-    } catch (e) {
-      console.error("Error cargarEventosHome:", e);
-      ul.innerHTML = "<li class='muted small'>Error cargando eventos.</li>";
-    }
+      li.innerHTML = `
+        <div>
+          <div class="event-title"><strong>${safeText(ev.titulo || "Evento")}</strong></div>
+          <div class="muted small">${safeText(ev.lugar || "")}</div>
+        </div>
+        <div class="event-meta muted small">${d && !isNaN(d) ? fmtDateTime(d) : ""}</div>
+      `;
+      ul.appendChild(li);
+    });
+  } catch (e) {
+    console.error("Error cargarEventosHome:", e);
+    ul.innerHTML = "<li class='muted small'>No se pudieron cargar los eventos (permisos/RLS).</li>";
   }
+}
 
   /* =========================
      Mensaje semanal (Supabase)
      ========================= */
   async function cargarMensajeSemanal() {
+  const title = $("#msgTitle");
+  const body  = $("#msgBody");
+  const meta  = $("#msgMeta");
 
-    const title = $("#msgTitle");
-    const body = $("#msgBody");
-    const meta = $("#msgMeta");
+  if (!title || !body) return;
 
-    if (!title || !body) return;
+  title.textContent = "Cargando…";
+  body.textContent  = "Un momento…";
+  if (meta) meta.textContent = "";
 
-    title.textContent = "Cargando…";
-    body.textContent = "Un momento…";
-    if (meta) meta.textContent = "";
+  // Si no hay sb.from => usa dinámico
+  if (!sb?.from) {
+    try { await renderWeeklyMessage(); } catch {}
+    return;
+  }
 
-    if (!sb?.from) {
-      title.textContent = "Sin conexión";
-      body.textContent = "No se puede cargar el mensaje semanal.";
+  try {
+    const { data, error } = await sb
+      .from("mensajes_semanales")
+      .select("titulo,contenido,fecha")
+      .order("fecha", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Si hay error (RLS/tabla) => fallback dinámico
+    if (error) {
+      console.warn("mensajes_semanales error => fallback:", error);
+      await renderWeeklyMessage();
       return;
     }
 
-    try {
-      const { data, error } = await sb
-        .from("mensajes_semanales")
-        .select("titulo,contenido,fecha")
-        .order("fecha", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    // Si no hay data => fallback dinámico
+    if (!data) {
+      await renderWeeklyMessage();
+      return;
+    }
 
-      if (error) throw error;
+    title.textContent = safeText(data.titulo || "Mensaje semanal");
+    body.textContent  = safeText(data.contenido || "");
+    if (meta) meta.textContent = data.fecha ? `Actualizado: ${fmtDate(new Date(data.fecha))}` : "";
+  } catch (e) {
+    console.error("Error cargarMensajeSemanal:", e);
+    // último fallback
+    try { await renderWeeklyMessage(); } catch {
+      title.textContent = "Error";
+      body.textContent  = "No se pudo cargar el mensaje semanal.";
+    }
+  }
+}
+/* =========================
+   EVENTOS (vista Eventos) — CORREGIDO
+   - Lista ordenada y limpia (opcional: ocultar pasados con showPast=false)
+   - Insert guarda fecha en ISO (fechaISO)
+   ========================= */
+async function cargarEventos({ destinoId = "eventList", tipo = "", showPast = true } = {}) {
+  const ul = document.getElementById(destinoId);
+  if (!ul) return;
 
-      if (!data) {
-  await renderWeeklyMessage();
-  return;
+  ul.innerHTML = "<li class='muted small'>Cargando…</li>";
+
+  if (!sb?.from) {
+    ul.innerHTML = "<li class='muted small'>No hay conexión al servidor.</li>";
+    return;
+  }
+
+  try {
+    let q = sb
+      .from("eventos")
+      .select("id,titulo,fecha,lugar,tipo")
+      .order("fecha", { ascending: true });
+
+    if (tipo) q = q.eq("tipo", tipo);
+
+    // ✅ opcional: si NO quieres ver pasados en la vista Eventos
+    if (!showPast) {
+      q = q.gte("fecha", new Date().toISOString());
+    }
+
+    const { data, error } = await q;
+    if (error) throw error;
+
+    const list = Array.isArray(data) ? data : [];
+    if (!list.length) {
+      ul.innerHTML = "<li class='muted small'>No hay eventos para mostrar.</li>";
+      return;
+    }
+
+    ul.innerHTML = "";
+    list.forEach((ev) => {
+      const li = document.createElement("li");
+      li.className = "event-item";
+
+      const d = ev.fecha ? new Date(ev.fecha) : null;
+      const when = d && !isNaN(d) ? fmtDateTime(d) : "";
+
+      li.innerHTML = `
+        <div>
+          <div class="event-title"><strong>${safeText(ev.titulo || "Evento")}</strong></div>
+          <div class="muted small">${safeText(ev.lugar || "")}</div>
+        </div>
+        <div class="event-meta muted small">${when}</div>
+      `;
+      ul.appendChild(li);
+    });
+  } catch (e) {
+    console.error("Error cargarEventos:", e);
+    ul.innerHTML = "<li class='muted small'>Error cargando eventos (permisos/RLS).</li>";
+  }
 }
 
-      title.textContent = safeText(data.titulo || "Mensaje semanal");
-      body.textContent = safeText(data.contenido || "");
-      if (meta && data.fecha) meta.textContent = `Actualizado: ${fmtDate(new Date(data.fecha))}`;
-    } catch (e) {
-      console.error("Error cargarMensajeSemanal:", e);
-      title.textContent = "Error";
-      body.textContent = "No se pudo cargar el mensaje semanal.";
-    }
+$("#filtroTipo")?.addEventListener("change", () => {
+  const tipo = $("#filtroTipo")?.value || "";
+  cargarEventos({ destinoId: "eventList", tipo, showPast: true }); // cambia a false si no quieres pasados
+});
+
+const formEvento = $("#formEvento");
+formEvento?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const evEstado = $("#evEstado");
+  if (evEstado) {
+    evEstado.classList.remove("error");
+    evEstado.textContent = "Guardando…";
   }
 
-  /* =========================
-     EVENTOS (vista Eventos)
-     ========================= */
-  async function cargarEventos({ destinoId = "eventList", tipo = "" } = {}) {
-    const ul = document.getElementById(destinoId);
-    if (!ul) return;
-
-    ul.innerHTML = "<li class='muted small'>Cargando…</li>";
-
-    if (!sb?.from) {
-      ul.innerHTML = "<li class='muted small'>No hay conexión al servidor.</li>";
-      return;
-    }
-
-    try {
-      let q = sb.from("eventos").select("id,titulo,fecha,lugar,tipo").order("fecha", { ascending: true });
-      if (tipo) q = q.eq("tipo", tipo);
-
-      const { data, error } = await q;
-      if (error) throw error;
-
-      const list = Array.isArray(data) ? data : [];
-      if (!list.length) {
-        ul.innerHTML = "<li class='muted small'>No hay eventos para mostrar.</li>";
-        return;
-      }
-
-      ul.innerHTML = "";
-      list.forEach((ev) => {
-        const li = document.createElement("li");
-        li.className = "event-item";
-        const d = ev.fecha ? new Date(ev.fecha) : null;
-        li.innerHTML = `
-          <div>
-            <div class="event-title"><strong>${safeText(ev.titulo || "Evento")}</strong></div>
-            <div class="muted small">${safeText(ev.lugar || "")}</div>
-          </div>
-          <div class="event-meta muted small">${d ? fmtDateTime(d) : ""}</div>
-        `;
-        ul.appendChild(li);
-      });
-    } catch (e) {
-      console.error("Error cargarEventos:", e);
-      ul.innerHTML = "<li class='muted small'>Error cargando eventos.</li>";
-    }
+  if (!sb?.from) {
+    if (evEstado) evEstado.textContent = "No hay conexión al servidor.";
+    return;
   }
 
-  $("#filtroTipo")?.addEventListener("change", () => {
-    const tipo = $("#filtroTipo")?.value || "";
-    cargarEventos({ destinoId: "eventList", tipo });
-  });
+  const titulo = $("#evTitulo")?.value?.trim();
+  const fechaRaw = $("#evFecha")?.value;
+  const fechaISO = fechaRaw ? new Date(fechaRaw).toISOString() : null;
+  const lugar = $("#evLugar")?.value?.trim() || "";
+  const tipo = $("#evTipo")?.value?.trim() || "";
 
-  const formEvento = $("#formEvento");
-  formEvento?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const evEstado = $("#evEstado");
+  if (!titulo || !fechaISO) {
     if (evEstado) {
-      evEstado.classList.remove("error");
-      evEstado.textContent = "Guardando…";
+      evEstado.textContent = "Completa título y fecha.";
+      evEstado.classList.add("error");
     }
+    angieSetEstado("confundida");
+    return;
+  }
 
-    if (!sb?.from) {
-      if (evEstado) evEstado.textContent = "No hay conexión al servidor.";
-      return;
+  try {
+    // ✅ FIX: guardar fechaISO (no "fecha" inexistente)
+    const { error } = await sb.from("eventos").insert({
+      titulo,
+      fecha: fechaISO,
+      lugar,
+      tipo
+    });
+    if (error) throw error;
+
+    formEvento.reset();
+    if (evEstado) evEstado.textContent = "Evento guardado ✅";
+
+    logAviso({ title: "Nuevo evento", body: `${titulo} (${tipo || "general"})` });
+
+    const tipoFiltro = document.getElementById("filtroTipo")?.value || "";
+    cargarEventos({ destinoId: "eventList", tipo: tipoFiltro, showPast: true });
+    cargarEventosHome();
+
+    ciroSetEstado("excited");
+    angieSetEstado("sorprendida");
+  } catch (err) {
+    console.error("Error insertando evento:", err);
+    if (evEstado) {
+      evEstado.textContent = "No se pudo guardar el evento. Intenta más tarde.";
+      evEstado.classList.add("error");
     }
-
-    const titulo = $("#evTitulo")?.value?.trim();
-    const fecha = $("#evFecha")?.value;
-    const lugar = $("#evLugar")?.value?.trim() || "";
-    const tipo = $("#evTipo")?.value?.trim() || "";
-
-    if (!titulo || !fecha) {
-      if (evEstado) {
-        evEstado.textContent = "Completa título y fecha.";
-        evEstado.classList.add("error");
-      }
-      angieSetEstado("confundida");
-      return;
-    }
-
-    try {
-      const { error } = await sb.from("eventos").insert({ titulo, fecha, lugar, tipo });
-      if (error) throw error;
-
-      formEvento.reset();
-      if (evEstado) evEstado.textContent = "Evento guardado ✅";
-
-      logAviso({ title: "Nuevo evento", body: `${titulo} (${tipo || "general"})` });
-
-      const tipoFiltro = document.getElementById("filtroTipo")?.value || "";
-      cargarEventos({ destinoId: "eventList", tipo: tipoFiltro });
-      cargarEventosHome();
-
-      ciroSetEstado("excited");
-      angieSetEstado("sorprendida");
-    } catch (err) {
-      console.error("Error insertando evento:", err);
-      if (evEstado) {
-        evEstado.textContent = "No se pudo guardar el evento. Intenta más tarde.";
-        evEstado.classList.add("error");
-      }
-      angieSetEstado("confundida");
-    }
-  });
+    angieSetEstado("confundida");
+  }
+});
 
   /* =========================
      BOTS: estados + preload + modo Mia
@@ -1621,6 +1652,10 @@ comunidad.init();
 
   // inicial
   activate((location.hash || "#inicio").replace("#", ""));
+  botSetTimeout(() => {
+  cargarMensajeSemanal();
+  cargarEventosHome();
+}, 50);
 
   // exponer por compat
   window.activate = activate;
