@@ -191,39 +191,33 @@ let JC_SESSION = null;
 let JC_USER = null;
 let JC_PROFILE = null;
 
-function $(id){ return document.getElementById(id); }
+// ✅ NO usamos "$" porque ya existe en tu app
+function el(id){ return document.getElementById(id); }
 
 function setPerfilUIState({ logged=false, hasProfile=false } = {}) {
-  // resumen
-  $("btnCerrarPerfil") && ($("btnCerrarPerfil").style.display = logged ? "" : "none");
+  el("btnCerrarPerfil") && (el("btnCerrarPerfil").style.display = logged ? "" : "none");
 
-  // formulario perfil: solo si logged y NO tiene profile
-  const form = $("formMiembro");
+  const form = el("formMiembro");
   if (form) form.style.display = (logged && !hasProfile) ? "" : "none";
 
-  // estado/gates (comunidad)
-  const gate = $("comuGate");
-  const composer = $("comuComposer");
+  const gate = el("comuGate");
+  const composer = el("comuComposer");
   if (gate) gate.textContent = logged ? "✅ Sesión activa. Cargando permisos…" : "🔒 Inicia sesión para registrarte y participar.";
   if (composer) composer.style.display = (logged && hasProfile) ? "" : "none";
 
-  // comentar en modal comunidad
-  const comuCommentComposer = $("comuCommentComposer");
-  const comuCommentGate = $("comuCommentGate");
+  const comuCommentComposer = el("comuCommentComposer");
+  const comuCommentGate = el("comuCommentGate");
   if (comuCommentComposer) comuCommentComposer.style.display = (logged && hasProfile) ? "" : "none";
   if (comuCommentGate) comuCommentGate.style.display = (logged && hasProfile) ? "none" : "";
 }
 
 async function jcExchangeIfMagicLink() {
-  // Supabase v2: cuando llega magic link a GH Pages, la URL trae ?code=...
   const url = new URL(window.location.href);
   const code = url.searchParams.get("code");
-
   if (!code) return;
 
   try {
     await supabase.auth.exchangeCodeForSession(window.location.href);
-    // limpia la URL para que no re-intercambie
     url.searchParams.delete("code");
     window.history.replaceState({}, document.title, url.pathname + url.hash);
   } catch (e) {
@@ -256,11 +250,10 @@ async function jcLoadProfile() {
 
   JC_PROFILE = data || null;
 
-  // pinta resumen
   if (JC_PROFILE) {
-    $("perfilNombreTexto") && ($("perfilNombreTexto").textContent = JC_PROFILE.nombre || "Miembro");
-    $("perfilRolTexto") && ($("perfilRolTexto").textContent = JC_PROFILE.rol_key ? `Rol: ${JC_PROFILE.rol_key}` : "");
-    $("perfilFraseTexto") && ($("perfilFraseTexto").textContent = JC_PROFILE.frase || "—");
+    el("perfilNombreTexto") && (el("perfilNombreTexto").textContent = JC_PROFILE.nombre || "Miembro");
+    el("perfilRolTexto") && (el("perfilRolTexto").textContent = JC_PROFILE.rol_key ? `Rol: ${JC_PROFILE.rol_key}` : "");
+    el("perfilFraseTexto") && (el("perfilFraseTexto").textContent = JC_PROFILE.frase || "—");
   }
 
   setPerfilUIState({ logged:true, hasProfile: !!JC_PROFILE });
@@ -301,8 +294,8 @@ async function jcBootAuthAndProfile() {
 
   if (!user) {
     setPerfilUIState({ logged:false, hasProfile:false });
-    $("perfilNombreTexto") && ($("perfilNombreTexto").textContent = "Aún sin registrar");
-    $("perfilRolTexto") && ($("perfilRolTexto").textContent = "");
+    el("perfilNombreTexto") && (el("perfilNombreTexto").textContent = "Aún sin registrar");
+    el("perfilRolTexto") && (el("perfilRolTexto").textContent = "");
     return;
   }
 
@@ -310,18 +303,16 @@ async function jcBootAuthAndProfile() {
   await jcLoadProfile();
 }
 
-// Listener global: si cambia auth, refresca
-supabase.auth.onAuthStateChange(async (_event, _session) => {
+supabase.auth.onAuthStateChange(async () => {
   await jcBootAuthAndProfile();
 });
 
-// Hook submit perfil
 document.addEventListener("DOMContentLoaded", () => {
-  const form = $("formMiembro");
+  const form = el("formMiembro");
   if (form) {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const out = $("perfilEstado");
+      const out = el("perfilEstado");
       try {
         out && (out.textContent = "Guardando perfil…");
         await jcUpsertProfileFromForm(form);
@@ -334,17 +325,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // cerrar sesión
-  $("btnCerrarPerfil")?.addEventListener("click", async () => {
+  el("btnCerrarPerfil")?.addEventListener("click", async () => {
     await supabase.auth.signOut();
     JC_SESSION = null; JC_USER = null; JC_PROFILE = null;
     setPerfilUIState({ logged:false, hasProfile:false });
   });
 });
 
-// Arranque
 jcBootAuthAndProfile();
-
 
   /* =========================
    LOGIN (Magic Link por email)
