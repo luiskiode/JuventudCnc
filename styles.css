@@ -1650,3 +1650,53 @@ body.chat-open .ciro-widget {
 .view[data-view="box"] .jc-chat.jc-chat--collapsed {
   height: auto;
 }
+
+/* =========================
+   FONDO CON IMAGEN + OVERLAY
+   ========================= */
+
+/* Cambia esta ruta por tu imagen */
+:root{
+  --app-bg-img: url("assets/bg-floral.webp");
+  --app-bg-dim: rgba(4, 10, 26, .68); /* overlay oscuro */
+}
+
+/* Asegura que todo el contenido quede por encima */
+.app-shell, body.app-shell{
+  position: relative;
+  background: #0b1020; /* fallback si no carga imagen */
+}
+
+/* Imagen de fondo */
+body.app-shell::before{
+  content:"";
+  position: fixed;
+  inset: 0;
+  background-image: var(--app-bg-img);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: -2;
+  transform: translateZ(0);
+}
+
+/* Overlay oscuro para legibilidad */
+body.app-shell::after{
+  content:"";
+  position: fixed;
+  inset: 0;
+  background: var(--app-bg-dim);
+  z-index: -1;
+}
+
+/* En algunos Android, fixed puede ir raro; lo hacemos más estable */
+@media (max-width: 820px){
+  body.app-shell::before{
+    background-attachment: scroll;
+  }
+}
+
+body[data-theme="chicos"]{ --app-bg-img: url("assets/bg-blue.webp"); }
+body[data-theme="chicas"]{ --app-bg-img: url("assets/bg-pink.webp"); }
+body[data-theme="mix"]{ --app-bg-img: url("assets/bg-floral.webp"); }
+
