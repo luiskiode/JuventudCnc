@@ -69,6 +69,67 @@
 
   const safeText = (s) => (typeof s === "string" ? s : s == null ? "" : String(s));
 
+
+
+  /* =========================
+   MENSAJE SEMANAL (DINÁMICO)
+   ========================= */
+
+function getWeekKey() {
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), 0, 1);
+  const week = Math.ceil((((now - firstDay) / 86400000) + firstDay.getDay() + 1) / 7);
+  return `${now.getFullYear()}-W${week}`;
+}
+
+async function renderWeeklyMessage() {
+  const titleEl = document.getElementById("msgTitle");
+  const bodyEl = document.getElementById("msgBody");
+  const metaEl = document.getElementById("msgMeta");
+
+  if (!titleEl || !bodyEl || !metaEl) return;
+
+  const weekKey = getWeekKey();
+  metaEl.textContent = `Semana ${weekKey.replace("-", " ")}`;
+
+  // Mensaje base
+  let nombre = "bienvenido";
+  let personalizado = false;
+
+  try {
+    if (sb?.auth?.getUser) {
+      const { data: u } = await sb.auth.getUser();
+      const userId = u?.user?.id;
+
+      if (userId && sb?.from) {
+        const { data } = await sb
+          .from("miembros")
+          .select("nombre")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (data?.nombre) {
+          nombre = data.nombre.trim();
+          personalizado = true;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Mensaje semanal: sin perfil cargado aún");
+  }
+
+  // 🌱 Contenido dinámico
+  if (personalizado) {
+    titleEl.textContent = `🕊️ Hola, ${nombre}`;
+    bodyEl.textContent =
+      "Esta semana te invitamos a participar, compartir y crecer en comunidad. Gracias por ser parte activa de Juventud CNC 💙💗";
+  } else {
+    titleEl.textContent = "🕊️ Bienvenido a Juventud CNC";
+    bodyEl.textContent =
+      "Esta semana te invitamos a conocer la comunidad, explorar los espacios y dar el primer paso. Aquí todos sumamos 💙💗";
+  }
+}
+
   /* =========================
      Drawer + overlay
      ========================= */
@@ -78,9 +139,10 @@
   const closeDrawerBtn = $("#closeDrawer");
 
   const state = {
-    drawerOpen: false,
-    angieOpen: false
-  };
+  drawerOpen: false,
+  angieOpen: false,
+  loginOpen: false
+};
 
   // =========================
   // BOTS: switch maestro (ON/OFF)
@@ -115,10 +177,10 @@
   }
 
   function syncOverlay() {
-    const shouldShow = state.drawerOpen || state.angieOpen;
-    if (!overlay) return;
-    overlay.classList.toggle("show", shouldShow);
-  }
+  const shouldShow = state.drawerOpen || state.angieOpen || state.loginOpen;
+  if (!overlay) return;
+  overlay.classList.toggle("show", shouldShow);
+}
   /* =========================
    LOGIN (Magic Link por email)
    ========================= */
@@ -131,22 +193,20 @@ const loginEstado = document.getElementById("loginEstado");
 
 function openLoginModal() {
   if (!loginModal) return;
+  state.loginOpen = true;
   loginModal.style.display = "flex";
   loginModal.classList.add("show");
-  // overlay (si usas overlay global)
-  try {
-    state.angieOpen = true; // solo para que overlay se muestre con tu syncOverlay()
-    syncOverlay();
-    state.angieOpen = false;
-  } catch {}
+  syncOverlay();
   loginEmail?.focus();
 }
 
+
 function closeLoginModal() {
   if (!loginModal) return;
+  state.loginOpen = false;
   loginModal.classList.remove("show");
   loginModal.style.display = "none";
-  try { syncOverlay(); } catch {}
+  syncOverlay();
   if (loginEstado) loginEstado.textContent = "";
 }
 
@@ -220,9 +280,10 @@ if (sb?.auth?.onAuthStateChange) {
   closeDrawerBtn?.addEventListener("click", closeDrawer);
 
   overlay?.addEventListener("click", () => {
-    closeDrawer();
-    jcCloseAngieModal();
-  });
+  closeDrawer();
+  jcCloseAngieModal();
+  closeLoginModal();
+});
 
   /* =========================
      Theme: presets + tokens (FIX brand-2 / neutral-900 etc)
@@ -450,21 +511,7 @@ if (sb?.auth?.onAuthStateChange) {
    /* =========================
      COMUNIDAD (init) — dentro del IIFE
      ========================= */
-  const comunidad = createComunidadModule({
-    sb,
-    $,
-    $$,
-    safeText,
-    fmtDateTime,
-    normalizeTab,
-    logAviso,
-    angieSetEstado,
-    miaSetEstado,
-    ciroSetEstado
-  });
-
-  comunidad.init();
-
+  
   // exponer (por compat con overlay click)
   window.jcCloseAngieModal = jcCloseAngieModal;
 
@@ -559,6 +606,7 @@ if (sb?.auth?.onAuthStateChange) {
      Mensaje semanal (Supabase)
      ========================= */
   async function cargarMensajeSemanal() {
+
     const title = $("#msgTitle");
     const body = $("#msgBody");
     const meta = $("#msgMeta");
@@ -586,10 +634,9 @@ if (sb?.auth?.onAuthStateChange) {
       if (error) throw error;
 
       if (!data) {
-        title.textContent = "Aún no hay mensaje";
-        body.textContent = "Pronto aparecerá el mensaje semanal ✨";
-        return;
-      }
+  await renderWeeklyMessage();
+  return;
+}
 
       title.textContent = safeText(data.titulo || "Mensaje semanal");
       body.textContent = safeText(data.contenido || "");
@@ -811,33 +858,118 @@ if (sb?.auth?.onAuthStateChange) {
   }
   window.angieSetEstado = angieSetEstado;
 
-  // === Mia (todos tus assets)
-  const MIA_ESTADOS = {
-    guiando: {
-      img: "assets/mia-casual-wink.png",
-      frases: [
-        "Soy Mia. Aquí todo lo coordinamos con calma 💗",
-        "Respira. Vamos paso a paso.",
-        "¿Qué necesitas? Te acompaño."
-      ]
-    },
-   apoyo: {
-  img: "assets/mia-casual-love.png",
-  frases: [
-    "Bien, vamos avanzando 💗",
-    "Todo suma. Lo importante es seguir.",
-    "Te apoyo en lo que necesites."
-  ]
-},
-elegant_relief: {
-  img: "assets/mia-elegant-relief.png",
-  frases: [
-    "Modo elegante. Orden + claridad ✨",
-    "Presentemos esto bonito.",
-    "Vamos a dejarlo impecable."
-  ]
-}
-  };
+ /* =========================
+   MIA · ESTADOS (COMPLETO)
+   ========================= */
+const MIA_ESTADOS = {
+  // -------- CASUAL --------
+  guiando: {
+    modo: "casual",
+    imgs: [
+      "assets/mia-casual-wink.png",
+      "assets/mia-casual-surprised.png",
+      "assets/mia-casual-love.png"
+    ],
+    frases: [
+      "Te acompaño paso a paso 💗",
+      "Vamos viendo esto juntos 😊",
+      "Estoy aquí para ayudarte"
+    ]
+  },
+
+  apoyo: {
+    modo: "casual",
+    imgs: [
+      "assets/mia-casual-shy.png",
+      "assets/mia-casual-embarrassed.png",
+      "assets/mia-casual-love.png"
+    ],
+    frases: [
+      "Bien hecho, sigue así 💪",
+      "Todo suma, no te rindas",
+      "Confío en ti"
+    ]
+  },
+
+  confused: {
+    modo: "casual",
+    imgs: [
+      "assets/mia-casual-confused.png"
+    ],
+    frases: [
+      "Revisemos esto con calma 🤍"
+    ]
+  },
+
+  triste: {
+    modo: "casual",
+    imgs: [
+      "assets/mia-casual-sad.png",
+      "assets/mia-casual-cry.png"
+    ],
+    frases: [
+      "Está bien sentirse así…",
+      "Aquí no estás solo"
+    ]
+  },
+
+  // -------- ELEGANTE --------
+  elegante: {
+    modo: "elegante",
+    imgs: [
+      "assets/mia-elegant-relief.png",
+      "assets/mia-elegant-dreamy.png"
+    ],
+    frases: [
+      "Ordenemos esto con calma ✨",
+      "Presentemos algo bonito"
+    ]
+  },
+
+  inspirada: {
+    modo: "elegante",
+    imgs: [
+      "assets/mia-elegant-love.png",
+      "assets/mia-elegant-heart.png"
+    ],
+    frases: [
+      "Esto puede inspirar a otros 💫",
+      "Sigamos creando juntos"
+    ]
+  },
+
+  carinosa: {
+    modo: "elegante",
+    imgs: [
+      "assets/mia-elegant-kiss.png",
+      "assets/mia-elegant-shy.png"
+    ],
+    frases: [
+      "Me alegra verte aquí 🤍",
+      "Gracias por ser parte"
+    ]
+  },
+
+  confundida: {
+    modo: "elegante",
+    imgs: [
+      "assets/mia-elegant-confused.png"
+    ],
+    frases: [
+      "Algo no encaja… revisemos"
+    ]
+  },
+
+  llorando: {
+    modo: "elegante",
+    imgs: [
+      "assets/mia-elegant-cry.png"
+    ],
+    frases: [
+      "Respira… seguimos juntos"
+    ]
+  }
+};
 
   function miaSetEstado(tipo = "guiando") {
     const widget = document.getElementById("miaWidget");
@@ -848,7 +980,7 @@ elegant_relief: {
     let estado = MIA_ESTADOS[tipo];
     if (!estado) estado = MIA_ESTADOS.guiando;
 
-    if (imgEl && estado.img) imgEl.src = estado.img;
+    if (imgEl && estado.imgs) imgEl.src = pick(estado.imgs);
     textEl.textContent = pick(estado.frases, "Estoy aquí 💗");
 
     widget.classList.add("mia-widget--visible");
@@ -863,7 +995,7 @@ elegant_relief: {
     try { localStorage.setItem("jc_mia_modo", miaModo); } catch {}
 
     if (miaModo === "elegante") {
-      miaSetEstado("elegant_relief");
+      miaSetEstado("elegante");
     } else {
       miaSetEstado("guiando");
     }
@@ -950,7 +1082,7 @@ elegant_relief: {
   (function preloadAllBotImages() {
     const all = [
       ...Object.values(ANGIE_ESTADOS).map((x) => x.img),
-      ...Object.values(MIA_ESTADOS).map((x) => x.img),
+      ...Object.values(MIA_ESTADOS).flatMap((x) => x.imgs || []),
       ...Object.values(CIRO_ESTADOS).map((x) => x.img)
     ];
     jcPreloadImages(all);
@@ -1095,7 +1227,7 @@ elegant_relief: {
 
     // sincronizar emociones
     if (msg.from === "angie") angieSetEstado(msg.estado || "feliz");
-    if (msg.from === "mia") miaSetEstado(msg.estado || (miaModo === "elegante" ? "elegant_relief" : "guiando"));
+    if (msg.from === "mia") miaSetEstado(msg.estado || (miaModo === "elegante" ? "elegante" : "guiando"));
     if (msg.from === "ciro") ciroSetEstado(msg.estado || "feliz");
   }
 
@@ -1103,7 +1235,7 @@ elegant_relief: {
 
 
     comunidad: [
-  { from: "mia", text: "Aquí compartimos retos, dinámicas y opiniones 💗", estado: "apoyo", delay: 400 },
+  { from: "mia", text: "Aquí es para conocerte mejor. Nombre y frase 📝", estado: "elegante", delay: 400 },
   { from: "ciro", text: "Respeto primero. Participa con fuerza y corazón 💪", estado: "calm", delay: 1100 },
   { from: "angie", text: "¡Dale un ❤️ a lo que te inspire! 😏✨", estado: "traviesa", delay: 1700 }
 ],
@@ -1232,52 +1364,57 @@ elegant_relief: {
      MIEMBROS
      ========================= */
   async function cargarListaMiembros() {
-    const lista = document.getElementById("listaMiembros");
-    if (!lista) return;
+  const lista = document.getElementById("listaMiembros");
+  if (!lista) return;
 
-    lista.innerHTML = "<li>Cargando...</li>";
+  lista.innerHTML = "<li>Cargando...</li>";
 
-    if (!sb?.from) {
-      lista.innerHTML = "<li>No se puede conectar al servidor.</li>";
+  if (!sb?.from) {
+    lista.innerHTML = "<li>No se puede conectar al servidor.</li>";
+    return;
+  }
+
+  try {
+    const { data, error } = await sb
+      .from("miembros")
+      .select("nombre, rol_key")
+      .order("created_at", { ascending: false })
+      .limit(80);
+
+    if (error) throw error;
+
+    const list = Array.isArray(data) ? data : [];
+    if (!list.length) {
+      lista.innerHTML = "<li>No hay miembros registrados aún.</li>";
       return;
     }
 
-    try {
-      const { data, error } = await sb.from("miembros").select("nombre, rol_key").order("created_at", { ascending: false }).limit(80);
-      if (error) throw error;
+    lista.innerHTML = "";
+    list.forEach((m) => {
+      const li = document.createElement("li");
+      li.className = "user-item";
 
-      const list = Array.isArray(data) ? data : [];
-      if (!list.length) {
-        lista.innerHTML = "<li>No hay miembros registrados aún.</li>";
-        return;
-      }
+      const labelRol =
+        m.rol_key === "moderador" ? "Moderador" :
+        m.rol_key === "voluntario" ? "Voluntario digital" :
+        m.rol_key === "admin" ? "Admin" :
+        "Miembro";
 
-      lista.innerHTML = "";
-      list.forEach((m) => {
-        const li = document.createElement("li");
-        li.className = "user-item";
-
-        const labelRol =
-          m.rol_key === "moderador" ? "Moderador" :
-          m.rol_key === "voluntario" ? "Voluntario digital" :
-          m.rol_key === "admin" ? "Admin" :
-          "Miembro";
-
-        li.innerHTML = `
-          <div>
-            <div><strong>${safeText(m.nombre || "Usuario")}</strong></div>
-            <div class="muted small">${labelRol}</div>
-          </div>
-          <span class="estado-activo">Activo</span>
-        `;
-
-        lista.appendChild(li);
-      });
-    } catch (e) {
-      console.error("Error cargarListaMiembros:", e);
-      lista.innerHTML = "<li>Error cargando miembros.</li>";
-    }
+      li.innerHTML = `
+        <div>
+          <div><strong>${safeText(m.nombre || "Usuario")}</strong></div>
+          <div class="muted small">${labelRol}</div>
+        </div>
+        <span class="estado-activo">Activo</span>
+      `;
+      lista.appendChild(li);
+    });
+  } catch (e) {
+    console.error("Error cargarListaMiembros:", e);
+    lista.innerHTML = "<li>No se pudo cargar la lista de miembros.</li>";
+    try { angieSetEstado?.("confundida"); } catch (e2) {}
   }
+}
 
   /* =========================
      RECURSOS (tabla + storage)
@@ -1376,6 +1513,21 @@ elegant_relief: {
     }
   });
 
+  const comunidad = createComunidadModule({
+  sb,
+  $,
+  $$,
+  safeText,
+  fmtDateTime,
+  normalizeTab,
+  logAviso,
+  angieSetEstado,
+  miaSetEstado,
+  ciroSetEstado
+});
+
+comunidad.init();
+
   /* =========================
      SPA / TABS
      ========================= */
@@ -1394,6 +1546,11 @@ elegant_relief: {
     const tRaw = typeof tab === "string" ? tab : tab?.dataset?.tab;
     if (!tRaw) return;
     const t = normalizeTab(tRaw);
+    if (t === "inicio") {
+  cargarMensajeSemanal();     // trae de Supabase y si no hay, cae al dinámico
+  cargarEventosHome();        // lista home
+}
+
 
     tabs.forEach((b) => {
       const on = normalizeTab(b.dataset.tab) === t;
@@ -1499,7 +1656,7 @@ elegant_relief: {
     else ciroSetEstado("calm");
   }
 
-  // Chat escena se mantiene (ya sale secuencial con delays) :contentReference[oaicite:2]{index=2}
+// Chat escena se mantiene (ya sale secuencial con delays)
   jcChatPlayScene(t);
 }
 
@@ -1642,9 +1799,10 @@ formMiembro?.addEventListener("submit", async (e) => {
   if (perfilEstado) perfilEstado.textContent = "Guardando…";
 
   if (!sb?.from) {
-    if (perfilEstado) perfilEstado.textContent = "No hay conexión al servidor.";
-    return;
-  }
+  // fallback dinámico (local)
+  await renderWeeklyMessage();
+  return;
+}
 
   try {
     const userId = await ensureUserId();

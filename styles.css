@@ -1548,3 +1548,10 @@ select {
   }
 
 }
+
+body.chat-open .angie-widget,
+body.chat-open .mia-widget,
+body.chat-open .ciro-widget {
+  opacity: 0;
+  pointer-events: none;
+}

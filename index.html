@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,23 +6,23 @@
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b1020" />
-  <link rel="stylesheet" href="styles.css" />
 
-  <!-- SDKs -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
+  <!-- Build -->
+  <script>
+    window.JC_BUILD = "2025-12-20.02"; // cambia esto en cada release
+  </script>
 
-  <!-- Config -->
-  <script src="supabase-config.js" defer></script>
+  <!-- Styles (solo una vez, versionado) -->
+  <link rel="stylesheet" href="styles.css?v=2025-12-20.02" />
 
-  <!-- automatico  -->
-<script>
-  window.JC_BUILD = "2025-12-20.02"; // cambia esto en cada release
-</script>
+  <!-- Supabase SDK (SIN defer) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-<link rel="stylesheet" href="styles.css?v=2025-12-20.02" />
-<script src="app.js?v=2025-12-20.02" defer></script>
+  <!-- Config (SIN defer, debe correr después del SDK) -->
+  <script src="supabase-config.js"></script>
 
-
+  <!-- App (defer OK) -->
+  <script src="app.js?v=2025-12-20.02" defer></script>
 </head>
 
 <body class="app-shell">
@@ -392,7 +390,7 @@
     </div>
 
     <div class="bot-avatar mia-avatar">
-      <img id="miaAvatarImg" src="assets/mia-casual.png" alt="Mia" />
+      <img id="miaAvatarImg" src="assets/mia-casual-wink.png" alt="Mia" />
     </div>
   </div>
 
