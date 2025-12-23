@@ -89,6 +89,23 @@
   <!-- CONTENIDO -->
   <main class="container" id="main">
 
+    <!-- BOX -->
+<section class="view" data-view="box" aria-label="Box">
+  <section class="card">
+    <header class="card-header">
+      <div>
+        <h2 class="with-emoji" data-emoji="📦">Box</h2>
+        <p class="muted small" style="margin:4px 0 0">
+          Aquí vive el chat grande de los bots (sin tapar nada).
+        </p>
+      </div>
+    </header>
+
+    <!-- Mount: aquí se reubica el chat -->
+    <div id="boxChatMount" class="box-chat-mount"></div>
+  </section>
+</section>
+
     <!-- INICIO -->
     <section class="view active" data-view="inicio" aria-label="Inicio">
       <section class="card" id="mensaje-semanal">
@@ -501,7 +518,7 @@
   </div>
 
   <!-- CHAT BOTS (app.js lo crea si falta, pero aquí queda fijo y pulido) -->
-  <section id="jcChat" class="jc-chat" aria-label="Chat de bots">
+  <section id="jcChat" class="jc-chat" aria-label="Chat de bots" style="display:none">
     <header class="jc-chat-header">
       <div class="jc-chat-title">
         <span class="dot-online" aria-hidden="true"></span>

@@ -1554,3 +1554,99 @@ body.chat-open .ciro-widget {
     max-height: 40vh;
   }
 }
+
+/* ============================================================
+   BOX — Chat en grande (full) dentro de #boxChatMount
+   (sobrescribe el modo "widget pequeño" SOLO en la vista box)
+   ============================================================ */
+
+.view[data-view="box"]{
+  padding: 0 !important;
+}
+
+#boxChatMount.box-chat-mount{
+  width: 100%;
+  /* ocupa toda la altura útil del viewport (mejor en móvil) */
+  height: calc(100dvh - var(--topbar-h, 64px));
+  display: flex;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+/* En BOX: el chat deja de ser flotante y pasa a ser "panel grande" */
+.view[data-view="box"] .jc-chat{
+  position: relative !important;
+  inset: auto !important;
+  right: auto !important;
+  left: auto !important;
+  bottom: auto !important;
+
+  width: min(980px, 100%) !important;
+  height: 100% !important;
+  margin: 0 auto !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+/* Header fijo arriba */
+.view[data-view="box"] .jc-chat-header{
+  flex: 0 0 auto;
+}
+
+/* Body ocupa todo el resto */
+.view[data-view="box"] .jc-chat-body{
+  flex: 1 1 auto;
+  min-height: 0;              /* clave para que el scroll funcione */
+  overflow: auto;
+  padding-bottom: 6px;
+}
+
+/* Colapsado: deja el panel mini sin romper altura */
+.view[data-view="box"] .jc-chat.jc-chat--collapsed{
+  height: auto !important;
+  max-height: 64px;
+}
+
+.view[data-view="box"] .jc-chat.jc-chat--collapsed .jc-chat-body{
+  display: none;
+}
+
+/* Ajuste móvil extra */
+@media (max-width: 640px){
+  #boxChatMount.box-chat-mount{
+    padding: 8px;
+    height: calc(100dvh - var(--topbar-h, 56px));
+  }
+  .view[data-view="box"] .jc-chat{
+    border-radius: 14px;
+  }
+}
+/* ===== BOX: chat grande ===== */
+.box-chat-mount {
+  width: 100%;
+}
+
+.view[data-view="box"] .jc-chat {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  max-width: 100%;
+  height: min(70vh, 680px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+}
+
+.view[data-view="box"] .jc-chat .jc-chat-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.view[data-view="box"] .jc-chat.jc-chat--collapsed {
+  height: auto;
+}
