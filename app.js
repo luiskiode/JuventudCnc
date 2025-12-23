@@ -51,6 +51,8 @@
 
   const $ = (q, el = document) => el.querySelector(q);
   const $$ = (q, el = document) => Array.from(el.querySelectorAll(q));
+  // helper por compat (algunos bloques viejos usan el("id"))
+const el = (id) => document.getElementById(id);
 
   const fmtDate = (d) =>
     new Intl.DateTimeFormat(LOCALE, { timeZone: TZ, weekday: "long", month: "short", day: "numeric" }).format(d);
@@ -181,39 +183,11 @@ async function renderWeeklyMessage() {
   if (!overlay) return;
   overlay.classList.toggle("show", shouldShow);
 }
-
 /* =========================
-   AUTH + PERFIL PERSISTENTE (DESACTIVADO)
-   - Ya usamos el módulo PERFIL (tabla miembros)
+   PERFIL (BOOT)
+   - El perfil real se maneja más abajo con cargarPerfil()
+   - Se eliminó el bloque legacy que llamaba a funciones inexistentes
    ========================= */
-// (bloque desactivado para evitar conflicto con "miembros")
-
-document.addEventListener("DOMContentLoaded", () => {
-  const form = el("formMiembro");
-  if (form) {
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const out = el("perfilEstado");
-      try {
-        out && (out.textContent = "Guardando perfil…");
-        await jcUpsertProfileFromForm(form);
-        out && (out.textContent = "✅ Perfil guardado");
-        form.reset();
-      } catch (err) {
-        console.error(err);
-        out && (out.textContent = "❌ No se pudo guardar: " + (err?.message || err));
-      }
-    });
-  }
-
-  el("btnCerrarPerfil")?.addEventListener("click", async () => {
-    await supabase.auth.signOut();
-    JC_SESSION = null; JC_USER = null; JC_PROFILE = null;
-    setPerfilUIState({ logged:false, hasProfile:false });
-  });
-});
-
-jcBootAuthAndProfile();
 
   /* =========================
    LOGIN (Magic Link por email)
