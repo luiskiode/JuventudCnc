@@ -124,9 +124,9 @@ async function renderWeeklyMessage() {
     bodyEl.textContent =
       "Esta semana te invitamos a participar, compartir y crecer en comunidad. Gracias por ser parte activa de Juventud CNC 💙💗";
   } else {
-    titleEl.textContent = "🕊️ Bienvenido a Juventud CNC";
+    titleEl.textContent = "Bienvenido a Juventud CNC";
     bodyEl.textContent =
-      "Esta semana te invitamos a conocer la comunidad, explorar los espacios y dar el primer paso. Aquí todos sumamos 💙💗";
+      "Broer , esta semana te invitamos a conocer la comunidad, explorar los espacios y dar el primer paso. Aquí todos sumamos 💙💗";
   }
 }
 
@@ -659,11 +659,138 @@ if (sb?.auth?.onAuthStateChange) {
   }
 }
 /* =========================
-   EVENTOS (vista Eventos) — CORREGIDO
-   - Lista ordenada y limpia (opcional: ocultar pasados con showPast=false)
-   - Insert guarda fecha en ISO (fechaISO)
+   EVENTOS (CRUD + calendario + permisos)
+   - Solo miembros pueden crear/editar/borrar
+   - Espectadores solo ven
+   - Mini calendario mensual: click día filtra lista
    ========================= */
-async function cargarEventos({ destinoId = "eventList", tipo = "", showPast = true } = {}) {
+
+const EV = {
+  canWrite: false,
+  month: new Date(),     // mes visible del calendario
+  selectedDayKey: "",    // filtro por día (en TZ)
+  lastList: [],          // últimos eventos cargados (para calendario)
+};
+
+const fmtMonthLabel = (d) =>
+  new Intl.DateTimeFormat(LOCALE, { timeZone: TZ, month: "long", year: "numeric" }).format(d);
+
+const fmtDayKey = (d) =>
+  new Intl.DateTimeFormat(LOCALE, { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+
+// datetime-local helpers (usa timezone local del device)
+function toInputLocalValue(iso) {
+  const d = iso ? new Date(iso) : null;
+  if (!d || Number.isNaN(d.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mi = pad(d.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
+async function evRefreshAuth() {
+  EV.canWrite = false;
+
+  const gate = document.getElementById("evGate");
+  const createWrap = document.getElementById("evCreateWrap");
+
+  if (!sb?.auth?.getSession || !sb?.from) {
+    if (gate) gate.textContent = "⚠️ Sin conexión a Supabase.";
+    if (createWrap) createWrap.style.display = "none";
+    EV.canWrite = false;
+    return;
+  }
+
+  try {
+    const { data } = await sb.auth.getSession();
+    const user = data?.session?.user || null;
+
+    if (!user?.id) {
+      if (gate) gate.textContent = "👀 Estás en modo espectador. Regístrate en “Mi perfil” para crear/editar/borrar eventos.";
+      if (createWrap) createWrap.style.display = "none";
+      EV.canWrite = false;
+      return;
+    }
+
+    const { data: miembro } = await sb
+      .from("miembros")
+      .select("id,nombre,rol_key,user_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!miembro) {
+      if (gate) gate.textContent = "🔒 Tienes sesión, pero aún no eres miembro. Ve a “Mi perfil” y guarda tu registro.";
+      if (createWrap) createWrap.style.display = "none";
+      EV.canWrite = false;
+      return;
+    }
+
+    if (gate) gate.textContent = `✅ Hola ${safeText(miembro.nombre || "Miembro")}. Puedes crear/editar/borrar eventos.`;
+    if (createWrap) createWrap.style.display = "";
+    EV.canWrite = true;
+  } catch (e) {
+    console.error("Eventos auth:", e);
+    if (gate) gate.textContent = "⚠️ No se pudo validar acceso. Intenta recargar.";
+    if (createWrap) createWrap.style.display = "none";
+    EV.canWrite = false;
+  }
+}
+
+function tipoLabel(tipo) {
+  const t = (tipo || "").toLowerCase();
+  if (t === "formacion") return "📘 Formación";
+  if (t === "servicio") return "🫶 Servicio";
+  if (t === "convivencia") return "🤝 Convivencia";
+  if (t === "oracion") return "🙏 Oración";
+  return "📌 General";
+}
+
+function isPast(iso) {
+  const d = iso ? new Date(iso) : null;
+  if (!d || Number.isNaN(d.getTime())) return false;
+  return d.getTime() < Date.now();
+}
+
+function renderEventoLi(ev) {
+  const li = document.createElement("li");
+  li.className = "event-item";
+
+  const d = ev.fecha ? new Date(ev.fecha) : null;
+  const when = d ? fmtDateTime(d) : "";
+  const past = d ? isPast(ev.fecha) : false;
+
+  li.innerHTML = `
+    <div style="min-width:0">
+      <div class="event-title"><strong>${safeText(ev.titulo || "Evento")}</strong></div>
+      <div class="muted small">${safeText(ev.lugar || "")}</div>
+
+      <div class="event-badges">
+        <span class="event-badge">${tipoLabel(ev.tipo)}</span>
+        ${past ? `<span class="event-badge">✅ Realizado</span>` : `<span class="event-badge">⏳ Próximo</span>`}
+      </div>
+
+      ${EV.canWrite ? `
+        <div class="event-actions">
+          <button class="icon-mini" type="button" data-act="edit">✏️ Editar</button>
+          <button class="icon-mini" type="button" data-act="delete">🗑️ Borrar</button>
+        </div>
+      ` : ``}
+    </div>
+    <div class="event-meta muted small">${when}</div>
+  `;
+
+  if (EV.canWrite) {
+    li.querySelector('[data-act="edit"]')?.addEventListener("click", () => evOpenModal(ev));
+    li.querySelector('[data-act="delete"]')?.addEventListener("click", () => evDelete(ev));
+  }
+
+  return li;
+}
+
+async function cargarEventos({ destinoId = "eventList", tipo = "", scope = "upcoming", q = "", sort = "asc" } = {}) {
   const ul = document.getElementById(destinoId);
   if (!ul) return;
 
@@ -675,63 +802,295 @@ async function cargarEventos({ destinoId = "eventList", tipo = "", showPast = tr
   }
 
   try {
-    let q = sb
-      .from("eventos")
-      .select("id,titulo,fecha,lugar,tipo")
-      .order("fecha", { ascending: true });
+    let query = sb.from("eventos").select("id,titulo,fecha,lugar,tipo").limit(300);
+    query = query.order("fecha", { ascending: sort !== "desc" });
+    if (tipo) query = query.eq("tipo", tipo);
 
-    if (tipo) q = q.eq("tipo", tipo);
-
-    // ✅ opcional: si NO quieres ver pasados en la vista Eventos
-    if (!showPast) {
-      q = q.gte("fecha", new Date().toISOString());
-    }
-
-    const { data, error } = await q;
+    const { data, error } = await query;
     if (error) throw error;
 
-    const list = Array.isArray(data) ? data : [];
+    let list = Array.isArray(data) ? data : [];
+
+    // filtro búsqueda
+    const needle = (q || "").trim().toLowerCase();
+    if (needle) {
+      list = list.filter((ev) => {
+        const a = (ev.titulo || "").toLowerCase();
+        const b = (ev.lugar || "").toLowerCase();
+        return a.includes(needle) || b.includes(needle);
+      });
+    }
+
+    // scope
+    if (scope === "upcoming") list = list.filter((ev) => !isPast(ev.fecha));
+    if (scope === "past") list = list.filter((ev) => isPast(ev.fecha));
+
+    // filtro por día seleccionado (calendario)
+    if (EV.selectedDayKey) {
+      list = list.filter((ev) => {
+        if (!ev.fecha) return false;
+        return fmtDayKey(new Date(ev.fecha)) === EV.selectedDayKey;
+      });
+    }
+
+    // guardamos para calendario (sin filtros de día, pero sí por tipo/scope/búsqueda/orden)
+    EV.lastList = Array.isArray(data) ? data : [];
+
+    // render lista
     if (!list.length) {
       ul.innerHTML = "<li class='muted small'>No hay eventos para mostrar.</li>";
       return;
     }
 
     ul.innerHTML = "";
-    list.forEach((ev) => {
-      const li = document.createElement("li");
-      li.className = "event-item";
-
-      const d = ev.fecha ? new Date(ev.fecha) : null;
-      const when = d && !isNaN(d) ? fmtDateTime(d) : "";
-
-      li.innerHTML = `
-        <div>
-          <div class="event-title"><strong>${safeText(ev.titulo || "Evento")}</strong></div>
-          <div class="muted small">${safeText(ev.lugar || "")}</div>
-        </div>
-        <div class="event-meta muted small">${when}</div>
-      `;
-      ul.appendChild(li);
-    });
+    list.forEach((ev) => ul.appendChild(renderEventoLi(ev)));
   } catch (e) {
     console.error("Error cargarEventos:", e);
-    ul.innerHTML = "<li class='muted small'>Error cargando eventos (permisos/RLS).</li>";
+    ul.innerHTML = "<li class='muted small'>Error cargando eventos.</li>";
   }
 }
 
-$("#filtroTipo")?.addEventListener("change", () => {
-  const tipo = $("#filtroTipo")?.value || "";
-  cargarEventos({ destinoId: "eventList", tipo, showPast: true }); // cambia a false si no quieres pasados
+/* ===== Calendario ===== */
+function evRenderCalendar() {
+  const grid = document.getElementById("evCalendar");
+  const label = document.getElementById("evCalLabel");
+  const hint = document.getElementById("evDayHint");
+  const clearBtn = document.getElementById("evClearDay");
+
+  if (!grid) return;
+
+  const base = new Date(EV.month.getFullYear(), EV.month.getMonth(), 1);
+  if (label) label.textContent = fmtMonthLabel(base);
+
+  // Lunes=1...Domingo=7
+  const jsDay = base.getDay(); // 0 domingo..6 sábado
+  const mondayIndex = (jsDay === 0 ? 6 : jsDay - 1); // 0 lunes..6 domingo
+
+  const start = new Date(base);
+  start.setDate(base.getDate() - mondayIndex);
+
+  // mapa conteo por día del mes visible (en TZ)
+  const counts = new Map();
+  (EV.lastList || []).forEach((ev) => {
+    if (!ev.fecha) return;
+    const key = fmtDayKey(new Date(ev.fecha));
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+
+  grid.innerHTML = "";
+
+  for (let i = 0; i < 42; i++) {
+    const day = new Date(start);
+    day.setDate(start.getDate() + i);
+
+    const key = fmtDayKey(day);
+    const inMonth = day.getMonth() === base.getMonth();
+
+    const cell = document.createElement("div");
+    cell.className = "ev-day";
+    if (!inMonth) cell.classList.add("muted");
+    if (EV.selectedDayKey && key === EV.selectedDayKey) cell.classList.add("active");
+
+    const count = counts.get(key) || 0;
+
+    cell.innerHTML = `
+      <div>${day.getDate()}</div>
+      ${count ? `<div class="ev-dot"><i></i><span>${count}</span></div>` : ``}
+    `;
+
+    cell.addEventListener("click", () => {
+      // toggle
+      EV.selectedDayKey = (EV.selectedDayKey === key) ? "" : key;
+
+      if (hint) hint.textContent = EV.selectedDayKey
+        ? `Filtrando por día: ${EV.selectedDayKey}`
+        : "Toca un día para filtrar";
+
+      if (clearBtn) clearBtn.style.display = EV.selectedDayKey ? "" : "none";
+
+      evRenderCalendar();
+      evRefreshList();
+    });
+
+    grid.appendChild(cell);
+  }
+
+  if (hint) hint.textContent = EV.selectedDayKey
+    ? `Filtrando por día: ${EV.selectedDayKey}`
+    : "Toca un día para filtrar";
+
+  if (clearBtn) clearBtn.style.display = EV.selectedDayKey ? "" : "none";
+}
+
+function evShiftMonth(delta) {
+  EV.month = new Date(EV.month.getFullYear(), EV.month.getMonth() + delta, 1);
+  EV.selectedDayKey = "";
+  evRenderCalendar();
+  evRefreshList();
+}
+
+/* ===== Modal editar ===== */
+const evModal = document.getElementById("evModal");
+const evModalClose = document.getElementById("evModalClose");
+const evModalMeta = document.getElementById("evModalMeta");
+
+const evEditForm = document.getElementById("evEditForm");
+const evEditTitulo = document.getElementById("evEditTitulo");
+const evEditFecha = document.getElementById("evEditFecha");
+const evEditLugar = document.getElementById("evEditLugar");
+const evEditTipo = document.getElementById("evEditTipo");
+const evEditEstado = document.getElementById("evEditEstado");
+const evEditDelete = document.getElementById("evEditDelete");
+
+let evEditing = null;
+
+function evOpenModal(ev) {
+  if (!EV.canWrite) return;
+
+  evEditing = ev;
+  if (!evModal) return;
+
+  if (evModalMeta) evModalMeta.textContent = safeText(ev.id || "");
+  if (evEditTitulo) evEditTitulo.value = ev.titulo || "";
+  if (evEditFecha) evEditFecha.value = toInputLocalValue(ev.fecha);
+  if (evEditLugar) evEditLugar.value = ev.lugar || "";
+  if (evEditTipo) evEditTipo.value = ev.tipo || "";
+
+  if (evEditEstado) evEditEstado.textContent = "";
+  evModal.style.display = "flex";
+  evModal.classList.add("show");
+}
+
+function evCloseModal() {
+  evEditing = null;
+  if (!evModal) return;
+  evModal.classList.remove("show");
+  evModal.style.display = "none";
+}
+
+evModalClose?.addEventListener("click", evCloseModal);
+evModal?.addEventListener("click", (e) => { if (e.target === evModal) evCloseModal(); });
+
+async function evDelete(ev) {
+  if (!EV.canWrite) return;
+  const ok = confirm("¿Borrar este evento?");
+  if (!ok) return;
+
+  try {
+    const { error } = await sb.from("eventos").delete().eq("id", ev.id);
+    if (error) throw error;
+
+    logAviso?.({ title: "Evento eliminado", body: safeText(ev.titulo || "") });
+    cargarEventosHome?.();
+    evCloseModal();
+    evRefreshList();
+
+    angieSetEstado?.("ok");
+  } catch (err) {
+    console.error("Error borrando evento:", err);
+    alert("No se pudo borrar el evento.");
+    angieSetEstado?.("confundida");
+  }
+}
+
+evEditDelete?.addEventListener("click", async () => {
+  if (!evEditing) return;
+  await evDelete(evEditing);
 });
 
-const formEvento = $("#formEvento");
+evEditForm?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!EV.canWrite || !evEditing?.id) return;
+
+  if (evEditEstado) evEditEstado.textContent = "Guardando…";
+
+  const titulo = (evEditTitulo?.value || "").trim();
+  const fechaRaw = evEditFecha?.value;
+  const fechaISO = fechaRaw ? new Date(fechaRaw).toISOString() : null;
+  const lugar = (evEditLugar?.value || "").trim();
+  const tipo = (evEditTipo?.value || "").trim();
+
+  if (!titulo || !fechaISO) {
+    if (evEditEstado) evEditEstado.textContent = "Completa título y fecha.";
+    angieSetEstado?.("confundida");
+    return;
+  }
+
+  try {
+    const { error } = await sb
+      .from("eventos")
+      .update({ titulo, fecha: fechaISO, lugar, tipo })
+      .eq("id", evEditing.id);
+
+    if (error) throw error;
+
+    if (evEditEstado) evEditEstado.textContent = "Cambios guardados ✅";
+    logAviso?.({ title: "Evento editado", body: safeText(titulo) });
+
+    ciroSetEstado?.("feliz");
+    angieSetEstado?.("ok");
+
+    cargarEventosHome?.();
+    evCloseModal();
+    evRefreshList();
+  } catch (err) {
+    console.error("Error editando evento:", err);
+    if (evEditEstado) evEditEstado.textContent = "No se pudo guardar. Intenta otra vez.";
+    angieSetEstado?.("confundida");
+  }
+});
+
+/* ===== UI refresh ===== */
+function evRefreshList() {
+  const tipo = document.getElementById("filtroTipo")?.value || "";
+  const scope = document.getElementById("evScope")?.value || "upcoming";
+  const q = document.getElementById("evSearch")?.value || "";
+  const sort = document.getElementById("evSort")?.value || "asc";
+
+  cargarEventos({ destinoId: "eventList", tipo, scope, q, sort })
+    .then(() => evRenderCalendar())
+    .catch(() => {});
+}
+
+function evBindUI() {
+  document.getElementById("filtroTipo")?.addEventListener("change", evRefreshList);
+  document.getElementById("evScope")?.addEventListener("change", evRefreshList);
+  document.getElementById("evSort")?.addEventListener("change", evRefreshList);
+  document.getElementById("btnEvRefresh")?.addEventListener("click", evRefreshList);
+
+  // búsqueda con debounce
+  (function bindSearchDebounce(){
+    const input = document.getElementById("evSearch");
+    if (!input) return;
+    let t = null;
+    input.addEventListener("input", () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(evRefreshList, 180);
+    });
+  })();
+
+  document.getElementById("evCalPrev")?.addEventListener("click", () => evShiftMonth(-1));
+  document.getElementById("evCalNext")?.addEventListener("click", () => evShiftMonth(1));
+
+  document.getElementById("evClearDay")?.addEventListener("click", () => {
+    EV.selectedDayKey = "";
+    evRenderCalendar();
+    evRefreshList();
+  });
+}
+
+/* ===== Crear evento (solo miembros) ===== */
+const formEvento = document.getElementById("formEvento");
 formEvento?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const evEstado = $("#evEstado");
-  if (evEstado) {
-    evEstado.classList.remove("error");
-    evEstado.textContent = "Guardando…";
+  const evEstado = document.getElementById("evEstado");
+  if (evEstado) evEstado.textContent = "";
+
+  if (!EV.canWrite) {
+    if (evEstado) evEstado.textContent = "🔒 Solo miembros pueden crear eventos.";
+    angieSetEstado?.("confundida");
+    return;
   }
 
   if (!sb?.from) {
@@ -739,51 +1098,48 @@ formEvento?.addEventListener("submit", async (e) => {
     return;
   }
 
-  const titulo = $("#evTitulo")?.value?.trim();
-  const fechaRaw = $("#evFecha")?.value;
+  const titulo = document.getElementById("evTitulo")?.value?.trim();
+  const fechaRaw = document.getElementById("evFecha")?.value;
   const fechaISO = fechaRaw ? new Date(fechaRaw).toISOString() : null;
-  const lugar = $("#evLugar")?.value?.trim() || "";
-  const tipo = $("#evTipo")?.value?.trim() || "";
+  const lugar = document.getElementById("evLugar")?.value?.trim() || "";
+  const tipo = document.getElementById("evTipo")?.value?.trim() || "";
 
   if (!titulo || !fechaISO) {
-    if (evEstado) {
-      evEstado.textContent = "Completa título y fecha.";
-      evEstado.classList.add("error");
-    }
-    angieSetEstado("confundida");
+    if (evEstado) evEstado.textContent = "Completa título y fecha.";
+    angieSetEstado?.("confundida");
     return;
   }
 
+  if (evEstado) evEstado.textContent = "Guardando…";
+
   try {
-    // ✅ FIX: guardar fechaISO (no "fecha" inexistente)
-    const { error } = await sb.from("eventos").insert({
-      titulo,
-      fecha: fechaISO,
-      lugar,
-      tipo
-    });
+    const { error } = await sb.from("eventos").insert({ titulo, fecha: fechaISO, lugar, tipo });
     if (error) throw error;
 
     formEvento.reset();
     if (evEstado) evEstado.textContent = "Evento guardado ✅";
 
-    logAviso({ title: "Nuevo evento", body: `${titulo} (${tipo || "general"})` });
+    logAviso?.({ title: "Nuevo evento", body: `${titulo} (${tipo || "general"})` });
+    cargarEventosHome?.();
 
-    const tipoFiltro = document.getElementById("filtroTipo")?.value || "";
-    cargarEventos({ destinoId: "eventList", tipo: tipoFiltro, showPast: true });
-    cargarEventosHome();
+    ciroSetEstado?.("excited");
+    angieSetEstado?.("sorprendida");
 
-    ciroSetEstado("excited");
-    angieSetEstado("sorprendida");
+    evRefreshList();
   } catch (err) {
     console.error("Error insertando evento:", err);
-    if (evEstado) {
-      evEstado.textContent = "No se pudo guardar el evento. Intenta más tarde.";
-      evEstado.classList.add("error");
-    }
-    angieSetEstado("confundida");
+    if (evEstado) evEstado.textContent = "No se pudo guardar el evento. Intenta más tarde.";
+    angieSetEstado?.("confundida");
   }
 });
+
+/* ===== Inicializar Eventos (llamar al entrar a la pestaña) ===== */
+async function initEventosView() {
+  evBindUI();
+  await evRefreshAuth();
+  evRenderCalendar();
+  evRefreshList();
+}
 
   /* =========================
      BOTS: estados + preload + modo Mia
@@ -1635,7 +1991,7 @@ comunidad.init();
     comunidad.onTab(t);
 
     if (t === "miembros-activos") cargarListaMiembros();
-    if (t === "eventos") cargarEventos({ destinoId: "eventList", tipo: $("#filtroTipo")?.value || "" });
+    if (t === "eventos") initEventosView();
     if (t === "recursos") listarRecursos();
   }
 
