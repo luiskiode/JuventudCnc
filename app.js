@@ -181,6 +181,171 @@ async function renderWeeklyMessage() {
   if (!overlay) return;
   overlay.classList.toggle("show", shouldShow);
 }
+
+
+/* =========================
+   AUTH + PERFIL PERSISTENTE
+   ========================= */
+
+let JC_SESSION = null;
+let JC_USER = null;
+let JC_PROFILE = null;
+
+function $(id){ return document.getElementById(id); }
+
+function setPerfilUIState({ logged=false, hasProfile=false } = {}) {
+  // resumen
+  $("btnCerrarPerfil") && ($("btnCerrarPerfil").style.display = logged ? "" : "none");
+
+  // formulario perfil: solo si logged y NO tiene profile
+  const form = $("formMiembro");
+  if (form) form.style.display = (logged && !hasProfile) ? "" : "none";
+
+  // estado/gates (comunidad)
+  const gate = $("comuGate");
+  const composer = $("comuComposer");
+  if (gate) gate.textContent = logged ? "✅ Sesión activa. Cargando permisos…" : "🔒 Inicia sesión para registrarte y participar.";
+  if (composer) composer.style.display = (logged && hasProfile) ? "" : "none";
+
+  // comentar en modal comunidad
+  const comuCommentComposer = $("comuCommentComposer");
+  const comuCommentGate = $("comuCommentGate");
+  if (comuCommentComposer) comuCommentComposer.style.display = (logged && hasProfile) ? "" : "none";
+  if (comuCommentGate) comuCommentGate.style.display = (logged && hasProfile) ? "none" : "";
+}
+
+async function jcExchangeIfMagicLink() {
+  // Supabase v2: cuando llega magic link a GH Pages, la URL trae ?code=...
+  const url = new URL(window.location.href);
+  const code = url.searchParams.get("code");
+
+  if (!code) return;
+
+  try {
+    await supabase.auth.exchangeCodeForSession(window.location.href);
+    // limpia la URL para que no re-intercambie
+    url.searchParams.delete("code");
+    window.history.replaceState({}, document.title, url.pathname + url.hash);
+  } catch (e) {
+    console.warn("exchangeCodeForSession error:", e);
+  }
+}
+
+async function jcLoadSession() {
+  await jcExchangeIfMagicLink();
+  const { data, error } = await supabase.auth.getSession();
+  if (error) console.warn(error);
+  JC_SESSION = data?.session || null;
+  JC_USER = JC_SESSION?.user || null;
+  return JC_USER;
+}
+
+async function jcLoadProfile() {
+  if (!JC_USER) return null;
+
+  const { data, error } = await supabase
+    .from("jc_profiles")
+    .select("*")
+    .eq("id", JC_USER.id)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Load profile error:", error);
+    return null;
+  }
+
+  JC_PROFILE = data || null;
+
+  // pinta resumen
+  if (JC_PROFILE) {
+    $("perfilNombreTexto") && ($("perfilNombreTexto").textContent = JC_PROFILE.nombre || "Miembro");
+    $("perfilRolTexto") && ($("perfilRolTexto").textContent = JC_PROFILE.rol_key ? `Rol: ${JC_PROFILE.rol_key}` : "");
+    $("perfilFraseTexto") && ($("perfilFraseTexto").textContent = JC_PROFILE.frase || "—");
+  }
+
+  setPerfilUIState({ logged:true, hasProfile: !!JC_PROFILE });
+  return JC_PROFILE;
+}
+
+async function jcUpsertProfileFromForm(formEl) {
+  if (!JC_USER) throw new Error("No hay sesión");
+
+  const fd = new FormData(formEl);
+  const payload = {
+    id: JC_USER.id,
+    nombre: String(fd.get("nombre") || "").trim(),
+    edad: Number(fd.get("edad") || 0) || null,
+    contacto: String(fd.get("contacto") || "").trim() || null,
+    ministerio: String(fd.get("ministerio") || "").trim() || null,
+    rol_key: String(fd.get("rol_key") || "miembro"),
+    frase: String(fd.get("frase") || "").trim() || null
+  };
+
+  if (!payload.nombre) throw new Error("Nombre requerido");
+
+  const { data, error } = await supabase
+    .from("jc_profiles")
+    .upsert(payload, { onConflict: "id" })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  JC_PROFILE = data;
+  setPerfilUIState({ logged:true, hasProfile:true });
+  return data;
+}
+
+async function jcBootAuthAndProfile() {
+  const user = await jcLoadSession();
+
+  if (!user) {
+    setPerfilUIState({ logged:false, hasProfile:false });
+    $("perfilNombreTexto") && ($("perfilNombreTexto").textContent = "Aún sin registrar");
+    $("perfilRolTexto") && ($("perfilRolTexto").textContent = "");
+    return;
+  }
+
+  setPerfilUIState({ logged:true, hasProfile:false });
+  await jcLoadProfile();
+}
+
+// Listener global: si cambia auth, refresca
+supabase.auth.onAuthStateChange(async (_event, _session) => {
+  await jcBootAuthAndProfile();
+});
+
+// Hook submit perfil
+document.addEventListener("DOMContentLoaded", () => {
+  const form = $("formMiembro");
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const out = $("perfilEstado");
+      try {
+        out && (out.textContent = "Guardando perfil…");
+        await jcUpsertProfileFromForm(form);
+        out && (out.textContent = "✅ Perfil guardado");
+        form.reset();
+      } catch (err) {
+        console.error(err);
+        out && (out.textContent = "❌ No se pudo guardar: " + (err?.message || err));
+      }
+    });
+  }
+
+  // cerrar sesión
+  $("btnCerrarPerfil")?.addEventListener("click", async () => {
+    await supabase.auth.signOut();
+    JC_SESSION = null; JC_USER = null; JC_PROFILE = null;
+    setPerfilUIState({ logged:false, hasProfile:false });
+  });
+});
+
+// Arranque
+jcBootAuthAndProfile();
+
+
   /* =========================
    LOGIN (Magic Link por email)
    ========================= */

@@ -1700,3 +1700,14 @@ body[data-theme="chicos"]{ --app-bg-img: url("assets/bg-blue.webp"); }
 body[data-theme="chicas"]{ --app-bg-img: url("assets/bg-pink.webp"); }
 body[data-theme="mix"]{ --app-bg-img: url("assets/bg-floral.webp"); }
 
+/* Box: el chat ocupa el ancho y se ve grande */
+.view[data-view="box"] #jcChat,
+.view[data-view="box"] .jc-chat{
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.view[data-view="box"] .jc-chat-body{
+  min-height: 55vh;
+}
