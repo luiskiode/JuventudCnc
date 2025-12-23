@@ -1517,3 +1517,40 @@ body.chat-open .ciro-widget {
     animation:none !important;
   }
 }
+/* ============================
+   FIX: chat dentro de Box
+   ============================ */
+
+#boxChatMount,
+.box-chat-mount {
+  position: relative;
+  width: 100%;
+}
+
+/* cuando el chat esté dentro del box */
+.jc-chat.in-box {
+  position: relative !important;
+  inset: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  /* evita que se salga visualmente */
+  overflow: hidden;
+  border-radius: 16px; /* ajusta si quieres */
+}
+
+/* controla la altura del body del chat para que no rompa el box */
+.jc-chat.in-box .jc-chat-body {
+  max-height: 320px;
+  overflow: auto;
+}
+
+/* móvil: menos alto */
+@media (max-width: 720px) {
+  .jc-chat.in-box .jc-chat-body {
+    max-height: 40vh;
+  }
+}

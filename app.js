@@ -1494,22 +1494,71 @@ const MIA_ESTADOS = {
   document.getElementById("ciroClose")?.addEventListener("click", () => $("#ciroWidget")?.classList.remove("ciro-widget--visible"));
 
   /* =========================
-     CHAT
+     CHAT  (FIX: encerrar dentro de BOX)
      ========================= */
-  let jcChatBody = document.getElementById("jcChatBody");
-  let jcChatWidget = document.getElementById("jcChat");
-  let jcChatToggle = document.getElementById("jcChatToggle");
+let jcChatBody = document.getElementById("jcChatBody");
+let jcChatWidget = document.getElementById("jcChat");
+let jcChatToggle = document.getElementById("jcChatToggle");
 
-  // Si tu index nuevo no trae el chat, lo creamos para no romper CSS ni bots
-  function getChatMount() {
-  return document.getElementById("boxChatMount") || document.body;
+// helpers para detectar la vista box aunque cambie el HTML
+function getBoxViewEl() {
+  return document.querySelector('[data-view="box"]') || null;
+}
+
+// Si tu index nuevo no trae el chat, lo creamos para no romper CSS ni bots
+function getChatMount() {
+  // 1) mount “oficial”
+  const mount = document.getElementById("boxChatMount");
+  if (mount) return mount;
+
+  // 2) fallback: busca dentro de la vista box
+  const boxView = getBoxViewEl();
+  if (boxView) {
+    const alt = boxView.querySelector(".box-chat-mount");
+    return alt || boxView;
+  }
+
+  // 3) último fallback
+  return document.body;
+}
+
+function applyChatLayoutForMount(mountEl) {
+  if (!jcChatWidget) return;
+
+  const isInBox = !!(mountEl && (mountEl.id === "boxChatMount" || mountEl.closest?.('[data-view="box"]')));
+  jcChatWidget.classList.toggle("in-box", isInBox);
+
+  // Refuerzo anti “se escapó”: mata fixed/inset del CSS viejo
+  if (isInBox) {
+    jcChatWidget.style.position = "relative";
+    jcChatWidget.style.inset = "auto";
+    jcChatWidget.style.right = "auto";
+    jcChatWidget.style.bottom = "auto";
+    jcChatWidget.style.width = "100%";
+    jcChatWidget.style.maxWidth = "100%";
+  } else {
+    // fuera de box dejamos tu CSS normal (igual lo ocultas)
+    jcChatWidget.style.position = "";
+    jcChatWidget.style.inset = "";
+    jcChatWidget.style.right = "";
+    jcChatWidget.style.bottom = "";
+    jcChatWidget.style.width = "";
+    jcChatWidget.style.maxWidth = "";
+  }
 }
 
 function moveChatToMount() {
   const mount = getChatMount();
-  if (jcChatWidget && mount && jcChatWidget.parentElement !== mount) {
-    mount.appendChild(jcChatWidget);
-  }
+  if (!jcChatWidget || !mount) return;
+
+  // asegura contenedor relativo para que "relative" funcione bien
+  try {
+    const cs = getComputedStyle(mount);
+    if (cs.position === "static") mount.style.position = "relative";
+  } catch {}
+
+  if (jcChatWidget.parentElement !== mount) mount.appendChild(jcChatWidget);
+  applyChatLayoutForMount(mount);
 }
 
 (function ensureChatWidget() {
@@ -1538,16 +1587,18 @@ function moveChatToMount() {
   jcChatWidget = chat;
   jcChatBody = document.getElementById("jcChatBody");
   jcChatToggle = document.getElementById("jcChatToggle");
+
+  moveChatToMount();
 })();
 
-  const JC_CHAR_INFO = {
-    mia: { name: "Mia", initial: "M" },
-    ciro: { name: "Ciro", initial: "C" },
-    angie: { name: "Angie", initial: "A" },
-    system: { name: "Sistema", initial: "★" }
-  };
+const JC_CHAR_INFO = {
+  mia: { name: "Mia", initial: "M" },
+  ciro: { name: "Ciro", initial: "C" },
+  angie: { name: "Angie", initial: "A" },
+  system: { name: "Sistema", initial: "★" }
+};
 
-  function hideBotsUI() {
+function hideBotsUI() {
   document.getElementById("angieWidget")?.classList.remove("angie-widget--visible");
   document.getElementById("miaWidget")?.classList.remove("mia-widget--visible");
   document.getElementById("ciroWidget")?.classList.remove("ciro-widget--visible");
@@ -1559,169 +1610,202 @@ function showBotsUI() {
   const current = normalizeTab((location.hash || "#inicio").replace("#", ""));
   syncChatVisibility(current);
 }
-  
-  function syncChatVisibility(tabKey) {
+
+function syncChatVisibility(tabKey) {
   if (!jcChatWidget) return;
 
   const t = normalizeTab(tabKey);
   const shouldShow = botsEnabled && t === "box";
-  jcChatWidget.style.display = shouldShow ? "" : "none";
 
-  // siempre lo re-montamos en el contenedor si existe
+  // 1) re-monta SIEMPRE primero (para que no flote en body)
   moveChatToMount();
+
+  // 2) luego decide si se muestra
+  jcChatWidget.style.display = shouldShow ? "" : "none";
 }
 
-  function setBotsEnabled(on, { silent = false } = {}) {
-    botsEnabled = !!on;
-    try { localStorage.setItem("jc_bots_enabled", botsEnabled ? "1" : "0"); } catch {}
+function setBotsEnabled(on, { silent = false } = {}) {
+  botsEnabled = !!on;
+  try { localStorage.setItem("jc_bots_enabled", botsEnabled ? "1" : "0"); } catch {}
 
-    if (!botsEnabled) {
-      hideBotsUI();
-      if (!silent) {
-        try { logAviso({ title: "Bots apagados", body: "Puedes volver a encenderlos con 🤖" }); } catch {}
-      }
-    } else {
-      showBotsUI();
-      if (!silent) {
-        jcChatAddMessage({ from: "system", text: "Bots encendidos 🤖✨" });
-      }
-      const current = normalizeTab((location.hash || "#inicio").replace("#", ""));
-      botsSegunVista(current);
+  if (!botsEnabled) {
+    hideBotsUI();
+    if (!silent) {
+      try { logAviso({ title: "Bots apagados", body: "Puedes volver a encenderlos con 🤖" }); } catch {}
     }
-
-    updateBotsButtonUI();
-  }
-
-  function ensureBotsButton() {
-    const actions = document.querySelector(".topbar-actions");
-    if (!actions) return;
-
-    let btn = document.getElementById("btnBots");
-    if (!btn) {
-      btn = document.createElement("button");
-      btn.id = "btnBots";
-      btn.className = "icon-btn";
-      btn.type = "button";
-      btn.title = "Encender / Apagar bots";
-      btn.textContent = "🤖";
-      actions.insertBefore(btn, document.getElementById("btnAngie") || actions.lastElementChild);
+  } else {
+    showBotsUI();
+    if (!silent) {
+      jcChatAddMessage({ from: "system", text: "Bots encendidos 🤖✨" });
     }
-
-    btn.addEventListener("click", () => setBotsEnabled(!botsEnabled));
-
-    updateBotsButtonUI();
+    const current = normalizeTab((location.hash || "#inicio").replace("#", ""));
+    botsSegunVista(current);
   }
 
-  function updateBotsButtonUI() {
-    const btn = document.getElementById("btnBots");
-    if (!btn) return;
-    btn.setAttribute("aria-pressed", botsEnabled ? "true" : "false");
-    btn.style.opacity = botsEnabled ? "1" : "0.55";
-    btn.title = botsEnabled ? "Bots encendidos (clic para apagar)" : "Bots apagados (clic para encender)";
+  updateBotsButtonUI();
+}
+
+function ensureBotsButton() {
+  const actions = document.querySelector(".topbar-actions");
+  if (!actions) return;
+
+  let btn = document.getElementById("btnBots");
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.id = "btnBots";
+    btn.className = "icon-btn";
+    btn.type = "button";
+    btn.title = "Encender / Apagar bots";
+    btn.textContent = "🤖";
+    actions.insertBefore(btn, document.getElementById("btnAngie") || actions.lastElementChild);
   }
 
-  function jcChatAddMessage(msg) {
-    if (!jcChatBody) return;
-    if (!botsEnabled) return;
+  btn.addEventListener("click", () => setBotsEnabled(!botsEnabled));
 
-    const info = JC_CHAR_INFO[msg.from] || JC_CHAR_INFO.system;
+  updateBotsButtonUI();
+}
 
-    const row = document.createElement("div");
-    row.className = `jc-chat-msg from-${msg.from || "system"}`;
+function updateBotsButtonUI() {
+  const btn = document.getElementById("btnBots");
+  if (!btn) return;
+  btn.setAttribute("aria-pressed", botsEnabled ? "true" : "false");
+  btn.style.opacity = botsEnabled ? "1" : "0.55";
+  btn.title = botsEnabled ? "Bots encendidos (clic para apagar)" : "Bots apagados (clic para encender)";
+}
 
-    row.innerHTML = `
-      <div class="jc-chat-avatar">${info.initial}</div>
-      <div class="jc-chat-bubble">
-        <div class="jc-chat-name">${info.name}</div>
-        <div class="jc-chat-text">${safeText(msg.text || "")}</div>
-      </div>
-    `;
+function jcChatAddMessage(msg) {
+  if (!jcChatBody) return;
+  if (!botsEnabled) return;
 
-    jcChatBody.appendChild(row);
-    jcChatBody.scrollTop = jcChatBody.scrollHeight;
+  const info = JC_CHAR_INFO[msg.from] || JC_CHAR_INFO.system;
 
-    // sincronizar emociones
-    if (msg.from === "angie") angieSetEstado(msg.estado || "feliz");
-    if (msg.from === "mia") miaSetEstado(msg.estado || (miaModo === "elegante" ? "elegante" : "guiando"));
-    if (msg.from === "ciro") ciroSetEstado(msg.estado || "feliz");
-  }
+  const row = document.createElement("div");
+  row.className = `jc-chat-msg from-${msg.from || "system"}`;
+
+  row.innerHTML = `
+    <div class="jc-chat-avatar">${info.initial}</div>
+    <div class="jc-chat-bubble">
+      <div class="jc-chat-name">${info.name}</div>
+      <div class="jc-chat-text">${safeText(msg.text || "")}</div>
+    </div>
+  `;
+
+  jcChatBody.appendChild(row);
+  jcChatBody.scrollTop = jcChatBody.scrollHeight;
+
+  // sincronizar emociones
+  if (msg.from === "angie") angieSetEstado(msg.estado || "feliz");
+  if (msg.from === "mia") miaSetEstado(msg.estado || (miaModo === "elegante" ? "elegante" : "guiando"));
+  if (msg.from === "ciro") ciroSetEstado(msg.estado || "feliz");
+}
 
   const JC_CHAT_SCENES = {
 
+  comunidad: [
+    { from: "mia", text: "Aquí es para conocerte mejor. Nombre y frase 📝", estado: "elegante", delay: 400 },
+    { from: "ciro", text: "Respeto primero. Participa con fuerza y corazón 💪", estado: "calm", delay: 1100 },
+    { from: "angie", text: "¡Dale un ❤️ a lo que te inspire! 😏✨", estado: "traviesa", delay: 1700 }
+  ],
 
-    comunidad: [
-  { from: "mia", text: "Aquí es para conocerte mejor. Nombre y frase 📝", estado: "elegante", delay: 400 },
-  { from: "ciro", text: "Respeto primero. Participa con fuerza y corazón 💪", estado: "calm", delay: 1100 },
-  { from: "angie", text: "¡Dale un ❤️ a lo que te inspire! 😏✨", estado: "traviesa", delay: 1700 }
-],
+  box: [
+    { from: "system", text: "Bienvenido a Box 📦 Aquí vive el chat de los bots.", delay: 200 },
+    { from: "mia", text: "Desde aquí te acompaño sin tapar la pantalla 💗", estado: "guiando", delay: 700 },
+    { from: "ciro", text: "Orden y enfoque. Aquí vamos al grano 💪", estado: "calm", delay: 1200 },
+    { from: "angie", text: "Y yo pongo la chispa 😏✨", estado: "traviesa", delay: 1700 }
+  ],
 
-box: [
-  { from: "system", text: "Bienvenido a Box 📦 Aquí vive el chat de los bots.", delay: 200 },
-  { from: "mia", text: "Desde aquí te acompaño sin tapar la pantalla 💗", estado: "guiando", delay: 700 },
-  { from: "ciro", text: "Orden y enfoque. Aquí vamos al grano 💪", estado: "calm", delay: 1200 },
-  { from: "angie", text: "Y yo pongo la chispa 😏✨", estado: "traviesa", delay: 1700 }
-],
+  inicio: [
+    { from: "mia", text: "¡Hola! Soy Mia, coordino Juventud CNC. Te acompaño 💗", estado: "guiando", delay: 400 },
+    { from: "ciro", text: "Y yo soy Ciro. Si hay que servir, ¡yo voy primero! 💪", estado: "excited", delay: 900 },
+    { from: "angie", text: "Yo soy Angie… y sí: hoy toca algo épico ✨", estado: "feliz", delay: 1400 }
+  ],
 
-    inicio: [
-      { from: "mia", text: "¡Hola! Soy Mia, coordino Juventud CNC. Te acompaño 💗", estado: "guiando", delay: 400 },
-      { from: "ciro", text: "Y yo soy Ciro. Si hay que servir, ¡yo voy primero! 💪", estado: "excited", delay: 900 },
-      { from: "angie", text: "Yo soy Angie… y sí: hoy toca algo épico ✨", estado: "feliz", delay: 1400 }
-    ],
-    eventos: [
-      { from: "mia", text: "Revisa los eventos y mira dónde puedes sumarte 🙌", estado: "apoyo", delay: 400 },
-      { from: "ciro", text: "Yo ya me apunté. Vamos con fuerza 🔥", estado: "excited", delay: 1100 },
-      { from: "angie", text: "Crea uno nuevo… me encanta llenar la agenda 😏", estado: "traviesa", delay: 1700 }
-    ],
-    perfil: [
-      { from: "mia", text: "Aquí es para conocerte mejor. Nombre y frase 📝", estado: "elegant_relief", delay: 400 },
-      { from: "ciro", text: "Prometo no llenarte de tareas… (bueno, intentaré 😂)", estado: "feliz", delay: 1200 }
-    ],
-    recursos: [
-      { from: "angie", text: "Esto será nuestra biblioteca: cantos, guías y materiales 📂", estado: "ok", delay: 400 },
-      { from: "mia", text: "Cuando subas algo, piensa: ¿ayuda a acercar a alguien a Dios? 💭", estado: "guiando", delay: 1200 }
-    ],
-    judart: [
-      { from: "angie", text: "Judart es nuestro rincón creativo 🎨✨", estado: "traviesa", delay: 400 },
-      { from: "mia", text: "Aquí vamos a subir arte, diseños y momentos bonitos del grupo 💗", estado: "apoyo", delay: 1200 },
-      { from: "ciro", text: "Arte con propósito. Disciplina + talento 😤", estado: "calm", delay: 1900 }
-    ],
-    // compat con la vista antigua (antes se llamaba 'avisos')
-    avisos: [
-      { from: "angie", text: "Judart 🎨 (antes ‘Avisos’). Aquí va el arte del grupo ✨", estado: "traviesa", delay: 400 },
-      { from: "mia", text: "Contenido creativo y sano para todos 💗", estado: "apoyo", delay: 1200 }
-    ],
-    "miembros-activos": [
-      { from: "angie", text: "¡Mira cuántos ya se están sumando! 👥", estado: "feliz", delay: 400 },
-      { from: "ciro", text: "Algún día: pizza gigante con todos los nombres 🍕", estado: "feliz", delay: 1200 }
-    ]
-  };
+  eventos: [
+    { from: "mia", text: "Revisa los eventos y mira dónde puedes sumarte 🙌", estado: "apoyo", delay: 400 },
+    { from: "ciro", text: "Yo ya me apunté. Vamos con fuerza 🔥", estado: "excited", delay: 1100 },
+    { from: "angie", text: "Crea uno nuevo… me encanta llenar la agenda 😏", estado: "traviesa", delay: 1700 }
+  ],
 
-  function jcChatPlayScene(viewKey) {
-    if (!botsEnabled) return;
-    const vk = normalizeTab(viewKey);
-    const scene = JC_CHAT_SCENES[vk] || JC_CHAT_SCENES[viewKey];
-    if (!scene || !jcChatWidget) return;
+  perfil: [
+    { from: "mia", text: "Aquí es para conocerte mejor. Nombre y frase 📝", estado: "elegant_relief", delay: 400 },
+    { from: "ciro", text: "Prometo no llenarte de tareas… (bueno, intentaré 😂)", estado: "feliz", delay: 1200 }
+  ],
 
-    const storageKey = `jc_chat_scene_${vk}`;
-    if (sessionStorage.getItem(storageKey) === "1") return;
-    sessionStorage.setItem(storageKey, "1");
+  recursos: [
+    { from: "angie", text: "Esto será nuestra biblioteca: cantos, guías y materiales 📂", estado: "ok", delay: 400 },
+    { from: "mia", text: "Cuando subas algo, piensa: ¿ayuda a acercar a alguien a Dios? 💭", estado: "guiando", delay: 1200 }
+  ],
 
-    let totalDelay = 0;
-    scene.forEach((msg) => {
-      totalDelay += typeof msg.delay === "number" ? msg.delay : 800;
-      botSetTimeout(() => jcChatAddMessage(msg), totalDelay);
-    });
-  }
+  judart: [
+    { from: "angie", text: "Judart es nuestro rincón creativo 🎨✨", estado: "traviesa", delay: 400 },
+    { from: "mia", text: "Aquí vamos a subir arte, diseños y momentos bonitos del grupo 💗", estado: "apoyo", delay: 1200 },
+    { from: "ciro", text: "Arte con propósito. Disciplina + talento 😤", estado: "calm", delay: 1900 }
+  ],
 
-  jcChatToggle?.addEventListener("click", () => {
-    jcChatWidget?.classList.toggle("jc-chat--collapsed");
+  // compat con la vista antigua (antes se llamaba 'avisos')
+  avisos: [
+    { from: "angie", text: "Judart 🎨 (antes ‘Avisos’). Aquí va el arte del grupo ✨", estado: "traviesa", delay: 400 },
+    { from: "mia", text: "Contenido creativo y sano para todos 💗", estado: "apoyo", delay: 1200 }
+  ],
+
+  "miembros-activos": [
+    { from: "system", text: "Miembros activos 👥 — se siente la familia creciendo.", delay: 250 },
+
+    // Mia: cariño fraterno, liderazgo y claridad (ella lo ve como hermano)
+    { from: "mia", text: "Me da paz verlos aquí. Somos equipo, familia… y sí, los cuido como a mis hermanos 🤍", estado: "apoyo", delay: 900 },
+
+    // Ciro: enamorado de Mia, pero lo disfraza con disciplina (y sufre en silencio)
+    { from: "ciro", text: "Yo… solo quiero que Mia esté bien. Si tengo que cargar el peso, lo cargo. Sin que se note.", estado: "calm", delay: 1250 },
+
+    // Angie: ama a Ciro en secreto, pero juega con humor para no mostrarlo
+    { from: "angie", text: "Ayyy Ciro… siempre tan fuerte 😏 (sí, ya te vimos). Igual… me gusta cuando hablas así.", estado: "vergonzosa", delay: 1350 },
+
+    // Mia: corta el drama con ternura (hermanos)
+    { from: "mia", text: "Ciro, no tienes que demostrar nada para que te valoremos. Eres mi hermano de corazón, ¿ok? ✨", estado: "elegante", delay: 1400 },
+
+    // Ciro: golpe directo (dolor contenido) + respeto
+    { from: "ciro", text: "Sí… hermana. Entendido. (Respira, Ciro.) Igual voy a estar. Siempre.", estado: "worried", delay: 1500 },
+
+    // Angie: confiesa a medias (señal clara, pero cuidando el tono)
+    { from: "angie", text: "Y tú… también mereces que te miren bonito, ¿sabías? No siempre tienes que ser el fuerte…", estado: "confundida", delay: 1550 },
+
+    // Ciro: la ve como hermana, la aconseja sin darse cuenta del corazón de Angie
+    { from: "ciro", text: "Angie, tú vales muchísimo. Pero no te enredes. Cuida tu corazón. Yo te cuido como a mi hermana.", estado: "calm", delay: 1600 },
+
+    // Angie: se rompe un poquito, lo tapa con humor (drama suave, family-friendly)
+    { from: "angie", text: "Claro… tu “hermana”. 😅 (ok ok, ya. Mejor… sigamos sirviendo).", estado: "triste", delay: 1700 },
+
+    // cierre: unidad (para que no quede pesado)
+    { from: "system", text: "Plot twist guardado 😇 — aquí lo importante: servir juntos, con respeto y corazón.", delay: 1200 }
+  ]
+};
+
+function jcChatPlayScene(viewKey) {
+  if (!botsEnabled) return;
+  const vk = normalizeTab(viewKey);
+  const scene = JC_CHAT_SCENES[vk] || JC_CHAT_SCENES[viewKey];
+  if (!scene || !jcChatWidget) return;
+
+  const storageKey = `jc_chat_scene_${vk}`;
+  if (sessionStorage.getItem(storageKey) === "1") return;
+  sessionStorage.setItem(storageKey, "1");
+
+  let totalDelay = 0;
+  scene.forEach((msg) => {
+    totalDelay += typeof msg.delay === "number" ? msg.delay : 800;
+    botSetTimeout(() => jcChatAddMessage(msg), totalDelay);
   });
+}
 
-  // escena inicial
-  setTimeout(() => {
-    const initialTab = (location.hash || "#inicio").replace("#", "");
-    jcChatPlayScene(initialTab || "inicio");
-  }, 700);
+jcChatToggle?.addEventListener("click", () => {
+  jcChatWidget?.classList.toggle("jc-chat--collapsed");
+});
+
+// escena inicial
+setTimeout(() => {
+  const initialTab = (location.hash || "#inicio").replace("#", "");
+  jcChatPlayScene(initialTab || "inicio");
+}, 700);
 
   /* =========================
      Rellenar botones del modal (emociones)
