@@ -1555,3 +1555,28 @@ body.chat-open .ciro-widget {
   opacity: 0;
   pointer-events: none;
 }
+
+/* =========================
+   BOX: el chat vive aquí
+   ========================= */
+.view[data-view="box"] .box-wrap{
+  padding: 1rem;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.view[data-view="box"] .jc-chat{
+  position: relative !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin-top: .75rem;
+}
+
+/* altura cómoda */
+.view[data-view="box"] .jc-chat-body{
+  height: min(60vh, 520px);
+  overflow: auto;
+}

@@ -1114,28 +1114,44 @@ const MIA_ESTADOS = {
   let jcChatToggle = document.getElementById("jcChatToggle");
 
   // Si tu index nuevo no trae el chat, lo creamos para no romper CSS ni bots
-  (function ensureChatWidget() {
-    if (jcChatWidget && jcChatBody) return;
+  function getChatMount() {
+  return document.getElementById("boxChatMount") || document.body;
+}
 
-    const chat = document.createElement("section");
-    chat.className = "jc-chat";
-    chat.id = "jcChat";
-    chat.innerHTML = `
-      <header class="jc-chat-header">
-        <div class="jc-chat-title">
-          <span class="dot-online"></span>
-          <span>Chat bots</span>
-        </div>
-        <button class="jc-chat-toggle" id="jcChatToggle" title="Colapsar">⌄</button>
-      </header>
-      <div class="jc-chat-body" id="jcChatBody"></div>
-    `;
-    document.body.appendChild(chat);
+function moveChatToMount() {
+  const mount = getChatMount();
+  if (jcChatWidget && mount && jcChatWidget.parentElement !== mount) {
+    mount.appendChild(jcChatWidget);
+  }
+}
 
-    jcChatWidget = chat;
-    jcChatBody = document.getElementById("jcChatBody");
-    jcChatToggle = document.getElementById("jcChatToggle");
-  })();
+(function ensureChatWidget() {
+  // si existe, solo re-montamos
+  if (jcChatWidget && jcChatBody) {
+    moveChatToMount();
+    return;
+  }
+
+  const chat = document.createElement("section");
+  chat.className = "jc-chat";
+  chat.id = "jcChat";
+  chat.innerHTML = `
+    <header class="jc-chat-header">
+      <div class="jc-chat-title">
+        <span class="dot-online"></span>
+        <span>Chat bots</span>
+      </div>
+      <button class="jc-chat-toggle" id="jcChatToggle" title="Colapsar">⌄</button>
+    </header>
+    <div class="jc-chat-body" id="jcChatBody"></div>
+  `;
+
+  getChatMount().appendChild(chat);
+
+  jcChatWidget = chat;
+  jcChatBody = document.getElementById("jcChatBody");
+  jcChatToggle = document.getElementById("jcChatToggle");
+})();
 
   const JC_CHAR_INFO = {
     mia: { name: "Mia", initial: "M" },
@@ -1145,16 +1161,28 @@ const MIA_ESTADOS = {
   };
 
   function hideBotsUI() {
-    document.getElementById("angieWidget")?.classList.remove("angie-widget--visible");
-    document.getElementById("miaWidget")?.classList.remove("mia-widget--visible");
-    document.getElementById("ciroWidget")?.classList.remove("ciro-widget--visible");
-    if (jcChatWidget) jcChatWidget.style.display = "none";
-    clearBotTimers();
-  }
+  document.getElementById("angieWidget")?.classList.remove("angie-widget--visible");
+  document.getElementById("miaWidget")?.classList.remove("mia-widget--visible");
+  document.getElementById("ciroWidget")?.classList.remove("ciro-widget--visible");
+  clearBotTimers();
+  syncChatVisibility("inicio");
+}
 
-  function showBotsUI() {
-    if (jcChatWidget) jcChatWidget.style.display = "";
-  }
+function showBotsUI() {
+  const current = normalizeTab((location.hash || "#inicio").replace("#", ""));
+  syncChatVisibility(current);
+}
+  
+  function syncChatVisibility(tabKey) {
+  if (!jcChatWidget) return;
+
+  const t = normalizeTab(tabKey);
+  const shouldShow = botsEnabled && t === "box";
+  jcChatWidget.style.display = shouldShow ? "" : "none";
+
+  // siempre lo re-montamos en el contenedor si existe
+  moveChatToMount();
+}
 
   function setBotsEnabled(on, { silent = false } = {}) {
     botsEnabled = !!on;
@@ -1240,6 +1268,12 @@ const MIA_ESTADOS = {
   { from: "angie", text: "¡Dale un ❤️ a lo que te inspire! 😏✨", estado: "traviesa", delay: 1700 }
 ],
 
+box: [
+  { from: "system", text: "Bienvenido a Box 📦 Aquí vive el chat de los bots.", delay: 200 },
+  { from: "mia", text: "Desde aquí te acompaño sin tapar la pantalla 💗", estado: "guiando", delay: 700 },
+  { from: "ciro", text: "Orden y enfoque. Aquí vamos al grano 💪", estado: "calm", delay: 1200 },
+  { from: "angie", text: "Y yo pongo la chispa 😏✨", estado: "traviesa", delay: 1700 }
+],
 
     inicio: [
       { from: "mia", text: "¡Hola! Soy Mia, coordino Juventud CNC. Te acompaño 💗", estado: "guiando", delay: 400 },
@@ -1559,6 +1593,8 @@ comunidad.init();
     });
 
     showView(t);
+    syncChatVisibility(t);
+
 
     if (location.hash !== `#${t}`) history.replaceState(null, "", `#${t}`);
 
