@@ -182,130 +182,11 @@ async function renderWeeklyMessage() {
   overlay.classList.toggle("show", shouldShow);
 }
 
-
 /* =========================
-   AUTH + PERFIL PERSISTENTE
+   AUTH + PERFIL PERSISTENTE (DESACTIVADO)
+   - Ya usamos el módulo PERFIL (tabla miembros)
    ========================= */
-
-let JC_SESSION = null;
-let JC_USER = null;
-let JC_PROFILE = null;
-
-// ✅ NO usamos "$" porque ya existe en tu app
-function el(id){ return document.getElementById(id); }
-
-function setPerfilUIState({ logged=false, hasProfile=false } = {}) {
-  el("btnCerrarPerfil") && (el("btnCerrarPerfil").style.display = logged ? "" : "none");
-
-  const form = el("formMiembro");
-  if (form) form.style.display = (logged && !hasProfile) ? "" : "none";
-
-  const gate = el("comuGate");
-  const composer = el("comuComposer");
-  if (gate) gate.textContent = logged ? "✅ Sesión activa. Cargando permisos…" : "🔒 Inicia sesión para registrarte y participar.";
-  if (composer) composer.style.display = (logged && hasProfile) ? "" : "none";
-
-  const comuCommentComposer = el("comuCommentComposer");
-  const comuCommentGate = el("comuCommentGate");
-  if (comuCommentComposer) comuCommentComposer.style.display = (logged && hasProfile) ? "" : "none";
-  if (comuCommentGate) comuCommentGate.style.display = (logged && hasProfile) ? "none" : "";
-}
-
-async function jcExchangeIfMagicLink() {
-  const url = new URL(window.location.href);
-  const code = url.searchParams.get("code");
-  if (!code) return;
-
-  try {
-    await supabase.auth.exchangeCodeForSession(window.location.href);
-    url.searchParams.delete("code");
-    window.history.replaceState({}, document.title, url.pathname + url.hash);
-  } catch (e) {
-    console.warn("exchangeCodeForSession error:", e);
-  }
-}
-
-async function jcLoadSession() {
-  await jcExchangeIfMagicLink();
-  const { data, error } = await supabase.auth.getSession();
-  if (error) console.warn(error);
-  JC_SESSION = data?.session || null;
-  JC_USER = JC_SESSION?.user || null;
-  return JC_USER;
-}
-
-async function jcLoadProfile() {
-  if (!JC_USER) return null;
-
-  const { data, error } = await supabase
-    .from("jc_profiles")
-    .select("*")
-    .eq("id", JC_USER.id)
-    .maybeSingle();
-
-  if (error) {
-    console.warn("Load profile error:", error);
-    return null;
-  }
-
-  JC_PROFILE = data || null;
-
-  if (JC_PROFILE) {
-    el("perfilNombreTexto") && (el("perfilNombreTexto").textContent = JC_PROFILE.nombre || "Miembro");
-    el("perfilRolTexto") && (el("perfilRolTexto").textContent = JC_PROFILE.rol_key ? `Rol: ${JC_PROFILE.rol_key}` : "");
-    el("perfilFraseTexto") && (el("perfilFraseTexto").textContent = JC_PROFILE.frase || "—");
-  }
-
-  setPerfilUIState({ logged:true, hasProfile: !!JC_PROFILE });
-  return JC_PROFILE;
-}
-
-async function jcUpsertProfileFromForm(formEl) {
-  if (!JC_USER) throw new Error("No hay sesión");
-
-  const fd = new FormData(formEl);
-  const payload = {
-    id: JC_USER.id,
-    nombre: String(fd.get("nombre") || "").trim(),
-    edad: Number(fd.get("edad") || 0) || null,
-    contacto: String(fd.get("contacto") || "").trim() || null,
-    ministerio: String(fd.get("ministerio") || "").trim() || null,
-    rol_key: String(fd.get("rol_key") || "miembro"),
-    frase: String(fd.get("frase") || "").trim() || null
-  };
-
-  if (!payload.nombre) throw new Error("Nombre requerido");
-
-  const { data, error } = await supabase
-    .from("jc_profiles")
-    .upsert(payload, { onConflict: "id" })
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  JC_PROFILE = data;
-  setPerfilUIState({ logged:true, hasProfile:true });
-  return data;
-}
-
-async function jcBootAuthAndProfile() {
-  const user = await jcLoadSession();
-
-  if (!user) {
-    setPerfilUIState({ logged:false, hasProfile:false });
-    el("perfilNombreTexto") && (el("perfilNombreTexto").textContent = "Aún sin registrar");
-    el("perfilRolTexto") && (el("perfilRolTexto").textContent = "");
-    return;
-  }
-
-  setPerfilUIState({ logged:true, hasProfile:false });
-  await jcLoadProfile();
-}
-
-supabase.auth.onAuthStateChange(async () => {
-  await jcBootAuthAndProfile();
-});
+// (bloque desactivado para evitar conflicto con "miembros")
 
 document.addEventListener("DOMContentLoaded", () => {
   const form = el("formMiembro");
@@ -385,8 +266,8 @@ loginForm?.addEventListener("submit", async (e) => {
     const { error } = await sb.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: location.origin + location.pathname
-      }
+  emailRedirectTo: location.origin + location.pathname + "#perfil"
+}
     });
 
     if (error) throw error;
@@ -1880,7 +1761,7 @@ function jcChatAddMessage(msg) {
   ],
 
   perfil: [
-    { from: "mia", text: "Aquí es para conocerte mejor. Nombre y frase 📝", estado: "elegant_relief", delay: 400 },
+    { from: "mia", text: "Aquí es para conocerte mejor. Nombre y frase 📝", estado: "elegante", delay: 400 },
     { from: "ciro", text: "Prometo no llenarte de tareas… (bueno, intentaré 😂)", estado: "feliz", delay: 1200 }
   ],
 
@@ -2365,22 +2246,12 @@ function saveAvatarToLocal(dataUrl) {
 }
 
 async function ensureUserId() {
-  if (!sb?.auth?.getUser) return null;
-
-  // 1) ya hay sesión?
-  let uRes = await sb.auth.getUser();
-  let userId = uRes?.data?.user?.id || null;
-
-  // 2) si no, intenta anónimo (requiere habilitarlo en Supabase Auth)
-  if (!userId && sb?.auth?.signInAnonymously) {
-    const { error } = await sb.auth.signInAnonymously();
-    if (!error) {
-      uRes = await sb.auth.getUser();
-      userId = uRes?.data?.user?.id || null;
-    }
+  try {
+    const { data } = await sb.auth.getSession();
+    return data?.session?.user?.id || null;
+  } catch {
+    return null;
   }
-
-  return userId;
 }
 
 async function cargarPerfil() {
