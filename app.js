@@ -49,9 +49,10 @@
   const LOCALE = "es-PE";
   const TZ = "America/Lima";
 
-  const $ = (q, el = document) => el.querySelector(q);
-  const $$ = (q, el = document) => Array.from(el.querySelectorAll(q));
-  // helper por compat (algunos bloques viejos usan el("id"))
+  const $ = (q, root = document) => root.querySelector(q);
+const $$ = (q, root = document) => Array.from(root.querySelectorAll(q));
+
+// ✅ alias compat (tu código usa el("id"))
 const el = (id) => document.getElementById(id);
 
   const fmtDate = (d) =>
@@ -259,13 +260,12 @@ loginForm?.addEventListener("submit", async (e) => {
 if (sb?.auth?.onAuthStateChange) {
   sb.auth.onAuthStateChange(async (_event, _session) => {
     try {
-      // refresca perfil (tu función actual)
       if (typeof cargarPerfil === "function") await cargarPerfil();
     } catch {}
 
     try {
-      // si existe el módulo comunidad (si lo creaste como const comunidad = ...)
-      if (typeof comunidad?.cargarFeed === "function") await comunidad.cargarFeed({ force: true });
+      const mod = comunidad || window.jcComunidad;
+      if (mod && typeof mod.cargarFeed === "function") await mod.cargarFeed({ force: true });
     } catch {}
   });
 }
@@ -420,7 +420,7 @@ if (sb?.auth?.onAuthStateChange) {
               <p>Cambia colores en la herramienta y se aplican directo al app. Cierra con ✕ / overlay / ESC.</p>
             </div>
             <div class="jc-iframe">
-              <iframe src="Angie herramienta.html" title="Herramienta Angie"></iframe>
+              <iframe src="Angie%20herramienta.html" title="Herramienta Angie"></iframe>
             </div>
           </section>
 
@@ -833,16 +833,17 @@ async function cargarEventos({ destinoId = "eventList", tipo = "", scope = "upco
     if (scope === "upcoming") list = list.filter((ev) => !isPast(ev.fecha));
     if (scope === "past") list = list.filter((ev) => isPast(ev.fecha));
 
-    // filtro por día seleccionado (calendario)
-    if (EV.selectedDayKey) {
-      list = list.filter((ev) => {
-        if (!ev.fecha) return false;
-        return fmtDayKey(new Date(ev.fecha)) === EV.selectedDayKey;
-      });
-    }
+ // filtro por día seleccionado (calendario)
+  if (EV.selectedDayKey) {
+  list = list.filter((ev) => {
+    if (!ev.fecha) return false;
+    return fmtDayKey(new Date(ev.fecha)) === EV.selectedDayKey;
+  });
+}
 
-    // guardamos para calendario (sin filtros de día, pero sí por tipo/scope/búsqueda/orden)
-    EV.lastList = Array.isArray(data) ? data : [];
+    // ✅ base para calendario = lista ya filtrada por tipo/scope/búsqueda (pero SIN filtro de día)
+const listForCalendar = [...list];
+EV.lastList = listForCalendar;
 
     // render lista
     if (!list.length) {
@@ -1102,9 +1103,10 @@ formEvento?.addEventListener("submit", async (e) => {
   }
 
   if (!sb?.from) {
-    if (evEstado) evEstado.textContent = "No hay conexión al servidor.";
-    return;
-  }
+  if (perfilEstado) perfilEstado.textContent = "Sin conexión al servidor. No se puede guardar el perfil ahora.";
+  angieSetEstado?.("confundida");
+  return;
+}
 
   const titulo = document.getElementById("evTitulo")?.value?.trim();
   const fechaRaw = document.getElementById("evFecha")?.value;
@@ -2026,7 +2028,7 @@ setTimeout(() => {
     }
   });
 
-  const comunidad = createComunidadModule({
+  comunidad = createComunidadModule({
   sb,
   $,
   $$,
@@ -2039,6 +2041,7 @@ setTimeout(() => {
   ciroSetEstado
 });
 
+window.jcComunidad = comunidad; // ✅ opcional, pero útil
 comunidad.init();
 
   /* =========================
@@ -2100,10 +2103,7 @@ comunidad.init();
 
   // inicial
   activate((location.hash || "#inicio").replace("#", ""));
-  botSetTimeout(() => {
-  cargarMensajeSemanal();
-  cargarEventosHome();
-}, 50);
+  
 
   // exponer por compat
   window.activate = activate;
