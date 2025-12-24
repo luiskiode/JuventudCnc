@@ -385,41 +385,66 @@ const JC_BUILD = window.JC_BUILD || "dev";
 
   // 🔥 Reescala/comprime para que no reviente el límite de localStorage
   function jcReadImageAsCompressedDataURL(file, { maxW = 1400, quality = 0.82 } = {}) {
-    return new Promise((resolve, reject) => {
-      if (!file || !file.type?.startsWith("image/")) return reject(new Error("Archivo no es imagen"));
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type?.startsWith("image/")) {
+      return reject(new Error("Archivo no es imagen"));
+    }
 
+    const fr = new FileReader();
+
+    fr.onload = () => {
+      const src = String(fr.result || "");
       const img = new Image();
-      const fr = new FileReader();
-
-      fr.onload = () => { img.src = String(fr.result || ""); };
-      fr.onerror = reject;
 
       img.onload = () => {
-        const w = img.naturalWidth || img.width;
-        const h = img.naturalHeight || img.height;
+        try {
+          const w = img.naturalWidth || img.width || 1;
+          const h = img.naturalHeight || img.height || 1;
 
-        const scale = w > maxW ? (maxW / w) : 1;
-        const cw = Math.max(1, Math.round(w * scale));
-        const ch = Math.max(1, Math.round(h * scale));
+          const scale = w > maxW ? (maxW / w) : 1;
+          const cw = Math.max(1, Math.round(w * scale));
+          const ch = Math.max(1, Math.round(h * scale));
 
-        const canvas = document.createElement("canvas");
-        canvas.width = cw;
-        canvas.height = ch;
+          const canvas = document.createElement("canvas");
+          canvas.width = cw;
+          canvas.height = ch;
 
-        const ctx2d = canvas.getContext("2d");
-        if (!ctx2d) return reject(new Error("No canvas ctx"));
+          const ctx2d = canvas.getContext("2d");
+          if (!ctx2d) return reject(new Error("No canvas ctx"));
 
-        ctx2d.drawImage(img, 0, 0, cw, ch);
+          ctx2d.drawImage(img, 0, 0, cw, ch);
 
-        // JPEG suele pesar menos que PNG
-        const out = canvas.toDataURL("image/jpeg", quality);
-        resolve(out);
+          // JPEG pesa menos
+          const out = canvas.toDataURL("image/jpeg", quality);
+          resolve(out);
+        } catch (e) {
+          reject(e);
+        }
       };
 
-      img.onerror = () => reject(new Error("No se pudo cargar imagen"));
+      img.onerror = () => reject(new Error("No se pudo cargar la imagen seleccionada"));
+      img.src = src;
+    };
+
+    fr.onerror = () => {
+      // Aquí cae tu NotReadableError
+      const err = fr.error;
+      const msg =
+        err?.name === "NotReadableError"
+          ? "El navegador no pudo leer el archivo (permisos / OneDrive / archivo bloqueado). Prueba moviéndolo a Desktop y vuelve a elegir."
+          : (err?.message || "No se pudo leer el archivo");
+      reject(new Error(msg));
+    };
+
+    fr.onabort = () => reject(new Error("Lectura cancelada"));
+
+    try {
       fr.readAsDataURL(file);
-    });
-  }
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
 
   let __jcBgBound = false;
 
@@ -473,6 +498,30 @@ function jcBindGlobalBackgroundUI() {
   });
 
   return true;
+
+  btnPick.addEventListener("click", () => {
+  try { input.value = ""; } catch {}
+  input.click();
+});
+
+input.addEventListener("change", async () => {
+  const file = input.files?.[0];
+  if (!file) return;
+
+  if (estado) estado.textContent = "Cargando fondo…";
+
+  try {
+    const dataUrl = await jcReadImageAsCompressedDataURL(file, { maxW: 1400, quality: 0.82 });
+    jcSaveGlobalBackground(dataUrl);
+    if (estado) estado.textContent = "✅ Fondo aplicado";
+    try { logAviso({ title: "Fondo", body: "Fondo global actualizado 🖼️" }); } catch {}
+  } catch (e) {
+    console.error("Fondo global:", e);
+    if (estado) estado.textContent = e?.message || "No se pudo aplicar el fondo.";
+  } finally {
+    try { input.value = ""; } catch {}
+  }
+});
 }
 
   jcLoadGlobalBackground();
@@ -2115,13 +2164,25 @@ function jcBindGlobalBackgroundUI() {
   }
 
   async function ensureUserId() {
-    try {
-      const { data } = await sb.auth.getSession();
-      return data?.session?.user?.id || null;
-    } catch {
-      return null;
+  try {
+    let { data } = await sb.auth.getSession();
+    let userId = data?.session?.user?.id || null;
+    if (userId) return userId;
+
+    // Intentar anónimo si existe el método (supabase-js v2)
+    if (typeof sb.auth.signInAnonymously === "function") {
+      const { error } = await sb.auth.signInAnonymously();
+      if (!error) {
+        ({ data } = await sb.auth.getSession());
+        userId = data?.session?.user?.id || null;
+        if (userId) return userId;
+      }
     }
+    return null;
+  } catch {
+    return null;
   }
+}
 
   async function cargarPerfil() {
     if (!sb?.from) return;
