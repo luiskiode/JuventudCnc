@@ -142,7 +142,7 @@ const JC_BUILD = window.JC_BUILD || "dev";
         "Broer , esta semana te invitamos a conocer la comunidad, explorar los espacios y dar el primer paso. Aquí todos sumamos 💙💗";
     }
   }
-
+  
   /* =========================
      Drawer + overlay
      ========================= */
@@ -159,7 +159,7 @@ const JC_BUILD = window.JC_BUILD || "dev";
 
   // ✅ FIX: declarar comunidad dentro del IIFE (strict mode)
   let comunidad = null;
-
+  let judart = null;
   // =========================
   // BOTS: switch maestro (ON/OFF)
   // =========================
@@ -265,6 +265,9 @@ const JC_BUILD = window.JC_BUILD || "dev";
   if (sb?.auth?.onAuthStateChange) {
     sb.auth.onAuthStateChange(async (_event, _session) => {
       try { if (typeof cargarPerfil === "function") await cargarPerfil(); } catch {}
+
+      try { await window.jcJudart?.refreshAuthAndMiembro?.(); } catch {}
+      if (current === "judart") { try { await window.jcJudart?.cargarGaleria?.({ force:true }); } catch {} }
 
       try {
         const mod = window.jcComunidad || comunidad;
@@ -2265,6 +2268,8 @@ async function catefaCrearNino() {
   document.getElementById("catefaNinoApellidos").value = "";
   catefaLoadNinos();
 }
+
+
   /* =========================
      SPA / TABS
      ========================= */
@@ -2283,11 +2288,14 @@ async function catefaCrearNino() {
     const tRaw = typeof tab === "string" ? tab : tab?.dataset?.tab;
     if (!tRaw) return;
     const t = normalizeTab(tRaw);
+    if (t === "judart") judart?.onTab?.("judart");
+
 
     if (t === "inicio") {
       cargarMensajeSemanal();
       cargarEventosHome();
     }
+
 
     // ✅ bind UI del fondo cuando entras a BOX
     if (t === "box") {
@@ -2585,21 +2593,52 @@ async function catefaCrearNino() {
   // =========================
   // INICIAL: Comunidad module
   // =========================
-  comunidad = createComunidadModule({
-    sb,
-    $,
-    $$,
-    safeText,
-    fmtDateTime,
-    normalizeTab,
-    logAviso,
-    angieSetEstado,
-    miaSetEstado,
-    ciroSetEstado
-  });
+ // =====================
+// COMUNIDAD
+// =====================
+comunidad = createComunidadModule({
+  sb,
+  $,
+  $$,
+  safeText,
+  fmtDateTime,
+  normalizeTab,
+  logAviso,
+  angieSetEstado,
+  miaSetEstado,
+  ciroSetEstado
+});
+window.jcComunidad = comunidad;
+comunidad.init();
 
+// =====================
+// JUDART
+// =====================
+judart = createJudartModule({
+  sb,
+  $,
+  $$,
+  safeText,
+  fmtDateTime,
+  normalizeTab,
+  logAviso,
+  angieSetEstado,
+  miaSetEstado,
+  ciroSetEstado
+});
+window.jcJudart = judart;
+judart.init();
   window.jcComunidad = comunidad;
   comunidad.init();
+
+
+  judart = createJudartModule({
+  sb, $, $$, safeText, fmtDateTime, normalizeTab, logAviso,
+  angieSetEstado, miaSetEstado, ciroSetEstado
+});
+window.jcJudart = judart;
+judart.init();
+  
 
   // Inicial
   cargarPerfil();
@@ -3133,4 +3172,481 @@ function createComunidadModule(ctx = {}) {
   }
 
   return { init, onTab, cargarFeed, refreshAuthAndMiembro };
+}
+/* ==========================================================
+   JUDART MODULE (galería + subir + corazones)
+   ========================================================== */
+function createJudartModule(ctx = {}) {
+  const sb = ctx.sb || window.supabaseClient;
+
+  const $ = ctx.$ || ((q, el = document) => el.querySelector(q));
+  const $$ = ctx.$$ || ((q, el = document) => Array.from(el.querySelectorAll(q)));
+  const safeText = ctx.safeText || ((s) => (typeof s === "string" ? s : s == null ? "" : String(s)));
+  const fmtDateTime =
+    ctx.fmtDateTime ||
+    ((d) =>
+      new Intl.DateTimeFormat("es-PE", {
+        timeZone: "America/Lima",
+        weekday: "short",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(d));
+
+  const logAviso = ctx.logAviso || null;
+  const angieSetEstado = ctx.angieSetEstado || window.angieSetEstado;
+  const miaSetEstado = ctx.miaSetEstado || window.miaSetEstado;
+  const ciroSetEstado = ctx.ciroSetEstado || window.ciroSetEstado;
+
+  const state = {
+    inited: false,
+    tab: "galeria",
+    user: null,
+    miembro: null,
+    canWrite: false,
+    list: [],
+    modalOpen: false,
+    modalPost: null,
+  };
+
+  const dom = {};
+
+  function cacheDom() {
+    dom.gate = $("#judGate");
+    dom.badge = $("#judGateBadge");
+
+    dom.tabs = $$('[data-jud-tab]');
+    dom.panelGaleria = $("#judPanelGaleria");
+    dom.panelSubir = $("#judPanelSubir");
+    dom.panelRetos = $("#judPanelRetos");
+
+    dom.search = $("#judSearch");
+    dom.refresh = $("#judRefresh");
+    dom.list = $("#judList");
+
+    dom.form = $("#judForm");
+    dom.titulo = $("#judTitulo");
+    dom.desc = $("#judDesc");
+    dom.mediaType = $("#judMediaType");
+    dom.url = $("#judUrl");
+    dom.file = $("#judFile");
+    dom.estado = $("#judEstado");
+    dom.clear = $("#judClear");
+
+    dom.modal = $("#judModal");
+    dom.modalClose = $("#judModalClose");
+    dom.modalTitle = $("#judModalTitle");
+    dom.modalMeta = $("#judModalMeta");
+    dom.modalMedia = $("#judModalMedia");
+    dom.modalDesc = $("#judModalDesc");
+  }
+
+  function setGate(msg) { if (dom.gate) dom.gate.textContent = msg; }
+  function setStatus(msg, isErr=false) {
+    if (!dom.estado) return;
+    dom.estado.textContent = msg || "";
+    dom.estado.classList.toggle("error", !!isErr);
+  }
+
+  function setActiveTab(tab) {
+    state.tab = (tab || "galeria").toLowerCase();
+
+    dom.tabs?.forEach(b => {
+      const on = (b.dataset.judTab || "galeria") === state.tab;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+
+    if (dom.panelGaleria) dom.panelGaleria.style.display = state.tab === "galeria" ? "" : "none";
+    if (dom.panelSubir)   dom.panelSubir.style.display   = state.tab === "subir" ? "" : "none";
+    if (dom.panelRetos)   dom.panelRetos.style.display   = state.tab === "retos" ? "" : "none";
+
+    // mood
+    if (state.tab === "galeria") miaSetEstado?.("inspirada");
+    if (state.tab === "subir")   angieSetEstado?.("ok");
+    if (state.tab === "retos")   ciroSetEstado?.("excited");
+
+    // gate subir
+    if (state.tab === "subir" && !state.canWrite) {
+      setStatus("🔒 Solo miembros registrados pueden publicar en Judart.", true);
+    } else {
+      setStatus("");
+    }
+  }
+
+  async function refreshAuthAndMiembro() {
+    state.user = null;
+    state.miembro = null;
+    state.canWrite = false;
+
+    if (!sb?.auth?.getSession || !sb?.from) {
+      setGate("⚠️ Sin conexión a Supabase.");
+      state.canWrite = false;
+      return;
+    }
+
+    try {
+      const { data } = await sb.auth.getSession();
+      const user = data?.session?.user || null;
+      state.user = user;
+
+      if (!user?.id) {
+        setGate("👀 Estás en modo espectador. Regístrate en “Mi perfil” para publicar y reaccionar ❤️");
+        state.canWrite = false;
+        return;
+      }
+
+      const { data: miembro } = await sb
+        .from("miembros")
+        .select("id,nombre,rol_key,user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      state.miembro = miembro || null;
+      state.canWrite = !!miembro;
+
+      if (!miembro) {
+        setGate("🔒 Tienes sesión, pero aún no eres miembro. Ve a “Mi perfil” y guarda tu registro.");
+        state.canWrite = false;
+        return;
+      }
+
+      setGate(`✅ Hola ${safeText(miembro.nombre)}. Puedes publicar en Judart y reaccionar ❤️`);
+      state.canWrite = true;
+    } catch (e) {
+      console.error("Judart auth:", e);
+      setGate("⚠️ No se pudo validar acceso. Intenta recargar.");
+      state.canWrite = false;
+    }
+  }
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function renderCard(p, heartCount=0, heartOn=false) {
+    const el = document.createElement("div");
+    el.className = "catefa-item";
+
+    const d = p.created_at ? new Date(p.created_at) : null;
+    const meta = `${safeText(p.autor_nombre || "Miembro")} · ${d ? fmtDateTime(d) : ""}`;
+
+    const isLink = (p.media_type || "") === "link";
+    const cover = isLink
+      ? `<div class="muted small">🔗 ${escapeHtml(p.url || "")}</div>`
+      : `<div class="muted small">🖼️ Imagen</div>`;
+
+    el.innerHTML = `
+      <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start">
+        <div style="min-width:0">
+          <h4 style="margin:0 0 6px 0">${escapeHtml(p.titulo || "Arte")}</h4>
+          <div class="muted small">${escapeHtml(meta)}</div>
+          <div style="margin-top:8px">${cover}</div>
+        </div>
+
+        <button class="btn small ghost" type="button" data-act="open">Ver</button>
+      </div>
+
+      <div class="jc-row" style="margin-top:10px; justify-content:space-between; flex-wrap:wrap">
+        <button class="btn small ${heartOn ? "" : "ghost"}" type="button" data-act="heart">
+          ❤️ <span data-count>${heartCount}</span>
+        </button>
+        <span class="muted small">${escapeHtml((p.descripcion || "").slice(0, 120))}${(p.descripcion || "").length > 120 ? "…" : ""}</span>
+      </div>
+    `;
+
+    el.querySelector('[data-act="open"]')?.addEventListener("click", () => openModal(p));
+    el.querySelector('[data-act="heart"]')?.addEventListener("click", () => toggleHeart(p.id));
+    return el;
+  }
+
+  async function cargarGaleria({ force=false } = {}) {
+    if (!dom.list) return;
+
+    dom.list.innerHTML = `<div class="muted small">Cargando galería…</div>`;
+    if (!sb?.from) {
+      dom.list.innerHTML = `<div class="muted small">Sin conexión.</div>`;
+      return;
+    }
+
+    try {
+      const { data: posts, error } = await sb
+        .from("judart_posts")
+        .select("id,autor_id,autor_nombre,titulo,descripcion,categoria,media_type,url,storage_path,created_at")
+        .order("created_at", { ascending: false })
+        .limit(60);
+
+      if (error) throw error;
+
+      let list = Array.isArray(posts) ? posts : [];
+
+      const needle = (dom.search?.value || "").trim().toLowerCase();
+      if (needle) {
+        list = list.filter(p =>
+          (p.titulo || "").toLowerCase().includes(needle) ||
+          (p.autor_nombre || "").toLowerCase().includes(needle)
+        );
+      }
+
+      // reacciones
+      const ids = list.map(x => x.id).filter(Boolean);
+      let reactions = [];
+      if (ids.length) {
+        const { data: r, error: rErr } = await sb
+          .from("judart_reacciones")
+          .select("post_id,user_id,tipo")
+          .in("post_id", ids)
+          .eq("tipo", "heart");
+        if (rErr) throw rErr;
+        reactions = Array.isArray(r) ? r : [];
+      }
+
+      const counts = new Map();
+      const mine = new Set();
+      reactions.forEach(x => {
+        counts.set(x.post_id, (counts.get(x.post_id) || 0) + 1);
+        if (state.user?.id && x.user_id === state.user.id) mine.add(x.post_id);
+      });
+
+      dom.list.innerHTML = "";
+      if (!list.length) {
+        dom.list.innerHTML = `<div class="muted small">Aún no hay trabajos. Sé el primero 😄</div>`;
+        return;
+      }
+
+      list.forEach(p => dom.list.appendChild(renderCard(p, counts.get(p.id) || 0, mine.has(p.id))));
+      state.list = list;
+
+      miaSetEstado?.("apoyo");
+    } catch (e) {
+      console.error("Judart cargar:", e);
+      dom.list.innerHTML = `<div class="muted small">Error cargando galería.</div>`;
+      angieSetEstado?.("confundida");
+    }
+  }
+
+  async function subirImagenAStorage(file) {
+    const path = `${Date.now()}-${file.name}`.replaceAll(" ", "_");
+    const { error: upErr } = await sb.storage.from("judart").upload(path, file, { upsert: false });
+    if (upErr) throw upErr;
+
+    const { data: pub } = sb.storage.from("judart").getPublicUrl(path);
+    return { path, publicUrl: pub?.publicUrl || "" };
+  }
+
+  async function publicar(e) {
+    e.preventDefault();
+    setStatus("");
+
+    if (!state.canWrite || !state.user?.id || !state.miembro) {
+      setStatus("🔒 Solo miembros pueden publicar.", true);
+      angieSetEstado?.("confundida");
+      return;
+    }
+
+    const titulo = (dom.titulo?.value || "").trim();
+    const descripcion = (dom.desc?.value || "").trim();
+    const mediaType = (dom.mediaType?.value || "image").trim();
+
+    if (!titulo) {
+      setStatus("Escribe un título.", true);
+      return;
+    }
+
+    setStatus("Publicando…");
+
+    try {
+      let url = "";
+      let storage_path = "";
+
+      if (mediaType === "link") {
+        url = (dom.url?.value || "").trim();
+        if (!url) {
+          setStatus("Pega un link válido.", true);
+          return;
+        }
+      } else {
+        const file = dom.file?.files?.[0];
+        if (!file) {
+          setStatus("Selecciona una imagen.", true);
+          return;
+        }
+        if (!sb?.storage?.from) throw new Error("Storage no disponible");
+        const up = await subirImagenAStorage(file);
+        storage_path = up.path;
+        url = up.publicUrl;
+      }
+
+      const payload = {
+        autor_id: state.user.id,
+        autor_nombre: state.miembro.nombre || "Miembro",
+        titulo,
+        descripcion,
+        categoria: "galeria",
+        media_type: mediaType,
+        url,
+        storage_path
+      };
+
+      const { error } = await sb.from("judart_posts").insert(payload);
+      if (error) throw error;
+
+      setStatus("Publicado ✅");
+      dom.form?.reset();
+      if (dom.url) dom.url.style.display = "none";
+
+      logAviso?.({ title: "Judart", body: `Nueva publicación: ${titulo}` });
+      ciroSetEstado?.("feliz");
+      angieSetEstado?.("ok");
+
+      await cargarGaleria({ force:true });
+      setActiveTab("galeria");
+    } catch (err) {
+      console.error("Judart publicar:", err);
+      setStatus(`No se pudo publicar: ${err?.message || "error"}`, true);
+      angieSetEstado?.("enojada");
+    }
+  }
+
+  async function toggleHeart(postId) {
+    if (!state.canWrite || !state.user?.id) {
+      logAviso?.({ title: "Judart", body: "🔒 Regístrate para reaccionar ❤️" });
+      angieSetEstado?.("saludo");
+      return;
+    }
+    if (!sb?.from) return;
+
+    try {
+      const { data: existing, error: exErr } = await sb
+        .from("judart_reacciones")
+        .select("id")
+        .eq("post_id", postId)
+        .eq("user_id", state.user.id)
+        .eq("tipo", "heart")
+        .maybeSingle();
+      if (exErr) throw exErr;
+
+      if (existing?.id) {
+        const { error: delErr } = await sb.from("judart_reacciones").delete().eq("id", existing.id);
+        if (delErr) throw delErr;
+        miaSetEstado?.("apoyo");
+      } else {
+        const { error: insErr } = await sb.from("judart_reacciones").insert({ post_id: postId, user_id: state.user.id, tipo: "heart" });
+        if (insErr) throw insErr;
+        angieSetEstado?.("vergonzosa");
+      }
+
+      await cargarGaleria({ force:true });
+    } catch (e) {
+      console.error("Judart heart:", e);
+      logAviso?.({ title: "Judart", body: "No se pudo reaccionar. Intenta otra vez." });
+      angieSetEstado?.("confundida");
+    }
+  }
+
+  function openModal(p) {
+    state.modalOpen = true;
+    state.modalPost = p;
+    if (!dom.modal) return;
+
+    const d = p.created_at ? new Date(p.created_at) : null;
+    if (dom.modalTitle) dom.modalTitle.textContent = safeText(p.titulo || "Arte");
+    if (dom.modalMeta) dom.modalMeta.textContent = `${safeText(p.autor_nombre || "Miembro")} · ${d ? fmtDateTime(d) : ""}`;
+    if (dom.modalDesc) dom.modalDesc.textContent = safeText(p.descripcion || "");
+
+    if (dom.modalMedia) {
+      dom.modalMedia.innerHTML = "";
+      if ((p.media_type || "") === "link") {
+        const a = document.createElement("a");
+        a.href = p.url || "#";
+        a.target = "_blank";
+        a.rel = "noreferrer";
+        a.className = "btn";
+        a.textContent = "Abrir enlace 🔗";
+        dom.modalMedia.appendChild(a);
+      } else {
+        const img = document.createElement("img");
+        img.src = p.url || "";
+        img.alt = p.titulo || "Judart";
+        img.style.width = "100%";
+        img.style.display = "block";
+        dom.modalMedia.appendChild(img);
+      }
+    }
+
+    dom.modal.style.display = "flex";
+    dom.modal.classList.add("show");
+  }
+
+  function closeModal() {
+    state.modalOpen = false;
+    state.modalPost = null;
+    if (!dom.modal) return;
+    dom.modal.classList.remove("show");
+    dom.modal.style.display = "none";
+  }
+
+  function bindOnce() {
+    dom.tabs?.forEach(btn => {
+      btn.addEventListener("click", async () => {
+        setActiveTab(btn.dataset.judTab || "galeria");
+        if (state.tab === "galeria") await cargarGaleria();
+      });
+    });
+
+    dom.refresh?.addEventListener("click", () => cargarGaleria({ force:true }));
+
+    if (dom.search) {
+      let t = null;
+      dom.search.addEventListener("input", () => {
+        if (t) clearTimeout(t);
+        t = setTimeout(() => cargarGaleria(), 180);
+      });
+    }
+
+    dom.mediaType?.addEventListener("change", () => {
+      const v = dom.mediaType.value;
+      if (dom.url) dom.url.style.display = (v === "link") ? "" : "none";
+      if (dom.file) dom.file.style.display = (v === "link") ? "none" : "";
+    });
+
+    dom.form?.addEventListener("submit", publicar);
+
+    dom.clear?.addEventListener("click", () => {
+      dom.form?.reset();
+      if (dom.url) dom.url.style.display = "none";
+      setStatus("");
+      angieSetEstado?.("ok");
+    });
+
+    dom.modalClose?.addEventListener("click", closeModal);
+    dom.modal?.addEventListener("click", (e) => { if (e.target === dom.modal) closeModal(); });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && state.modalOpen) closeModal();
+    });
+  }
+
+  async function init() {
+    if (state.inited) return;
+    state.inited = true;
+    cacheDom();
+    bindOnce();
+    setActiveTab("galeria");
+    await refreshAuthAndMiembro();
+  }
+
+  async function onTab(tabName) {
+    if (String(tabName) !== "judart") return;
+    await refreshAuthAndMiembro();
+    await cargarGaleria();
+  }
+
+  return { init, onTab, refreshAuthAndMiembro, cargarGaleria };
 }

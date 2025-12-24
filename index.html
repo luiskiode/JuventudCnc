@@ -445,6 +445,112 @@
   </div>
 </section>
 
+<!-- JUDART -->
+<section class="view" data-view="judart" aria-label="Judart">
+  <section class="card">
+    <header class="card-header">
+      <div>
+        <h2 class="with-emoji" data-emoji="🎨">Judart</h2>
+        <p class="muted small" style="margin:4px 0 0">
+          Taller creativo: galería + retos. Solo miembros suben y reaccionan ❤️
+        </p>
+      </div>
+      <span id="judGateBadge" class="badge badge-mix">🔒 Solo miembros</span>
+    </header>
+
+    <div id="judGate" class="muted small" style="margin-top:10px">Cargando estado…</div>
+
+    <div class="comu-tabs" role="tablist" aria-label="Judart tabs" style="margin-top:12px">
+      <button class="comu-tab active" type="button" data-jud-tab="galeria" aria-selected="true">🖼️ Galería</button>
+      <button class="comu-tab" type="button" data-jud-tab="subir" aria-selected="false">⬆️ Subir arte</button>
+      <button class="comu-tab" type="button" data-jud-tab="retos" aria-selected="false">🔥 Retos</button>
+    </div>
+
+    <!-- GALERIA -->
+    <div id="judPanelGaleria" style="margin-top:12px">
+      <div class="jc-row" style="justify-content:space-between; flex-wrap:wrap; gap:10px">
+        <input id="judSearch" type="search" placeholder="Buscar por título/autor…" style="flex:1; min-width:220px" />
+        <button id="judRefresh" class="btn small ghost" type="button">Actualizar</button>
+      </div>
+
+      <div id="judList" class="catefa-list" style="margin-top:12px">
+        <div class="muted small">Cargando galería…</div>
+      </div>
+    </div>
+
+    <!-- SUBIR -->
+    <div id="judPanelSubir" style="margin-top:12px; display:none">
+      <div class="jc-card-mini">
+        <h4>⬆️ Publicar en Judart</h4>
+        <p class="muted small">Sube una imagen (recomendado) o pega un link (Drive, YouTube, etc.).</p>
+
+        <form id="judForm" class="grid perfil-form" style="margin-top:10px">
+          <input id="judTitulo" placeholder="Título (ej: Mi dibujo de Adviento)" maxlength="120" required />
+          <textarea id="judDesc" rows="3" placeholder="Descripción / mensaje" maxlength="1500"></textarea>
+
+          <select id="judMediaType" aria-label="Tipo">
+            <option value="image">Imagen (subir)</option>
+            <option value="link">Link (URL)</option>
+          </select>
+
+          <input id="judUrl" placeholder="https://..." style="display:none" />
+
+          <input id="judFile" type="file" accept="image/*" />
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap">
+            <button class="btn" type="submit">Publicar</button>
+            <button id="judClear" class="btn ghost" type="button">Limpiar</button>
+          </div>
+
+          <p id="judEstado" class="small muted" style="margin:0"></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- RETOS -->
+    <div id="judPanelRetos" style="margin-top:12px; display:none">
+      <div class="jc-card-mini">
+        <h4>🔥 Reto de la semana</h4>
+        <p class="muted small" id="judRetoText">
+          Dibuja una escena donde un niño aprende algo bueno (bondad/respeto) y escribe una frase motivadora.
+        </p>
+        <div class="jc-row" style="margin-top:10px; flex-wrap:wrap">
+          <span class="catefa-badge">💡 Tip: usa colores simples y un mensaje corto.</span>
+          <span class="catefa-badge">🕊️ Meta: inspirar a los niños.</span>
+        </div>
+      </div>
+
+      <div class="jc-card-mini" style="margin-top:10px">
+        <h4>📌 Ideas rápidas</h4>
+        <ul class="muted small" style="margin:8px 0 0; padding-left:18px; line-height:1.4">
+          <li>Una acción buena que viste hoy.</li>
+          <li>Una escena de catequesis (asistencia, tema, amistad).</li>
+          <li>Un santo / una virtud (paciencia, humildad, servicio).</li>
+        </ul>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- MODAL PREVIEW -->
+  <div id="judModal" class="jc-modal" style="display:none">
+    <div class="jc-modal-card" role="dialog" aria-modal="true" aria-label="Judart preview">
+      <header class="jc-modal-header">
+        <div>
+          <h3 id="judModalTitle">Arte</h3>
+          <p id="judModalMeta" class="muted small">—</p>
+        </div>
+        <button id="judModalClose" class="icon-btn" type="button">✕</button>
+      </header>
+      <div class="jc-modal-body">
+        <div id="judModalMedia" style="border-radius:14px; overflow:hidden"></div>
+        <p id="judModalDesc" class="muted small" style="margin-top:10px"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
   <nav class="tabs" aria-label="Navegación inferior">
     <button class="tab active" type="button" data-tab="inicio">🏠<span>Inicio</span></button>
     <button class="tab" type="button" data-tab="eventos">📅<span>Eventos</span></button>
