@@ -33,7 +33,32 @@ const JC_BUILD = window.JC_BUILD || "dev";
   /* =========================
      BOOT
      ========================= */
-  const sb = window.supabaseClient;
+ const sb = window.supabaseClient;
+
+if (!sb) {
+  console.error("❌ Supabase no inicializado: window.supabaseClient undefined. Revisa supabase-config.js y el orden de scripts.");
+  alert("Error crítico: Supabase no está cargado.");
+  throw new Error("Supabase client (sb) no definido");
+}
+
+async function jcEnsureAnonSession() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data?.session?.user?.id) return data.session.user.id;
+
+    if (typeof sb.auth.signInAnonymously === "function") {
+      const { error } = await sb.auth.signInAnonymously();
+      if (error) throw error;
+
+      const { data: d2 } = await sb.auth.getSession();
+      return d2?.session?.user?.id || null;
+    }
+    return null;
+  } catch (e) {
+    console.warn("Anon session error:", e);
+    return null;
+  }
+}
 
   if (!sb) {
     console.error("❌ Supabase no inicializado: window.supabaseClient undefined. Revisa supabase-config.js y el orden de scripts.");
@@ -449,55 +474,7 @@ const JC_BUILD = window.JC_BUILD || "dev";
   let __jcBgBound = false;
 
 function jcBindGlobalBackgroundUI() {
-  if (__jcBgBound) return true;
-
-  const btnPick  = document.getElementById("btnBgPick");
-  const btnClear = document.getElementById("btnBgClear");
-  const input    = document.getElementById("bgPickerInput");
-  const estado   = document.getElementById("bgPickEstado");
-
-  // si aún no existe el DOM de BOX, salimos pero devolvemos false para reintentar
-  if (!btnPick || !btnClear || !input) return false;
-
-  __jcBgBound = true;
-
-  // 🔥 evita que el botón sea submit (si está dentro de un form)
-  btnPick.type = "button";
-  btnClear.type = "button";
-
-  btnPick.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    input.click();
-  });
-
-  input.addEventListener("change", async () => {
-    const file = input.files?.[0];
-    if (!file) return;
-
-    if (estado) estado.textContent = "Cargando fondo…";
-
-    try {
-      const dataUrl = await jcReadImageAsCompressedDataURL(file, { maxW: 1400, quality: 0.82 });
-      jcSaveGlobalBackground(dataUrl);
-      if (estado) estado.textContent = "✅ Fondo aplicado";
-      try { logAviso({ title: "Fondo", body: "Fondo global actualizado 🖼️" }); } catch {}
-    } catch (e) {
-      console.error("Fondo global:", e);
-      if (estado) estado.textContent = "No se pudo aplicar el fondo.";
-    } finally {
-      try { input.value = ""; } catch {}
-    }
-  });
-
-  btnClear.addEventListener("click", (e) => {
-    e.preventDefault();
-    jcSaveGlobalBackground("");
-    if (estado) estado.textContent = "Fondo quitado.";
-    try { logAviso({ title: "Fondo", body: "Fondo global quitado" }); } catch {}
-  });
-
-  return true;
+  jcBindGlobalBackgroundUI()
 
   btnPick.addEventListener("click", () => {
   try { input.value = ""; } catch {}
@@ -1733,7 +1710,7 @@ input.addEventListener("change", async () => {
       { from: "ciro", text: "A veces siento que si me detengo… todo se cae. Y me da miedo fallarte.", estado: "worried", delay: 1250 },
       { from: "mia", text: "No me fallas. Me cuidas. Pero yo también te cuido a ti.", estado: "apoyo", delay: 1150 },
 
-      { from: "angie", text: "Ok… esto es demasiado lindo. (Y yo aquí haciéndome la fuerte 😭)", estado: "triste", delay: 1150 },
+      { from: "angie", text: "Ok… esto es demasiado lindo. (Y yo aquí haciéndome la fuerte 😭)", estado: "vergonzosa", delay: 1150 },
       { from: "ciro", text: "Angie… tú vales mucho. Aunque te hagas la traviesa.", estado: "calm", delay: 1100 },
       { from: "angie", text: "¿Y por qué cuando dices eso… me duele bonito? 😅", estado: "vergonzosa", delay: 1050 },
 
@@ -2024,13 +2001,13 @@ input.addEventListener("change", async () => {
     const t = normalizeTab(tRaw);
 
     if (t === "inicio") {
-      cargarMensajeSemanal();
-      cargarEventosHome();
-
-    if (t === "box") {
-  jcBindGlobalBackgroundUI(); // es seguro por el flag __jcBgBound
+  cargarMensajeSemanal();
+  cargarEventosHome();
 }
-    }
+
+if (t === "box") {
+  jcBindGlobalBackgroundUI();
+}
 
     tabs.forEach((b) => {
       const on = normalizeTab(b.dataset.tab) === t;
@@ -2164,24 +2141,7 @@ input.addEventListener("change", async () => {
   }
 
   async function ensureUserId() {
-  try {
-    let { data } = await sb.auth.getSession();
-    let userId = data?.session?.user?.id || null;
-    if (userId) return userId;
-
-    // Intentar anónimo si existe el método (supabase-js v2)
-    if (typeof sb.auth.signInAnonymously === "function") {
-      const { error } = await sb.auth.signInAnonymously();
-      if (!error) {
-        ({ data } = await sb.auth.getSession());
-        userId = data?.session?.user?.id || null;
-        if (userId) return userId;
-      }
-    }
-    return null;
-  } catch {
-    return null;
-  }
+  return await jcEnsureAnonSession();
 }
 
   async function cargarPerfil() {
