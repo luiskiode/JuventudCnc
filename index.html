@@ -91,6 +91,19 @@
 
     <!-- BOX -->
 <section class="view" data-view="box" aria-label="Box">
+  <div class="jc-card-mini">
+  <h4>🖼️ Fondo global</h4>
+  <p class="muted small">Elige una imagen de tu galería. Se aplica al fondo principal.</p>
+
+  <div class="jc-row" style="gap:.5rem; flex-wrap:wrap;">
+    <button class="btn small" id="btnBgPick" type="button">Elegir fondo</button>
+    <button class="btn small ghost" id="btnBgClear" type="button">Quitar</button>
+    <span class="muted small" id="bgPickEstado"></span>
+  </div>
+
+  <input id="bgPickerInput" type="file" accept="image/*" hidden />
+</div>
+
   <section class="card">
     <header class="card-header">
       <div>

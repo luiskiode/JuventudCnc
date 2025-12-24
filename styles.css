@@ -1711,3 +1711,45 @@ body[data-theme="mix"]{ --app-bg-img: url("assets/bg-floral.webp"); }
 .view[data-view="box"] .jc-chat-body{
   min-height: 55vh;
 }
+/* =========================
+   FONDO GLOBAL (pantalla principal)
+   ========================= */
+#jcAppBgLayer,
+#jcAppBgOverlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#jcAppBgLayer {
+  z-index: -2;
+  background-image: var(--jc-app-bg, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+#jcAppBgOverlay {
+  z-index: -1;
+  background: rgba(2, 6, 23, 0.55); /* overlay para legibilidad */
+}
+
+/* UI mini del selector (vive en pestaña box) */
+.box-bg-tools {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: .75rem;
+}
+.box-bg-tools .btn.small { padding: .45rem .65rem; }
+/* Fondo global (imagen desde galería) */
+:root { --jc-bg-image: none; }
+
+body.jc-has-bg {
+  background-image: var(--jc-bg-image);
+  background-size: cover;
+  background-position: center center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}

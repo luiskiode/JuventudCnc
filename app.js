@@ -353,7 +353,115 @@ const JC_BUILD = window.JC_BUILD || "dev";
     try { localStorage.setItem("jc_theme_mode", mode); } catch {}
     applyThemePreset(mode);
   });
+  /* ============================================================
+     FONDO GLOBAL: Importar desde galería (UI en pestaña BOX)
+     - Aplica al fondo de la pantalla principal (no al view box)
+     - Guarda en localStorage
+     ============================================================ */
+  const JC_BG_KEY = "jc_bg_main_dataurl";
 
+  function jcApplyGlobalBackground(dataUrl) {
+    try {
+      if (dataUrl) {
+        document.documentElement.style.setProperty("--jc-bg-image", `url("${dataUrl}")`);
+        document.body.classList.add("jc-has-bg");
+      } else {
+        document.documentElement.style.removeProperty("--jc-bg-image");
+        document.body.classList.remove("jc-has-bg");
+      }
+    } catch {}
+  }
+
+  function jcLoadGlobalBackground() {
+    let dataUrl = "";
+    try { dataUrl = localStorage.getItem(JC_BG_KEY) || ""; } catch {}
+    if (dataUrl) jcApplyGlobalBackground(dataUrl);
+  }
+
+  function jcSaveGlobalBackground(dataUrl) {
+    try { localStorage.setItem(JC_BG_KEY, dataUrl || ""); } catch {}
+    jcApplyGlobalBackground(dataUrl || "");
+  }
+
+  // 🔥 Reescala/comprime para que no reviente el límite de localStorage
+  function jcReadImageAsCompressedDataURL(file, { maxW = 1400, quality = 0.82 } = {}) {
+    return new Promise((resolve, reject) => {
+      if (!file || !file.type?.startsWith("image/")) return reject(new Error("Archivo no es imagen"));
+
+      const img = new Image();
+      const fr = new FileReader();
+
+      fr.onload = () => { img.src = String(fr.result || ""); };
+      fr.onerror = reject;
+
+      img.onload = () => {
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+
+        const scale = w > maxW ? (maxW / w) : 1;
+        const cw = Math.max(1, Math.round(w * scale));
+        const ch = Math.max(1, Math.round(h * scale));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = cw;
+        canvas.height = ch;
+
+        const ctx2d = canvas.getContext("2d");
+        if (!ctx2d) return reject(new Error("No canvas ctx"));
+
+        ctx2d.drawImage(img, 0, 0, cw, ch);
+
+        // JPEG suele pesar menos que PNG
+        const out = canvas.toDataURL("image/jpeg", quality);
+        resolve(out);
+      };
+
+      img.onerror = () => reject(new Error("No se pudo cargar imagen"));
+      fr.readAsDataURL(file);
+    });
+  }
+
+  function jcBindGlobalBackgroundUI() {
+    // UI (en pestaña BOX)
+    const btnPick = document.getElementById("btnBgPick");
+    const btnClear = document.getElementById("btnBgClear");
+    const input = document.getElementById("bgPickerInput");
+    const estado = document.getElementById("bgPickEstado");
+
+    if (!btnPick || !btnClear || !input) return;
+
+    btnPick.addEventListener("click", () => input.click());
+
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      if (estado) estado.textContent = "Cargando fondo…";
+
+      try {
+        const dataUrl = await jcReadImageAsCompressedDataURL(file, { maxW: 1400, quality: 0.82 });
+        jcSaveGlobalBackground(dataUrl);
+        if (estado) estado.textContent = "✅ Fondo aplicado";
+        try { logAviso({ title: "Fondo", body: "Fondo global actualizado 🖼️" }); } catch {}
+      } catch (e) {
+        console.error("Fondo global:", e);
+        if (estado) estado.textContent = "No se pudo aplicar el fondo.";
+      } finally {
+        try { input.value = ""; } catch {}
+      }
+    });
+
+    btnClear.addEventListener("click", () => {
+      jcSaveGlobalBackground("");
+      if (estado) estado.textContent = "Fondo quitado.";
+      try { logAviso({ title: "Fondo", body: "Fondo global quitado" }); } catch {}
+    });
+  }
+
+  // ✅ Ejecutar: cargar fondo guardado + bind UI
+  jcLoadGlobalBackground();
+  jcBindGlobalBackgroundUI();
+  
   /* =========================
      Angie: Modal con herramienta
      ========================= */
@@ -1512,48 +1620,47 @@ const JC_BUILD = window.JC_BUILD || "dev";
     updateBotsButtonUI();
   }
 
-  ensureBotsButton();
+    ensureBotsButton();
   if (!botsEnabled) hideBotsUI();
 
   const JC_CHAT_SCENES = {
-    comunidad: [
-      { from: "mia", text: "Aquí es para conocerte mejor. Nombre y frase 📝", estado: "elegante", delay: 400 },
-      { from: "ciro", text: "Respeto primero. Participa con fuerza y corazón 💪", estado: "calm", delay: 1100 },
-      { from: "angie", text: "¡Dale un ❤️ a lo que te inspire! 😏✨", estado: "traviesa", delay: 1700 }
-    ],
+    // =========================
+    // BOX (drama sentimental + propósito)
+    // =========================
     box: [
-      { from: "system", text: "Bienvenido a Box 📦 Aquí vive el chat de los bots.", delay: 200 },
-      { from: "mia", text: "Desde aquí te acompaño sin tapar la pantalla 💗", estado: "guiando", delay: 700 },
-      { from: "ciro", text: "Orden y enfoque. Aquí vamos al grano 💪", estado: "calm", delay: 1200 },
-      { from: "angie", text: "Y yo pongo la chispa 😏✨", estado: "traviesa", delay: 1700 }
+      { from: "system", text: "Bienvenido a Box 📦 — aquí se habla con calma.", delay: 200 },
+
+      { from: "mia", text: "Aquí no quiero que te pierdas. Respira… yo te acompaño 💗", estado: "guiando", delay: 650 },
+      { from: "ciro", text: "Orden y enfoque. Pero… también corazón. No somos máquinas.", estado: "calm", delay: 900 },
+
+      { from: "angie", text: "Mia… siempre tan perfecta. A veces me pregunto si yo solo estorbo 😅", estado: "confundida", delay: 1050 },
+      { from: "mia", text: "Angie, tú no estorbas. Tú levantas el ánimo cuando todos están cansados.", estado: "apoyo", delay: 1150 },
+
+      { from: "ciro", text: "Y cuando alguien se rompe por dentro… Angie lo nota primero.", estado: "worried", delay: 1200 },
+      { from: "angie", text: "No digas eso, Ciro… después me pongo sentimental 🙄…", estado: "vergonzosa", delay: 1050 },
+
+      { from: "ciro", text: "Yo también me pongo. Pero aprendí a guardármelo… para no preocupar a Mia.", estado: "calm", delay: 1100 },
+      { from: "mia", text: "Ciro… si te lo guardas, te pesa. No tienes que cargar solo.", estado: "elegante", delay: 1200 },
+
+      { from: "ciro", text: "A veces siento que si me detengo… todo se cae. Y me da miedo fallarte.", estado: "worried", delay: 1250 },
+      { from: "mia", text: "No me fallas. Me cuidas. Pero yo también te cuido a ti.", estado: "apoyo", delay: 1150 },
+
+      { from: "angie", text: "Ok… esto es demasiado lindo. (Y yo aquí haciéndome la fuerte 😭)", estado: "triste", delay: 1150 },
+      { from: "ciro", text: "Angie… tú vales mucho. Aunque te hagas la traviesa.", estado: "calm", delay: 1100 },
+      { from: "angie", text: "¿Y por qué cuando dices eso… me duele bonito? 😅", estado: "vergonzosa", delay: 1050 },
+
+      { from: "mia", text: "Escuchen: aquí se sirve con respeto. Y con verdad. Si algo duele, se habla.", estado: "elegante", delay: 1200 },
+      { from: "ciro", text: "Entonces digo la verdad: no quiero que nadie aquí se sienta solo.", estado: "happy_pray", delay: 1250 },
+
+      { from: "angie", text: "Ya… me ganaste. Gracias por no rendirte con nosotros.", estado: "feliz", delay: 1050 },
+      { from: "mia", text: "Eso es Box: un lugar seguro para ordenar… y sanar un poquito.", estado: "apoyo", delay: 1100 },
+
+      { from: "system", text: "🕊️ Promesa del equipo: servir juntos, sin máscaras, con amor y fuerza.", delay: 900 }
     ],
-    inicio: [
-      { from: "mia", text: "¡Hola! Soy Mia, coordino Juventud CNC. Te acompaño 💗", estado: "guiando", delay: 400 },
-      { from: "ciro", text: "Y yo soy Ciro. Si hay que servir, ¡yo voy primero! 💪", estado: "excited", delay: 900 },
-      { from: "angie", text: "Yo soy Angie… y sí: hoy toca algo épico ✨", estado: "feliz", delay: 1400 }
-    ],
-    eventos: [
-      { from: "mia", text: "Revisa los eventos y mira dónde puedes sumarte 🙌", estado: "apoyo", delay: 400 },
-      { from: "ciro", text: "Yo ya me apunté. Vamos con fuerza 🔥", estado: "excited", delay: 1100 },
-      { from: "angie", text: "Crea uno nuevo… me encanta llenar la agenda 😏", estado: "traviesa", delay: 1700 }
-    ],
-    perfil: [
-      { from: "mia", text: "Aquí es para conocerte mejor. Nombre y frase 📝", estado: "elegante", delay: 400 },
-      { from: "ciro", text: "Prometo no llenarte de tareas… (bueno, intentaré 😂)", estado: "feliz", delay: 1200 }
-    ],
-    recursos: [
-      { from: "angie", text: "Esto será nuestra biblioteca: cantos, guías y materiales 📂", estado: "ok", delay: 400 },
-      { from: "mia", text: "Cuando subas algo, piensa: ¿ayuda a acercar a alguien a Dios? 💭", estado: "guiando", delay: 1200 }
-    ],
-    judart: [
-      { from: "angie", text: "Judart es nuestro rincón creativo 🎨✨", estado: "traviesa", delay: 400 },
-      { from: "mia", text: "Aquí vamos a subir arte, diseños y momentos bonitos del grupo 💗", estado: "apoyo", delay: 1200 },
-      { from: "ciro", text: "Arte con propósito. Disciplina + talento 😤", estado: "calm", delay: 1900 }
-    ],
-    avisos: [
-      { from: "angie", text: "Judart 🎨 (antes ‘Avisos’). Aquí va el arte del grupo ✨", estado: "traviesa", delay: 400 },
-      { from: "mia", text: "Contenido creativo y sano para todos 💗", estado: "apoyo", delay: 1200 }
-    ],
+
+  
+    // MIEMBROS ACTIVOS (drama largo)
+    // =========================
     "miembros-activos": [
       { from: "system", text: "Miembros activos 👥 — se siente la familia creciendo.", delay: 250 },
       { from: "mia", text: "Me da paz verlos aquí. Somos equipo, familia… y sí, los cuido como a mis hermanos 🤍", estado: "apoyo", delay: 900 },
@@ -1567,6 +1674,8 @@ const JC_BUILD = window.JC_BUILD || "dev";
       { from: "system", text: "Plot twist guardado 😇 — aquí lo importante: servir juntos, con respeto y corazón.", delay: 1200 }
     ]
   };
+
+  
 
   function jcChatPlayScene(viewKey) {
     if (!botsEnabled) return;
