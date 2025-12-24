@@ -274,6 +274,33 @@ function initNotificacionesView() {
   const pick = (arr, fallback = "") => (Array.isArray(arr) && arr.length ? arr[Math.floor(Math.random() * arr.length)] : fallback);
   const safeText = (s) => (typeof s === "string" ? s : s == null ? "" : String(s));
 
+ // --- AUTH STATE (global) ---
+let currentUser = null;
+window.currentUser = null;
+
+if (sb?.auth?.onAuthStateChange) {
+  sb.auth.onAuthStateChange(async (_event, session) => {
+    try {
+      currentUser = session?.user ?? null;
+      window.currentUser = currentUser;
+
+      // refresca perfil si ya existe la función
+      try { await cargarPerfil?.(); } catch {}
+
+      // refresca módulos si ya existen
+      try {
+        const modC = window.jcComunidad || comunidad || null;
+        await modC?.refreshAuthAndMiembro?.();
+
+        const modJ = window.jcJudart || judart || null;
+        await modJ?.refreshAuthAndMiembro?.();
+      } catch {}
+    } catch (e) {
+      console.error("onAuthStateChange error:", e);
+    }
+  });
+}
+
   /* =========================
      MENSAJE SEMANAL (DINÁMICO)
      ========================= */
@@ -2818,8 +2845,7 @@ judart = createJudartModule({
 });
 window.jcJudart = judart;
 judart.init();
-  window.jcComunidad = comunidad;
-  comunidad.init();
+  
 
 
   judart = createJudartModule({
