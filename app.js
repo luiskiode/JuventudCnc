@@ -240,18 +240,24 @@ const JC_BUILD = window.JC_BUILD || "dev";
 
   // Cuando la sesión cambie, refrescamos perfil/comunidad
   if (sb?.auth?.onAuthStateChange) {
-    sb.auth.onAuthStateChange(async (_event, _session) => {
-      try {
-        if (typeof cargarPerfil === "function") await cargarPerfil();
-      } catch {}
+  sb.auth.onAuthStateChange(async (_event, _session) => {
+    try { if (typeof cargarPerfil === "function") await cargarPerfil(); } catch {}
 
-      try {
-        // ✅ FIX: prioriza window.jcComunidad (global) y usa fallback seguro
-        const mod = window.jcComunidad || comunidad;
-        if (mod && typeof mod.cargarFeed === "function") await mod.cargarFeed({ force: true });
-      } catch {}
-    });
-  }
+    try {
+      const mod = window.jcComunidad || comunidad;
+      const current = normalizeTab((location.hash || "#inicio").replace("#", ""));
+
+      if (mod && typeof mod.refreshAuthAndMiembro === "function") {
+        await mod.refreshAuthAndMiembro(); // ✅ actualiza state.user/state.canWrite + UI gate
+      }
+
+      // Si estás en Comunidad, refresca feed (para counts + corazón “on”)
+      if (current === "comunidad" && mod && typeof mod.cargarFeed === "function") {
+        await mod.cargarFeed({ force: true });
+      }
+    } catch {}
+  });
+}
 
   function openDrawer() {
     if (!drawer) return;
@@ -2142,7 +2148,6 @@ const JC_BUILD = window.JC_BUILD || "dev";
 
 })();
 
-
 /* ==========================================================
    COMUNIDAD MODULE (posts + comentarios + corazones)
    ========================================================== */
@@ -2221,6 +2226,12 @@ function createComunidadModule(ctx = {}) {
     el.classList.toggle("error", !!isError);
   }
 
+  // ✅ FIX: si el modal de comentarios está abierto, sincroniza el gate/composer al cambiar auth
+  function syncCommentComposerIfModal() {
+    if (!state.modalOpen) return;
+    setCommentComposerVisible(!!state.canWrite);
+  }
+
   async function refreshAuthAndMiembro() {
     state.user = null;
     state.miembro = null;
@@ -2230,6 +2241,7 @@ function createComunidadModule(ctx = {}) {
       setGate("⚠️ Sin conexión a Supabase.");
       setComposerVisible(false);
       setCommentComposerVisible(false);
+      syncCommentComposerIfModal();
       return;
     }
 
@@ -2242,6 +2254,7 @@ function createComunidadModule(ctx = {}) {
         setGate("👀 Estás en modo espectador. Regístrate en “Mi perfil” para publicar, comentar y reaccionar ❤️");
         setComposerVisible(false);
         setCommentComposerVisible(false);
+        syncCommentComposerIfModal();
         return;
       }
 
@@ -2260,17 +2273,20 @@ function createComunidadModule(ctx = {}) {
         setGate("🔒 Tu sesión está activa, pero aún no estás registrado como miembro. Ve a “Mi perfil” y guarda tu registro.");
         setComposerVisible(false);
         setCommentComposerVisible(false);
+        syncCommentComposerIfModal();
         return;
       }
 
       const rol = miembro.rol_key ? ` (${miembro.rol_key})` : "";
       setGate(`✅ Hola ${safeText(miembro.nombre)}${rol}. Puedes publicar, comentar y reaccionar ❤️`);
       setComposerVisible(true);
+      syncCommentComposerIfModal();
     } catch (e) {
       console.error("Comunidad: refreshAuthAndMiembro:", e);
       setGate("⚠️ No se pudo validar tu acceso. Intenta recargar.");
       setComposerVisible(false);
       setCommentComposerVisible(false);
+      syncCommentComposerIfModal();
     }
   }
 
@@ -2534,6 +2550,7 @@ function createComunidadModule(ctx = {}) {
     if (dom.modalTitle) dom.modalTitle.textContent = safeText(post.titulo || "Comentarios");
     if (dom.modalMeta) dom.modalMeta.textContent = `${safeText(post.autor_nombre || "Miembro")} · ${d ? fmtDateTime(d) : ""}`;
 
+    // ✅ respeta permisos actuales (y se auto-actualiza con refreshAuthAndMiembro)
     setCommentComposerVisible(!!state.canWrite);
     await cargarComentarios(post.id);
   }
@@ -2657,5 +2674,6 @@ function createComunidadModule(ctx = {}) {
     await cargarFeed();
   }
 
-  return { init, onTab, cargarFeed };
+  // ✅ FIX: exporta refreshAuthAndMiembro para que el onAuthStateChange lo llame
+  return { init, onTab, cargarFeed, refreshAuthAndMiembro };
 }
