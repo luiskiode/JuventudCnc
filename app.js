@@ -1922,107 +1922,349 @@ const JC_BUILD = window.JC_BUILD || "dev";
       try { angieSetEstado?.("confundida"); } catch {}
     }
   }
+// =========================
+// RECURSOS = CATEFA
+// =========================
+const CATEFA = {
+  bound: false,
+  miembro: null,
+  canWrite: false,
+  grupoId: null
+};
 
-  /* =========================
-     RECURSOS (tabla + storage)
-     ========================= */
-  async function listarRecursos() {
-    const cont = document.getElementById("listaRecursos");
-    if (!cont) return;
+async function catefaLoadMiembro() {
+  try {
+    const { data } = await sb.auth.getSession();
+    const user = data?.session?.user;
+    if (!user?.id) return null;
 
-    cont.innerHTML = `<p class="muted small">Cargando recursos…</p>`;
+    const { data: m } = await sb
+      .from("miembros")
+      .select("id,nombre,rol_key,user_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-    if (!sb?.from) {
-      cont.innerHTML = `<p class="muted small">No se puede conectar al servidor.</p>`;
-      return;
-    }
+    return m || null;
+  } catch {
+    return null;
+  }
+}
 
-    try {
-      const { data, error } = await sb
-        .from("recursos")
-        .select("id,titulo,categoria,path,mime,created_at")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
+function catefaCanWriteFromRole(miembro) {
+  // Nota: el write real lo controla RLS.
+  // Esto solo controla UI.
+  if (!miembro) return false;
+  if (["admin","moderador"].includes(miembro.rol_key)) return true;
+  return true; // como mínimo: si es miembro puede manejar SU grupo / asignaciones editor según RLS
+}
 
-      const list = Array.isArray(data) ? data : [];
-      if (!list.length) {
-        cont.innerHTML = `<p class="muted small">Aún no hay recursos subidos.</p>`;
-        return;
-      }
+async function initRecursosCatefa() {
+  if (!sb?.from) return;
 
-      const rows = await Promise.all(list.map(async (r) => {
-        let url = "";
-        try {
-          if (sb?.storage?.from) {
-            const { data: pub } = sb.storage.from("recursos").getPublicUrl(r.path);
-            url = pub?.publicUrl || "";
-          }
-        } catch {}
+  // Bind UI una sola vez (para evitar duplicar listeners)
+  if (!CATEFA.bound) {
+    CATEFA.bound = true;
 
-        return `
-          <div class="resource-item">
-            <div>
-              <div><strong>${safeText(r.titulo || "Recurso")}</strong></div>
-              <div class="muted small">${safeText(r.categoria || "")} • ${r.created_at ? fmtDateTime(new Date(r.created_at)) : ""}</div>
-            </div>
-            ${url ? `<a class="btn small" href="${url}" target="_blank" rel="noreferrer">Abrir</a>` : `<span class="muted small">Sin URL</span>`}
-          </div>
-        `;
-      }));
+    document.getElementById("btnCatefaRefresh")?.addEventListener("click", () => catefaRefresh());
+    document.getElementById("catefaGrupoSelect")?.addEventListener("change", (e) => {
+      CATEFA.grupoId = Number(e.target.value || 0) || null;
+      catefaRefresh();
+    });
 
-      cont.innerHTML = rows.join("");
-    } catch (e) {
-      console.error("Error listarRecursos:", e);
-      cont.innerHTML = `<p class="muted small">Error cargando recursos.</p>`;
-    }
+    document.getElementById("btnCatefaNuevaSesion")?.addEventListener("click", () => catefaCrearSesion());
+    document.getElementById("btnCatefaNuevoNino")?.addEventListener("click", () => catefaCrearNino());
+
+    // Links
+    document.getElementById("btnVaticano")?.addEventListener("click", () => window.open("https://www.vatican.va", "_blank", "noreferrer"));
+    document.getElementById("btnBiblia")?.addEventListener("click", () => window.open("https://www.biblegateway.com", "_blank", "noreferrer"));
   }
 
-  const fileInput = document.getElementById("fileRec");
-  fileInput?.addEventListener("change", async () => {
-    const file = fileInput.files?.[0];
-    if (!file) return;
+  CATEFA.miembro = await catefaLoadMiembro();
+  CATEFA.canWrite = catefaCanWriteFromRole(CATEFA.miembro);
 
-    if (!sb?.storage || !sb?.from) {
-      alert("Servidor no disponible para subir.");
+  await catefaLoadGrupos();   // llena selector
+  await catefaRefresh();      // carga niños/sesiones/asistencias del grupo actual
+}
+
+async function catefaLoadGrupos() {
+  const sel = document.getElementById("catefaGrupoSelect");
+  const gate = document.getElementById("catefaGate");
+
+  if (!sel || !gate) return;
+
+  if (!CATEFA.miembro) {
+    gate.textContent = "🔒 Regístrate en “Mi perfil” para usar Catefa (asistencias y temas).";
+    sel.innerHTML = "";
+    return;
+  }
+
+  gate.textContent = `✅ Hola ${CATEFA.miembro.nombre || "Miembro"} — Catefa listo.`;
+
+  const { data, error } = await sb
+    .from("catefa_grupos")
+    .select("id,nombre,nivel,parroquia,dia,hora,activo,created_at")
+    .eq("activo", true)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("catefaLoadGrupos:", error);
+    gate.textContent = "⚠️ No se pudieron cargar grupos (RLS/permisos).";
+    return;
+  }
+
+  const list = Array.isArray(data) ? data : [];
+  if (!list.length) {
+    sel.innerHTML = `<option value="">(No tienes grupos aún)</option>`;
+    CATEFA.grupoId = null;
+    return;
+  }
+
+  sel.innerHTML = list.map(g => {
+    const label = `${g.nombre}${g.nivel ? " · " + g.nivel : ""}${g.dia ? " · " + g.dia : ""}${g.hora ? " " + g.hora : ""}`;
+    return `<option value="${g.id}">${label}</option>`;
+  }).join("");
+
+  if (!CATEFA.grupoId) CATEFA.grupoId = list[0].id;
+  sel.value = String(CATEFA.grupoId || "");
+}
+
+async function catefaRefresh() {
+  await Promise.all([catefaLoadNinos(), catefaLoadSesiones()]);
+}
+
+async function catefaLoadNinos() {
+  const wrap = document.getElementById("catefaNinos");
+  if (!wrap) return;
+
+  if (!CATEFA.grupoId) {
+    wrap.innerHTML = `<div class="muted small">Crea o selecciona un grupo para ver niños.</div>`;
+    return;
+  }
+
+  const { data, error } = await sb
+    .from("catefa_ninos")
+    .select("id,nombre,apellidos,activo")
+    .eq("grupo_id", CATEFA.grupoId)
+    .eq("activo", true)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("catefaLoadNinos:", error);
+    wrap.innerHTML = `<div class="muted small">No se pudo cargar niños.</div>`;
+    return;
+  }
+
+  const list = Array.isArray(data) ? data : [];
+  if (!list.length) {
+    wrap.innerHTML = `<div class="muted small">Aún no hay niños registrados en este grupo.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = list.map(n => `
+    <div class="resource-item">
+      <div>
+        <div><strong>${safeText(n.nombre)} ${safeText(n.apellidos || "")}</strong></div>
+        <div class="muted small">ID: ${n.id}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function catefaLoadSesiones() {
+  const wrap = document.getElementById("catefaSesiones");
+  if (!wrap) return;
+
+  if (!CATEFA.grupoId) {
+    wrap.innerHTML = `<div class="muted small">Crea o selecciona un grupo para ver sesiones.</div>`;
+    return;
+  }
+
+  const { data, error } = await sb
+    .from("catefa_sesiones")
+    .select("id,fecha,tema,objetivo,recursos_url,created_at")
+    .eq("grupo_id", CATEFA.grupoId)
+    .order("fecha", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error("catefaLoadSesiones:", error);
+    wrap.innerHTML = `<div class="muted small">No se pudo cargar sesiones.</div>`;
+    return;
+  }
+
+  const list = Array.isArray(data) ? data : [];
+  if (!list.length) {
+    wrap.innerHTML = `<div class="muted small">Aún no hay sesiones. Crea la primera.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = list.map(s => {
+    const d = s.fecha ? new Date(s.fecha) : null;
+    return `
+      <div class="resource-item">
+        <div style="min-width:0">
+          <div><strong>${safeText(s.tema)}</strong></div>
+          <div class="muted small">${d && !isNaN(d) ? fmtDateTime(d) : ""}</div>
+          ${s.objetivo ? `<div class="muted small">${safeText(s.objetivo)}</div>` : ``}
+        </div>
+        <div class="jc-row">
+          <button class="btn small" type="button" onclick="catefaTomarAsistencia(${s.id})">✅ Asistencia</button>
+          ${s.recursos_url ? `<a class="btn small" href="${s.recursos_url}" target="_blank" rel="noreferrer">📎</a>` : ``}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// Tomar asistencia: crea/actualiza filas catefa_asistencias para cada niño
+window.catefaTomarAsistencia = async function (sesionId) {
+  if (!sesionId || !CATEFA.grupoId) return;
+
+  const estado = document.getElementById("catefaEstado");
+  if (estado) estado.textContent = "Cargando asistencia…";
+
+  // 1) niños del grupo
+  const { data: ninos, error: nErr } = await sb
+    .from("catefa_ninos")
+    .select("id,nombre,apellidos")
+    .eq("grupo_id", CATEFA.grupoId)
+    .eq("activo", true);
+
+  if (nErr) {
+    console.error(nErr);
+    if (estado) estado.textContent = "Error cargando niños.";
+    return;
+  }
+
+  const kids = Array.isArray(ninos) ? ninos : [];
+
+  // 2) asistencias existentes
+  const { data: asis, error: aErr } = await sb
+    .from("catefa_asistencias")
+    .select("id,nino_id,presente,nota")
+    .eq("sesion_id", sesionId);
+
+  if (aErr) {
+    console.error(aErr);
+    if (estado) estado.textContent = "Error cargando asistencias.";
+    return;
+  }
+
+  const map = new Map((asis || []).map(x => [x.nino_id, x]));
+
+  // 3) Render UI simple (modal o panel)
+  const panel = document.getElementById("catefaAsistenciaPanel");
+  if (!panel) return;
+
+  panel.innerHTML = `
+    <div class="jc-card-mini">
+      <h4>Asistencia</h4>
+      <p class="muted small">Marca presente y guarda. (RLS protege quién puede hacerlo)</p>
+      <div class="jc-col" id="catefaAsistenciaList"></div>
+      <div class="jc-row" style="margin-top:.75rem">
+        <button class="btn" id="btnAsisGuardar">Guardar</button>
+      </div>
+    </div>
+  `;
+
+  const listEl = document.getElementById("catefaAsistenciaList");
+  listEl.innerHTML = kids.map(k => {
+    const ex = map.get(k.id);
+    const on = ex?.presente ? "checked" : "";
+    return `
+      <label class="resource-item" style="gap:.75rem">
+        <input type="checkbox" data-nino="${k.id}" ${on}/>
+        <div style="min-width:0">
+          <div><strong>${safeText(k.nombre)} ${safeText(k.apellidos || "")}</strong></div>
+          <div class="muted small">ID: ${k.id}</div>
+        </div>
+      </label>
+    `;
+  }).join("");
+
+  document.getElementById("btnAsisGuardar")?.addEventListener("click", async () => {
+    const checks = Array.from(panel.querySelectorAll("input[type=checkbox][data-nino]"));
+    const rows = checks.map(ch => ({
+      sesion_id: sesionId,
+      nino_id: Number(ch.dataset.nino),
+      presente: !!ch.checked,
+      updated_at: new Date().toISOString()
+    }));
+
+    if (estado) estado.textContent = "Guardando…";
+
+    const { error } = await sb
+      .from("catefa_asistencias")
+      .upsert(rows, { onConflict: "sesion_id,nino_id" });
+
+    if (error) {
+      console.error(error);
+      if (estado) estado.textContent = "No se pudo guardar (RLS/permisos).";
+      angieSetEstado?.("confundida");
       return;
     }
 
-    try {
-      const path = `${Date.now()}-${file.name}`;
-      const { error: upErr } = await sb.storage.from("recursos").upload(path, file, { upsert: false });
-      if (upErr) throw upErr;
-
-      let userId = null;
-      try {
-        if (sb?.auth?.getUser) {
-          const { data: u } = await sb.auth.getUser();
-          userId = u?.user?.id || null;
-        }
-      } catch {}
-
-      await sb.from("recursos").insert({
-        titulo: file.name,
-        categoria: file.type.includes("pdf") ? "pdf" :
-                  file.type.includes("audio") ? "audio" :
-                  file.type.includes("image") ? "imagen" : "otro",
-        path,
-        mime: file.type,
-        subido_por: userId
-      });
-
-      logAviso({ title: "Recurso subido", body: file.name });
-      listarRecursos();
-      angieSetEstado("ok");
-    } catch (e) {
-      console.error("Error subiendo recurso:", e);
-      alert("Error al subir archivo");
-      angieSetEstado("confundida");
-    } finally {
-      try { fileInput.value = ""; } catch {}
-    }
+    if (estado) estado.textContent = "✅ Asistencia guardada";
+    ciroSetEstado?.("feliz");
+    angieSetEstado?.("ok");
   });
 
+  if (estado) estado.textContent = "Listo ✅";
+};
+
+async function catefaCrearSesion() {
+  const estado = document.getElementById("catefaEstado");
+  const tema = (document.getElementById("catefaTema")?.value || "").trim();
+  const fechaRaw = document.getElementById("catefaFecha")?.value || "";
+  const fechaISO = fechaRaw ? new Date(fechaRaw).toISOString() : null;
+
+  if (!CATEFA.grupoId) { if (estado) estado.textContent = "Selecciona un grupo."; return; }
+  if (!tema || !fechaISO) { if (estado) estado.textContent = "Completa tema y fecha."; return; }
+
+  if (estado) estado.textContent = "Guardando sesión…";
+  const { error } = await sb.from("catefa_sesiones").insert({
+    grupo_id: CATEFA.grupoId,
+    fecha: fechaISO,
+    tema
+  });
+
+  if (error) {
+    console.error(error);
+    if (estado) estado.textContent = "No se pudo crear sesión (RLS/permisos).";
+    return;
+  }
+
+  if (estado) estado.textContent = "✅ Sesión creada";
+  document.getElementById("catefaTema").value = "";
+  catefaLoadSesiones();
+}
+
+async function catefaCrearNino() {
+  const estado = document.getElementById("catefaEstado");
+  const nombre = (document.getElementById("catefaNinoNombre")?.value || "").trim();
+  const apellidos = (document.getElementById("catefaNinoApellidos")?.value || "").trim();
+
+  if (!CATEFA.grupoId) { if (estado) estado.textContent = "Selecciona un grupo."; return; }
+  if (!nombre) { if (estado) estado.textContent = "Completa nombre."; return; }
+
+  if (estado) estado.textContent = "Guardando niño…";
+  const { error } = await sb.from("catefa_ninos").insert({
+    grupo_id: CATEFA.grupoId,
+    nombre,
+    apellidos
+  });
+
+  if (error) {
+    console.error(error);
+    if (estado) estado.textContent = "No se pudo crear niño (RLS/permisos).";
+    return;
+  }
+
+  if (estado) estado.textContent = "✅ Niño agregado";
+  document.getElementById("catefaNinoNombre").value = "";
+  document.getElementById("catefaNinoApellidos").value = "";
+  catefaLoadNinos();
+}
   /* =========================
      SPA / TABS
      ========================= */

@@ -1753,3 +1753,227 @@ body.jc-has-bg {
   background-attachment: fixed;
   background-repeat: no-repeat;
 }
+/* ============================================================
+   CATEFA / RECURSOS — Responsive + Mobile-safe
+   (Pegar al FINAL de styles.css)
+   ============================================================ */
+
+/* Asegura que todo calcule bien tamaños en móvil */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Evita overflow horizontal fantasma en móviles */
+html, body { overflow-x: hidden; }
+
+/* Contenedor principal más estable en celular */
+.container {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px;
+}
+
+/* Views: evita que un panel se “coma” el alto y empuje feo */
+.view {
+  min-height: calc(100dvh - 110px);
+  padding-bottom: 90px; /* espacio para tabs bottom */
+}
+
+/* Cards mini: mejor en móvil */
+.jc-card-mini,
+.card {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* Grid genérico: en desktop 2 cols, en móvil 1 col */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Formularios dentro de recursos/catefa */
+.grid label { display: grid; gap: 6px; }
+
+/* Inputs/textarea/select: full width y sin romper layout */
+input, textarea, select, button {
+  max-width: 100%;
+}
+
+/* Botones fila: que no se descuadre */
+.jc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Permite que filas “salten” en celular */
+.jc-row[style*="flex-wrap"],
+.jc-row.flex-wrap {
+  flex-wrap: wrap;
+}
+
+/* Enlaces útiles / listados */
+#catefaNinos, #catefaSesiones, #catefaAsistenciaPanel {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Tarjetas internas para listas */
+.catefa-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.catefa-item {
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+
+.catefa-item h4,
+.catefa-item h5 {
+  margin: 0 0 6px 0;
+}
+
+.catefa-item .muted {
+  opacity: .85;
+}
+
+/* Tabla de asistencias: nunca debe romper en móvil */
+.catefa-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.15);
+}
+
+.catefa-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px; /* fuerza scroll horizontal si es necesario */
+}
+
+.catefa-table th,
+.catefa-table td {
+  padding: 10px 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  white-space: nowrap;
+}
+
+.catefa-table th {
+  font-weight: 700;
+  opacity: .95;
+}
+
+.catefa-badge {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Botones pequeños consistentes */
+.btn.small,
+button.btn.small {
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+
+/* Botón ghost visible en fondos oscuros */
+.btn.ghost,
+button.btn.ghost {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+/* CTA / estado */
+#catefaEstado,
+#catefaGate {
+  line-height: 1.3;
+}
+
+/* ============================================================
+   MOBILE BREAKPOINTS
+   ============================================================ */
+@media (max-width: 820px) {
+  .container { padding: 12px; }
+  .grid { grid-template-columns: 1fr; }
+  .jc-row { flex-wrap: wrap; align-items: stretch; }
+
+  /* Inputs más cómodos */
+  input, textarea, select {
+    font-size: 16px; /* evita zoom iOS */
+  }
+
+  /* Topbar + tabs: evitar que se monten */
+  .topbar-title { font-size: 16px; }
+  .theme-picker { max-width: 120px; }
+
+  /* Reduce padding en cards para móvil */
+  .jc-card-mini, .card { border-radius: 14px; }
+}
+
+@media (max-width: 420px) {
+  .container { padding: 10px; }
+
+  /* Botones full-width en teléfonos pequeños */
+  .jc-row button,
+  .jc-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Tabs inferiores: texto pequeño */
+  .tabs .tab span { font-size: 11px; }
+}
+
+/* ============================================================
+   FIX: CHAT en BOX que no tape nada (siempre dentro)
+   ============================================================ */
+.jc-chat.in-box {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 16px;
+  position: relative;
+  margin-top: 10px;
+}
+
+.jc-chat.in-box .jc-chat-body {
+  max-height: 52vh;
+  overflow: auto;
+}
+
+/* En móvil: reduce alto para que no empuje todo */
+@media (max-width: 820px) {
+  .jc-chat.in-box .jc-chat-body { max-height: 42vh; }
+}
+
+/* ============================================================
+   FIX: modales en móvil
+   ============================================================ */
+.jc-modal-card {
+  width: min(720px, 92vw);
+  max-height: 88dvh;
+  overflow: auto;
+  border-radius: 18px;
+}
+
+@media (max-width: 820px) {
+  .jc-modal-card {
+    width: 94vw;
+    max-height: 86dvh;
+    border-radius: 16px;
+  }
+}

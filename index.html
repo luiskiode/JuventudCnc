@@ -344,6 +344,107 @@
 
       </main>
 
+      <!-- RECURSOS (CATEFA) -->
+<section class="view" data-view="recursos" aria-label="Recursos">
+  <div class="view-head">
+    <h2>📚 Recursos (Catefa)</h2>
+    <p class="muted small">
+      Aquí vive Catefa: asistencias, seguimiento de temas y enlaces útiles. Todo con blindaje RLS 🔒
+    </p>
+  </div>
+
+  <div class="jc-card-mini" style="margin-top:.75rem;">
+    <div id="catefaGate" class="muted small">Cargando Catefa…</div>
+
+    <div class="jc-row" style="margin-top:.75rem; gap:.5rem; flex-wrap:wrap;">
+      <button class="btn small" type="button" id="btnCatefaRefresh">🔄 Actualizar</button>
+      <button class="btn small" type="button" id="btnVaticano">🌍 Vaticano</button>
+      <button class="btn small" type="button" id="btnBiblia">📖 Biblia Online</button>
+      <span id="catefaEstado" class="muted small" style="margin-left:auto;"></span>
+    </div>
+  </div>
+
+  <div class="jc-card-mini" style="margin-top:.75rem;">
+    <h4>Enlaces útiles</h4>
+    <div class="muted small">
+      - Vaticano: noticias, documentos y guía espiritual.<br />
+      - Biblia Online: lectura rápida y búsqueda por versículos.
+    </div>
+  </div>
+
+  <div class="jc-card-mini" style="margin-top:.75rem;">
+    <h4>Mi grupo de Catequesis</h4>
+    <div class="grid" style="margin-top:.5rem;">
+      <label>
+        Grupo
+        <select id="catefaGrupoSelect">
+          <option value="">(Cargando…)</option>
+        </select>
+      </label>
+    </div>
+    <div class="muted small" style="margin-top:.5rem;">
+      Si no ves grupos, es porque RLS no te asignó ninguno (o aún no existe tu asignación).
+    </div>
+  </div>
+
+  <div class="jc-card-mini" style="margin-top:.75rem;">
+    <h4>➕ Nueva sesión (tema)</h4>
+    <div class="grid" style="margin-top:.5rem;">
+      <label>
+        Tema
+        <input id="catefaTema" type="text" placeholder="Ej: La oración, Los sacramentos..." />
+      </label>
+      <label>
+        Fecha y hora
+        <input id="catefaFecha" type="datetime-local" />
+      </label>
+    </div>
+    <div class="jc-row" style="margin-top:.5rem;">
+      <button class="btn" type="button" id="btnCatefaNuevaSesion">Guardar sesión</button>
+    </div>
+  </div>
+
+  <div class="jc-card-mini" style="margin-top:.75rem;">
+    <h4>➕ Registrar niño</h4>
+    <div class="grid" style="margin-top:.5rem;">
+      <label>
+        Nombre
+        <input id="catefaNinoNombre" type="text" placeholder="Nombre del niño" />
+      </label>
+      <label>
+        Apellidos
+        <input id="catefaNinoApellidos" type="text" placeholder="Apellidos (opcional)" />
+      </label>
+    </div>
+    <div class="jc-row" style="margin-top:.5rem;">
+      <button class="btn" type="button" id="btnCatefaNuevoNino">Agregar niño</button>
+    </div>
+  </div>
+
+  <div class="jc-card-mini" style="margin-top:.75rem;">
+    <h4>👦👧 Niños del grupo</h4>
+    <div id="catefaNinos">
+      <div class="muted small">Selecciona un grupo para ver niños.</div>
+    </div>
+  </div>
+
+  <div class="jc-card-mini" style="margin-top:.75rem;">
+    <h4>🗓️ Sesiones / Temas</h4>
+    <div id="catefaSesiones">
+      <div class="muted small">Selecciona un grupo para ver sesiones.</div>
+    </div>
+  </div>
+
+  <div id="catefaAsistenciaPanel" style="margin-top:.75rem;"></div>
+
+  <div class="jc-card-mini" style="margin-top:.75rem;">
+    <h4>🔒 Blindaje (RLS)</h4>
+    <p class="muted small">
+      Supabase bloquea todo por políticas RLS. Solo animadores autorizados ven/registran asistencias.
+    </p>
+  </div>
+</section>
+
   <nav class="tabs" aria-label="Navegación inferior">
     <button class="tab active" type="button" data-tab="inicio">🏠<span>Inicio</span></button>
     <button class="tab" type="button" data-tab="eventos">📅<span>Eventos</span></button>
@@ -425,5 +526,5 @@
     </div>
   </div>
 
-</body>
+</body> 
 </html>
