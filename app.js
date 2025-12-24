@@ -448,30 +448,33 @@ function initNotificacionesView() {
     }
   });
 
-  // Cuando la sesión cambie, refrescamos perfil/comunidad
-  if (sb?.auth?.onAuthStateChange) {
-    sb.auth.onAuthStateChange(async (_event, _session) => {
-      try { if (typeof cargarPerfil === "function") await cargarPerfil(); } catch {}
+ // Cuando la sesión cambie, refrescamos perfil/comunidad (FIX: current -> currentTab)
+if (sb?.auth?.onAuthStateChange) {
+  sb.auth.onAuthStateChange(async (_event, _session) => {
+    const currentTab = normalizeTab((location.hash || "#inicio").replace("#", ""));
 
-      try { await window.jcJudart?.refreshAuthAndMiembro?.(); } catch {}
-      if (current === "judart") { try { await window.jcJudart?.cargarGaleria?.({ force:true }); } catch {} }
+    try {
+      if (typeof cargarPerfil === "function") await cargarPerfil();
+    } catch (e) {
+      console.warn("onAuthStateChange > cargarPerfil:", e);
+    }
 
-      try {
-        const mod = window.jcComunidad || comunidad;
-        const current = normalizeTab((location.hash || "#inicio").replace("#", ""));
+    try {
+      const mod = window.jcComunidad || comunidad || null;
 
-        if (mod && typeof mod.refreshAuthAndMiembro === "function") {
-          await mod.refreshAuthAndMiembro(); // ✅ actualiza state.user/state.canWrite + UI gate
-        }
+      if (mod && typeof mod.refreshAuthAndMiembro === "function") {
+        await mod.refreshAuthAndMiembro();
+      }
 
-        // Si estás en Comunidad, refresca feed (para counts + corazón “on”)
-        if (current === "comunidad" && mod && typeof mod.cargarFeed === "function") {
-          await mod.cargarFeed({ force: true });
-        }
-      } catch {}
-    });
-  }
-
+      // Si estás en Comunidad, refresca feed (para counts + corazón “on”)
+      if (currentTab === "comunidad" && mod && typeof mod.cargarFeed === "function") {
+        await mod.cargarFeed({ force: true });
+      }
+    } catch (e) {
+      console.warn("onAuthStateChange > comunidad refresh:", e);
+    }
+  });
+}
   function openDrawer() {
     if (!drawer) return;
     state.drawerOpen = true;
@@ -2779,9 +2782,7 @@ async function catefaCrearNino() {
     angieSetEstado("saludo");
   });
 
-  // =========================
-  // INICIAL: Comunidad module
-  // =========================
+
  // =====================
 // COMUNIDAD
 // =====================
