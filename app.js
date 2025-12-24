@@ -421,47 +421,75 @@ const JC_BUILD = window.JC_BUILD || "dev";
     });
   }
 
-  function jcBindGlobalBackgroundUI() {
-    // UI (en pestaña BOX)
-    const btnPick = document.getElementById("btnBgPick");
-    const btnClear = document.getElementById("btnBgClear");
-    const input = document.getElementById("bgPickerInput");
-    const estado = document.getElementById("bgPickEstado");
+  let __jcBgBound = false;
 
-    if (!btnPick || !btnClear || !input) return;
+function jcBindGlobalBackgroundUI() {
+  if (__jcBgBound) return true;
 
-    btnPick.addEventListener("click", () => input.click());
+  const btnPick  = document.getElementById("btnBgPick");
+  const btnClear = document.getElementById("btnBgClear");
+  const input    = document.getElementById("bgPickerInput");
+  const estado   = document.getElementById("bgPickEstado");
 
-    input.addEventListener("change", async () => {
-      const file = input.files?.[0];
-      if (!file) return;
+  // si aún no existe el DOM de BOX, salimos pero devolvemos false para reintentar
+  if (!btnPick || !btnClear || !input) return false;
 
-      if (estado) estado.textContent = "Cargando fondo…";
+  __jcBgBound = true;
 
-      try {
-        const dataUrl = await jcReadImageAsCompressedDataURL(file, { maxW: 1400, quality: 0.82 });
-        jcSaveGlobalBackground(dataUrl);
-        if (estado) estado.textContent = "✅ Fondo aplicado";
-        try { logAviso({ title: "Fondo", body: "Fondo global actualizado 🖼️" }); } catch {}
-      } catch (e) {
-        console.error("Fondo global:", e);
-        if (estado) estado.textContent = "No se pudo aplicar el fondo.";
-      } finally {
-        try { input.value = ""; } catch {}
-      }
-    });
+  // 🔥 evita que el botón sea submit (si está dentro de un form)
+  btnPick.type = "button";
+  btnClear.type = "button";
 
-    btnClear.addEventListener("click", () => {
-      jcSaveGlobalBackground("");
-      if (estado) estado.textContent = "Fondo quitado.";
-      try { logAviso({ title: "Fondo", body: "Fondo global quitado" }); } catch {}
-    });
-  }
+  btnPick.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    input.click();
+  });
 
-  // ✅ Ejecutar: cargar fondo guardado + bind UI
+  input.addEventListener("change", async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (estado) estado.textContent = "Cargando fondo…";
+
+    try {
+      const dataUrl = await jcReadImageAsCompressedDataURL(file, { maxW: 1400, quality: 0.82 });
+      jcSaveGlobalBackground(dataUrl);
+      if (estado) estado.textContent = "✅ Fondo aplicado";
+      try { logAviso({ title: "Fondo", body: "Fondo global actualizado 🖼️" }); } catch {}
+    } catch (e) {
+      console.error("Fondo global:", e);
+      if (estado) estado.textContent = "No se pudo aplicar el fondo.";
+    } finally {
+      try { input.value = ""; } catch {}
+    }
+  });
+
+  btnClear.addEventListener("click", (e) => {
+    e.preventDefault();
+    jcSaveGlobalBackground("");
+    if (estado) estado.textContent = "Fondo quitado.";
+    try { logAviso({ title: "Fondo", body: "Fondo global quitado" }); } catch {}
+  });
+
+  return true;
+}
+
   jcLoadGlobalBackground();
-  jcBindGlobalBackgroundUI();
-  
+
+// intentar bind ahora, y si no existe aún el DOM, reintentar
+(function bindBgWithRetries(){
+  if (jcBindGlobalBackgroundUI()) return;
+
+  document.addEventListener("DOMContentLoaded", () => jcBindGlobalBackgroundUI(), { once: true });
+
+  // reintentos cortos por si el tab BOX se renderiza después
+  setTimeout(() => jcBindGlobalBackgroundUI(), 300);
+  setTimeout(() => jcBindGlobalBackgroundUI(), 900);
+  setTimeout(() => jcBindGlobalBackgroundUI(), 1500);
+})();
+
+
   /* =========================
      Angie: Modal con herramienta
      ========================= */
@@ -1554,14 +1582,25 @@ const JC_BUILD = window.JC_BUILD || "dev";
   };
 
   function syncChatVisibility(tabKey) {
-    if (!jcChatWidget) return;
+  if (!jcChatWidget) return;
 
-    const t = normalizeTab(tabKey);
-    const shouldShow = botsEnabled && t === "box";
+  const t = normalizeTab(tabKey);
+  const shouldShow = botsEnabled && t === "box";
 
-    moveChatToMount();
-    jcChatWidget.style.display = shouldShow ? "" : "none";
+  moveChatToMount();
+
+  if (shouldShow) {
+    jcChatWidget.style.display = "";
+    // 🔥 FORZAR ABIERTO SIEMPRE
+    jcChatWidget.classList.remove("jc-chat--collapsed");
+    if (jcChatToggle) {
+      jcChatToggle.setAttribute("aria-expanded", "true");
+      jcChatToggle.title = "Colapsar";
+    }
+  } else {
+    jcChatWidget.style.display = "none";
   }
+}
 
   function hideBotsUI() {
     document.getElementById("angieWidget")?.classList.remove("angie-widget--visible");
@@ -1695,8 +1734,10 @@ const JC_BUILD = window.JC_BUILD || "dev";
   }
 
   jcChatToggle?.addEventListener("click", () => {
-    jcChatWidget?.classList.toggle("jc-chat--collapsed");
-  });
+  jcChatWidget?.classList.toggle("jc-chat--collapsed");
+  const collapsed = jcChatWidget?.classList.contains("jc-chat--collapsed");
+  jcChatToggle?.setAttribute("aria-expanded", collapsed ? "false" : "true");
+});
 
   setTimeout(() => {
     const initialTab = (location.hash || "#inicio").replace("#", "");
@@ -1936,6 +1977,10 @@ const JC_BUILD = window.JC_BUILD || "dev";
     if (t === "inicio") {
       cargarMensajeSemanal();
       cargarEventosHome();
+
+    if (t === "box") {
+  jcBindGlobalBackgroundUI(); // es seguro por el flag __jcBgBound
+}
     }
 
     tabs.forEach((b) => {
