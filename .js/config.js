@@ -1,0 +1,573 @@
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Juventud CNC</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0b1020" />
+
+  <!-- Build -->
+  <script>
+    window.JC_BUILD = "2025-12-20.02"; // cambia esto en cada release
+  </script>
+
+  <!-- Styles (solo una vez, versionado) -->
+  <link rel="stylesheet" href="styles.css?v=2025-12-20.02" />
+
+  <!-- Supabase SDK (SIN defer) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- Config (SIN defer, debe correr después del SDK) -->
+  <script src="supabase-config.js"></script>
+
+  <!-- App (defer OK) -->
+  <script src="app.js?v=2025-12-20.02" defer></script>
+</head>
+
+<body class="app-shell">
+
+  <!-- OVERLAY GLOBAL -->
+  <div id="overlay" class="overlay" aria-hidden="true"></div>
+
+  <!-- DRAWER -->
+  <aside id="drawer" class="drawer" aria-label="Menú lateral">
+    <div class="drawer-header">
+      <h2>Juventud CNC</h2>
+      <button id="closeDrawer" class="icon-btn" type="button" aria-label="Cerrar menú">✕</button>
+    </div>
+
+    <nav class="drawer-nav" aria-label="Secciones">
+      <a href="#inicio" data-tab="inicio">🏠 Inicio</a>
+      <a href="#eventos" data-tab="eventos">📅 Eventos</a>
+      <a href="#comunidad" data-tab="comunidad">👥 Comunidad</a>
+      <button type="button" data-tab="box" class="drawer-link">📦 Box</button>
+      <hr />
+
+      <a href="#perfil" data-tab="perfil">👤 Mi perfil</a>
+      <a href="#judart" data-tab="judart">🎨 Judart</a>
+      <a href="#recursos" data-tab="recursos">📂 Recursos</a>
+
+      <hr />
+
+      <a href="#miembros-activos" data-tab="miembros-activos">⭐ Miembros</a>
+    </nav>
+
+    <footer class="drawer-footer">
+      v1.0 · Juventud CNC 💙💗
+    </footer>
+  </aside>
+
+  <!-- TOPBAR -->
+  <header class="topbar" role="banner">
+    <button id="openDrawer" class="icon-btn" type="button" aria-label="Abrir menú">☰</button>
+
+    <h1 class="topbar-title">Juventud CNC</h1>
+
+    <div class="topbar-actions" aria-label="Acciones">
+      <select id="themePicker" class="theme-picker" aria-label="Tema">
+        <option value="auto">Auto</option>
+        <option value="chicos">Chicos 💙</option>
+        <option value="chicas">Chicas 💗</option>
+        <option value="mix">Mix 💙💗</option>
+      </select>
+
+      <!-- 🤖 (Se inyecta desde app.js si no existe; lo dejamos listo para estilos/orden) -->
+      <button id="btnBots" class="icon-btn" type="button" title="Encender / Apagar bots" aria-label="Encender o apagar bots">🤖</button>
+
+      <!-- Angie -->
+      <button id="btnAngie" class="icon-btn" type="button" title="Diseño Angie" aria-label="Diseño Angie">🎨</button>
+
+      <button id="btnLogin" class="icon-btn" type="button" title="Iniciar sesión" aria-label="Iniciar sesión">🔑</button>
+
+
+      <!-- Perfil -->
+      <button id="btnPerfil" class="icon-btn" type="button" data-tab="perfil" title="Mi perfil" aria-label="Mi perfil">👤</button>
+    </div>
+  </header>
+
+  <!-- CONTENIDO -->
+  <main class="container" id="main">
+
+    <!-- BOX -->
+<section class="view" data-view="box" aria-label="Box">
+  <div class="jc-card-mini">
+  <h4>🖼️ Fondo global</h4>
+  <p class="muted small">Elige una imagen de tu galería. Se aplica al fondo principal.</p>
+
+  <div class="jc-row" style="gap:.5rem; flex-wrap:wrap;">
+    <button id="btnBgPick" type="button">Elegir fondo</button>
+    <button id="btnBgClear" type="button">Quitar fondo</button>
+    <input id="bgPickerInput" type="file" accept="image/*" hidden />
+    <small id="bgPickEstado"></small>
+  </div>
+
+  <input id="bgPickerInput" type="file" accept="image/*" hidden />
+</div>
+
+  <section class="card">
+    <header class="card-header">
+      <div>
+        <h2 class="with-emoji" data-emoji="📦">Box</h2>
+        <p class="muted small" style="margin:4px 0 0">
+          Aquí vive el chat grande de los bots (sin tapar nada).
+        </p>
+      </div>
+    </header>
+
+    <!-- Mount: aquí se reubica el chat -->
+    <div id="boxChatMount" class="box-chat-mount"></div>
+  </section>
+</section>
+
+    <!-- INICIO -->
+    <section class="view active" data-view="inicio" aria-label="Inicio">
+      <section class="card" id="mensaje-semanal">
+        <header class="card-header">
+          <h2 class="with-emoji" data-emoji="🕊️">Mensaje semanal</h2>
+          <span class="badge badge-mix">Para todos</span>
+        </header>
+
+        <article class="card-body">
+          <h3 id="msgTitle">Cargando mensaje...</h3>
+          <p id="msgBody">Un momento…</p>
+          <small id="msgMeta"></small>
+        </article>
+      </section>
+
+      <section class="card hero" aria-label="Bienvenida">
+        <div>
+          <h2>Bienvenido a Juventud CNC</h2>
+          <p>Un espacio para crecer, servir y caminar juntos.</p>
+          <p class="small" style="margin-top:8px; opacity:.95">
+            Consejo rápido: usa <strong>🤖</strong> para encender/apagar bots, y <strong>🎨</strong> para el diseño de Angie.
+          </p>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Eventos próximos">
+        <div class="card-header">
+          <h3 class="with-emoji" data-emoji="📅">Próximos eventos</h3>
+          <a href="#eventos" data-tab="eventos" class="link">Ver todos</a>
+        </div>
+        <ul id="eventListHome" class="event-list"></ul>
+      </section>
+    </section>
+
+<!-- EVENTOS -->
+<section class="view" data-view="eventos" aria-label="Eventos">
+  <section class="card">
+    <header class="card-header">
+      <div>
+        <h2 class="with-emoji" data-emoji="📅">Eventos</h2>
+        <p class="muted small" style="margin:4px 0 0">Calendario + lista. Solo miembros gestionan.</p>
+      </div>
+
+      <div class="event-toolbar" aria-label="Herramientas de eventos">
+        <select id="filtroTipo" aria-label="Filtrar por tipo">
+          <option value="">Todos</option>
+          <option value="formacion">Formación</option>
+          <option value="servicio">Servicio</option>
+          <option value="convivencia">Convivencia</option>
+          <option value="oracion">Oración</option>
+        </select>
+
+        <select id="evScope" aria-label="Rango">
+          <option value="upcoming">Próximos</option>
+          <option value="all">Todos</option>
+          <option value="past">Pasados</option>
+        </select>
+
+        <button id="btnEvRefresh" class="btn small ghost" type="button">Actualizar</button>
+      </div>
+    </header>
+
+    <!-- Gate (miembros vs espectadores) -->
+    <div id="evGate" class="muted small" style="margin-top:10px">
+      Cargando estado…
+    </div>
+
+    <!-- Mini calendario -->
+    <section class="event-cal" aria-label="Calendario" style="margin-top:12px">
+      <div class="event-cal-head">
+        <button id="evCalPrev" class="icon-mini" type="button" aria-label="Mes anterior">‹</button>
+        <div id="evCalLabel" class="event-cal-label">Mes</div>
+        <button id="evCalNext" class="icon-mini" type="button" aria-label="Mes siguiente">›</button>
+      </div>
+
+      <div class="event-cal-weekdays" aria-hidden="true">
+        <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+      </div>
+
+      <div id="evCalendar" class="event-cal-grid"></div>
+
+      <div class="event-cal-foot">
+        <span id="evDayHint" class="muted small">Toca un día para filtrar</span>
+        <button id="evClearDay" class="btn small ghost" type="button" style="display:none">Ver todos</button>
+      </div>
+    </section>
+
+    <!-- Buscador -->
+    <div class="event-search-row">
+      <input id="evSearch" class="event-search" type="search" placeholder="Buscar por título o lugar…" />
+      <select id="evSort" aria-label="Orden">
+        <option value="asc">Más cercanos</option>
+        <option value="desc">Más recientes</option>
+      </select>
+    </div>
+
+    <!-- Crear (solo miembros; el JS lo oculta si espectador) -->
+    <details id="evCreateWrap" class="event-create" open style="margin-top:12px; display:none">
+      <summary class="event-create-summary">
+        <strong>Crear evento</strong>
+        <span class="muted small">Toca para abrir/cerrar</span>
+      </summary>
+
+      <form id="formEvento" class="grid perfil-form" aria-label="Crear evento" style="margin-top:10px">
+        <input id="evTitulo" placeholder="Título" required />
+        <input id="evFecha" type="datetime-local" required />
+        <input id="evLugar" placeholder="Lugar" />
+        <select id="evTipo" aria-label="Tipo">
+          <option value="">Tipo</option>
+          <option value="formacion">Formación</option>
+          <option value="servicio">Servicio</option>
+          <option value="convivencia">Convivencia</option>
+          <option value="oracion">Oración</option>
+        </select>
+
+        <button class="btn small" type="submit">Guardar</button>
+        <p id="evEstado" class="small muted"></p>
+      </form>
+    </details>
+
+    <!-- Lista -->
+    <ul id="eventList" class="event-list"></ul>
+  </section>
+</section>
+
+<!-- MODAL EDITAR EVENTO -->
+<div id="evModal" class="jc-modal" style="display:none">
+  <div class="jc-modal-card" role="dialog" aria-modal="true" aria-label="Editar evento">
+    <header class="jc-modal-header">
+      <div>
+        <h3>✏️ Editar evento</h3>
+        <p class="muted small" id="evModalMeta">—</p>
+      </div>
+      <button id="evModalClose" class="icon-btn" type="button">✕</button>
+    </header>
+
+    <div class="jc-modal-body">
+      <form id="evEditForm" class="grid perfil-form" aria-label="Formulario editar evento">
+        <input id="evEditTitulo" placeholder="Título" required />
+        <input id="evEditFecha" type="datetime-local" required />
+        <input id="evEditLugar" placeholder="Lugar" />
+        <select id="evEditTipo" aria-label="Tipo">
+          <option value="">Tipo</option>
+          <option value="formacion">Formación</option>
+          <option value="servicio">Servicio</option>
+          <option value="convivencia">Convivencia</option>
+          <option value="oracion">Oración</option>
+        </select>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn" type="submit">Guardar cambios</button>
+          <button id="evEditDelete" class="btn ghost" type="button">🗑️ Borrar</button>
+        </div>
+
+        <p id="evEditEstado" class="small muted" style="margin:0"></p>
+      </form>
+    </div>
+  </div>
+</div>
+
+  
+    <!-- COMUNIDAD -->
+<section class="view" data-view="comunidad" aria-label="Comunidad">
+  <section class="card">
+    <header class="card-header">
+      <div>
+        <h2 class="with-emoji" data-emoji="👥">Comunidad</h2>
+        <p class="muted small">Retos + dinámicas + foro. Solo miembros registrados publican, comentan y reaccionan ❤️</p>
+      </div>
+      <span id="comuLockBadge" class="badge badge-mix">🔒 Solo miembros</span>
+    </header>
+
+    <!-- Tabs -->
+    <div class="comu-tabs" role="tablist" aria-label="Categorías de comunidad">
+      <button class="comu-tab active" type="button" data-comu-cat="chicos" role="tab" aria-selected="true">💙 Retos chicos</button>
+      <button class="comu-tab" type="button" data-comu-cat="chicas" role="tab" aria-selected="false">💗 Retos chicas</button>
+      <button class="comu-tab" type="button" data-comu-cat="dinamicas" role="tab" aria-selected="false">🔄 Dinámicas</button>
+      <button class="comu-tab" type="button" data-comu-cat="foro" role="tab" aria-selected="false">💬 Foro</button>
+    </div>
+
+    <!-- Estado de acceso -->
+    <div id="comuGate" class="comu-gate muted small" style="margin-top:10px">
+      Cargando estado…
+    </div>
+
+    <!-- Crear publicación (solo miembros; se oculta por JS si no está logueado/registrado) -->
+    <div id="comuComposer" class="comu-composer" style="margin-top:12px; display:none">
+      <div class="comu-composer-head">
+        <strong>Publicar</strong>
+        <span class="muted small">Comparte una idea, reto o dinámica</span>
+      </div>
+
+      <form id="formComuPost" class="grid comu-form" aria-label="Crear publicación comunidad">
+        <input id="comuTitulo" maxlength="120" placeholder="Título (ej: Reto de la semana)" required />
+        <textarea id="comuContenido" rows="3" maxlength="4000" placeholder="Escribe tu publicación…" required></textarea>
+
+        <div class="comu-actions">
+          <button class="btn" type="submit">Publicar</button>
+          <button id="btnComuClear" class="btn ghost" type="button">Limpiar</button>
+        </div>
+
+        <p id="comuEstado" class="small muted" style="margin:0"></p>
+      </form>
+    </div>
+
+    <!-- Feed -->
+    <div class="comu-feed" style="margin-top:14px">
+      <div class="comu-feed-head">
+        <h3 class="with-emoji" data-emoji="📰">Publicaciones</h3>
+        <button id="btnComuRefresh" class="btn small ghost" type="button">Actualizar</button>
+      </div>
+
+      <div id="comuList" class="comu-list">
+        <div class="muted small">Cargando publicaciones…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal comentarios -->
+  <div id="comuModal" class="jc-modal" style="display:none">
+    <div class="jc-modal-card" role="dialog" aria-modal="true" aria-label="Comentarios comunidad">
+      <header class="jc-modal-header">
+        <div>
+          <h3 id="comuModalTitle">Comentarios</h3>
+          <p id="comuModalMeta" class="muted small">—</p>
+        </div>
+        <button id="comuModalClose" class="icon-btn" type="button">✕</button>
+      </header>
+
+      <div class="jc-modal-body">
+        <div id="comuCommentsList" class="comu-comments"></div>
+
+        <!-- Form comentario -->
+        <div id="comuCommentComposer" class="comu-composer" style="margin-top:12px; display:none">
+          <form id="formComuComment" class="grid comu-form" aria-label="Agregar comentario">
+            <textarea id="comuCommentText" rows="2" maxlength="1500" placeholder="Escribe un comentario…" required></textarea>
+            <div class="comu-actions">
+              <button class="btn" type="submit">Comentar</button>
+              <button id="btnComuCommentClear" class="btn ghost" type="button">Limpiar</button>
+            </div>
+            <p id="comuCommentEstado" class="small muted" style="margin:0"></p>
+          </form>
+        </div>
+
+        <div id="comuCommentGate" class="muted small" style="margin-top:10px">
+          🔒 Regístrate para comentar.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+    <!-- PERFIL -->
+    <section class="view" data-view="perfil" aria-label="Perfil">
+      <section class="card perfil-card">
+        <h2 class="with-emoji" data-emoji="👤">Mi perfil</h2>
+
+        <div class="perfil-resumen">
+          <div class="perfil-avatar" id="perfilAvatar" aria-label="Foto de perfil">
+  <img id="perfilAvatarImg" alt="Foto de perfil" style="display:none" />
+  <span id="perfilAvatarInitial">👤</span>
+</div>        
+          
+          <div>
+            <strong id="perfilNombreTexto">Aún sin registrar</strong>
+            <div id="perfilRolTexto" class="small muted"></div>
+          </div>
+          <button id="btnCerrarPerfil" class="btn small" type="button" style="display:none">
+            Cerrar sesión
+          </button>
+        </div>
+
+        <p id="perfilFraseTexto" class="perfil-frase">
+          Aquí aparecerá tu frase.
+        </p>
+
+        <p id="perfilEstado" class="small muted"></p>
+
+        <div class="perfil-avatar-tools">
+  <label class="btn small ghost" for="perfilAvatarInput">📷 Subir foto</label>
+  <input id="perfilAvatarInput" type="file" accept="image/*" style="display:none" />
+  <button id="btnAvatarClear" class="btn small ghost" type="button">Quitar</button>
+</div>
+
+        <form id="formMiembro" class="grid perfil-form" aria-label="Formulario de perfil">
+          <input name="nombre" placeholder="Nombre completo" required />
+          <input name="edad" type="number" min="10" max="99" placeholder="Edad" required />
+          <input name="contacto" placeholder="Celular" />
+          <input name="ministerio" placeholder="Ministerio (opcional)" />
+
+          <select name="rol_key" aria-label="Rol">
+            <option value="miembro">Miembro</option>
+            <option value="voluntario">Voluntario digital</option>
+            <option value="moderador">Moderador</option>
+          </select>
+
+          <input name="frase" placeholder="Frase personal" />
+          <button class="btn" type="submit">Guardar perfil</button>
+        </form>
+      </section>
+    </section>
+
+    <!-- JUDART -->
+    <section class="view" data-view="judart" aria-label="Judart">
+      <section class="card">
+        <h2 class="with-emoji" data-emoji="🎨">Judart</h2>
+        <p class="muted">Espacio creativo: arte, ilustración, identidad juvenil.</p>
+
+        <div class="grid" style="margin-top:12px; gap:10px">
+          <div class="card" style="padding:12px">
+            <h3 class="with-emoji" data-emoji="🖼️">Galería</h3>
+            <p class="small muted">Próximamente: mural digital, fotos, artes del grupo.</p>
+          </div>
+          <div class="card" style="padding:12px">
+            <h3 class="with-emoji" data-emoji="✨">Identidad</h3>
+            <p class="small muted">Logos, colores, estilos y diseños.</p>
+          </div>
+          <div class="card" style="padding:12px">
+            <h3 class="with-emoji" data-emoji="📌">Avisos</h3>
+            <p class="small muted">Los avisos ahora viven aquí (modo creativo).</p>
+          </div>
+        </div>
+
+        <!-- Compat: si en algún momento tenías un botón de notificaciones, app.js lo redirige a Judart -->
+        <button id="btnPermPush" class="btn" type="button" style="margin-top:12px">
+          Abrir Judart (modo arte)
+        </button>
+      </section>
+    </section>
+
+    <!-- RECURSOS -->
+    <section class="view" data-view="recursos" aria-label="Recursos">
+      <section class="card">
+        <div class="card-header">
+          <h2 class="with-emoji" data-emoji="📂">Recursos</h2>
+          <small class="muted">Tip: en esta vista el botón <strong>＋</strong> abre el selector de archivos</small>
+        </div>
+
+        <!-- input oculto que usa app.js -->
+        <input id="fileRec" type="file" style="display:none" />
+
+        <div id="listaRecursos"></div>
+      </section>
+    </section>
+
+    <!-- MIEMBROS -->
+    <section class="view" data-view="miembros-activos" aria-label="Miembros">
+      <section class="card">
+        <h2 class="with-emoji" data-emoji="⭐">Miembros registrados</h2>
+        <ul id="listaMiembros" class="user-list"></ul>
+      </section>
+    </section>
+
+  </main>
+
+  <!-- TABS -->
+  <nav class="tabs" aria-label="Navegación inferior">
+    <button class="tab active" type="button" data-tab="inicio">🏠<span>Inicio</span></button>
+    <button class="tab" type="button" data-tab="eventos">📅<span>Eventos</span></button>
+    <button class="tab" type="button" data-tab="comunidad">👥<span>Comunidad</span></button>
+    <button class="tab" type="button" data-tab="recursos">📂<span>Recursos</span></button>
+    <button class="tab" type="button" data-tab="judart">🎨<span>Judart</span></button>
+  </nav>
+
+  <!-- FAB (acción rápida) -->
+  <button id="fab" class="fab" type="button" aria-label="Acción rápida">＋</button>
+
+  <!-- =========================
+       WIDGETS BOTS (Angie / Mia / Ciro)
+       app.js espera estos IDs
+       ========================= -->
+
+  <!-- Angie -->
+  <div id="angieWidget" class="angie-widget" aria-label="Angie">
+    <div class="bot-bubble angie-bubble">
+      <button id="angieClose" class="bot-close" type="button" aria-label="Cerrar Angie">✕</button>
+      <div class="bot-name angie-name">Angie</div>
+      <div id="angieText">¡Holaaa! Qué bueno verte 😄</div>
+    </div>
+
+    <div class="bot-avatar angie-avatar">
+      <img id="angieAvatarImg" src="assets/angie-feliz-saludo.png" alt="Angie" />
+    </div>
+  </div>
+
+  <!-- Mia -->
+  <div id="miaWidget" class="mia-widget" aria-label="Mia">
+    <div class="bot-bubble mia-bubble">
+      <button id="miaClose" class="bot-close" type="button" aria-label="Cerrar Mia">✕</button>
+      <div class="bot-name mia-name">Mia</div>
+      <div id="miaText">Soy Mia. Aquí todo lo coordinamos con calma 💗</div>
+    </div>
+
+    <div class="bot-avatar mia-avatar">
+      <img id="miaAvatarImg" src="assets/mia-casual-wink.png" alt="Mia" />
+    </div>
+  </div>
+
+  <!-- Ciro -->
+  <div id="ciroWidget" class="ciro-widget" aria-label="Ciro">
+    <div class="bot-bubble ciro-bubble">
+      <button id="ciroClose" class="bot-close" type="button" aria-label="Cerrar Ciro">✕</button>
+      <div class="bot-name ciro-name">Ciro</div>
+      <div id="ciroText">¡Holaaa! ¡Vamos con fuerza! 💪🔥</div>
+    </div>
+
+    <div class="bot-avatar ciro-avatar">
+      <img id="ciroAvatarImg" src="assets/ciro-happy.png" alt="Ciro" />
+    </div>
+  </div>
+
+  <!-- CHAT BOTS (app.js lo crea si falta, pero aquí queda fijo y pulido) -->
+  <section id="jcChat" class="jc-chat" aria-label="Chat de bots" style="display:none">
+    <header class="jc-chat-header">
+      <div class="jc-chat-title">
+        <span class="dot-online" aria-hidden="true"></span>
+        <span>Chat bots</span>
+      </div>
+      <button class="jc-chat-toggle" id="jcChatToggle" type="button" aria-label="Colapsar chat">⌄</button>
+    </header>
+    <div class="jc-chat-body" id="jcChatBody"></div>
+  </section>
+
+
+  <!-- LOGIN MODAL -->
+<div id="loginModal" class="jc-modal" style="display:none">
+  <div class="jc-modal-card" role="dialog" aria-modal="true" aria-label="Iniciar sesión">
+    <header class="jc-modal-header">
+      <div>
+        <h3>🔑 Iniciar sesión</h3>
+        <p class="muted small">Te enviamos un enlace a tu correo (Magic Link).</p>
+      </div>
+      <button id="loginClose" class="icon-btn" type="button">✕</button>
+    </header>
+
+    <div class="jc-modal-body">
+      <form id="loginForm" class="grid perfil-form" aria-label="Formulario login">
+        <input id="loginEmail" type="email" placeholder="tu-correo@gmail.com" required />
+        <button class="btn" type="submit">Enviar enlace</button>
+        <p id="loginEstado" class="small muted" style="margin:0"></p>
+      </form>
+
+      <div class="muted small" style="margin-top:10px">
+        💡 Tip: si ya estás logueado, verás tu perfil sin formulario.
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

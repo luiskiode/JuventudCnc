@@ -1,5 +1,9 @@
 /* ============================================================
    JUVENTUD CNC — app.js FINAL (FIX comunidad + perfil TDZ + bots + msg + eventos)
+   ✅ Correcciones extra:
+   - FIX recursión jcBindGlobalBackgroundUI()
+   - FIX bind background con detección flexible de IDs + return boolean
+   - FIX listeners duplicados (bots button / bg bind)
    ============================================================ */
 
 const JC_BUILD = window.JC_BUILD || "dev";
@@ -33,37 +37,31 @@ const JC_BUILD = window.JC_BUILD || "dev";
   /* =========================
      BOOT
      ========================= */
- const sb = window.supabaseClient;
-
-if (!sb) {
-  console.error("❌ Supabase no inicializado: window.supabaseClient undefined. Revisa supabase-config.js y el orden de scripts.");
-  alert("Error crítico: Supabase no está cargado.");
-  throw new Error("Supabase client (sb) no definido");
-}
-
-async function jcEnsureAnonSession() {
-  try {
-    const { data } = await sb.auth.getSession();
-    if (data?.session?.user?.id) return data.session.user.id;
-
-    if (typeof sb.auth.signInAnonymously === "function") {
-      const { error } = await sb.auth.signInAnonymously();
-      if (error) throw error;
-
-      const { data: d2 } = await sb.auth.getSession();
-      return d2?.session?.user?.id || null;
-    }
-    return null;
-  } catch (e) {
-    console.warn("Anon session error:", e);
-    return null;
-  }
-}
+  const sb = window.supabaseClient;
 
   if (!sb) {
     console.error("❌ Supabase no inicializado: window.supabaseClient undefined. Revisa supabase-config.js y el orden de scripts.");
     alert("Error crítico: Supabase no está cargado.");
     throw new Error("Supabase client (sb) no definido");
+  }
+
+  async function jcEnsureAnonSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data?.session?.user?.id) return data.session.user.id;
+
+      if (typeof sb.auth.signInAnonymously === "function") {
+        const { error } = await sb.auth.signInAnonymously();
+        if (error) throw error;
+
+        const { data: d2 } = await sb.auth.getSession();
+        return d2?.session?.user?.id || null;
+      }
+      return null;
+    } catch (e) {
+      console.warn("Anon session error:", e);
+      return null;
+    }
   }
 
   const LOCALE = "es-PE";
@@ -265,24 +263,24 @@ async function jcEnsureAnonSession() {
 
   // Cuando la sesión cambie, refrescamos perfil/comunidad
   if (sb?.auth?.onAuthStateChange) {
-  sb.auth.onAuthStateChange(async (_event, _session) => {
-    try { if (typeof cargarPerfil === "function") await cargarPerfil(); } catch {}
+    sb.auth.onAuthStateChange(async (_event, _session) => {
+      try { if (typeof cargarPerfil === "function") await cargarPerfil(); } catch {}
 
-    try {
-      const mod = window.jcComunidad || comunidad;
-      const current = normalizeTab((location.hash || "#inicio").replace("#", ""));
+      try {
+        const mod = window.jcComunidad || comunidad;
+        const current = normalizeTab((location.hash || "#inicio").replace("#", ""));
 
-      if (mod && typeof mod.refreshAuthAndMiembro === "function") {
-        await mod.refreshAuthAndMiembro(); // ✅ actualiza state.user/state.canWrite + UI gate
-      }
+        if (mod && typeof mod.refreshAuthAndMiembro === "function") {
+          await mod.refreshAuthAndMiembro(); // ✅ actualiza state.user/state.canWrite + UI gate
+        }
 
-      // Si estás en Comunidad, refresca feed (para counts + corazón “on”)
-      if (current === "comunidad" && mod && typeof mod.cargarFeed === "function") {
-        await mod.cargarFeed({ force: true });
-      }
-    } catch {}
-  });
-}
+        // Si estás en Comunidad, refresca feed (para counts + corazón “on”)
+        if (current === "comunidad" && mod && typeof mod.cargarFeed === "function") {
+          await mod.cargarFeed({ force: true });
+        }
+      } catch {}
+    });
+  }
 
   function openDrawer() {
     if (!drawer) return;
@@ -378,6 +376,7 @@ async function jcEnsureAnonSession() {
     try { localStorage.setItem("jc_theme_mode", mode); } catch {}
     applyThemePreset(mode);
   });
+
   /* ============================================================
      FONDO GLOBAL: Importar desde galería (UI en pestaña BOX)
      - Aplica al fondo de la pantalla principal (no al view box)
@@ -410,111 +409,155 @@ async function jcEnsureAnonSession() {
 
   // 🔥 Reescala/comprime para que no reviente el límite de localStorage
   function jcReadImageAsCompressedDataURL(file, { maxW = 1400, quality = 0.82 } = {}) {
-  return new Promise((resolve, reject) => {
-    if (!file || !file.type?.startsWith("image/")) {
-      return reject(new Error("Archivo no es imagen"));
-    }
+    return new Promise((resolve, reject) => {
+      if (!file || !file.type?.startsWith("image/")) {
+        return reject(new Error("Archivo no es imagen"));
+      }
 
-    const fr = new FileReader();
+      const fr = new FileReader();
 
-    fr.onload = () => {
-      const src = String(fr.result || "");
-      const img = new Image();
+      fr.onload = () => {
+        const src = String(fr.result || "");
+        const img = new Image();
 
-      img.onload = () => {
-        try {
-          const w = img.naturalWidth || img.width || 1;
-          const h = img.naturalHeight || img.height || 1;
+        img.onload = () => {
+          try {
+            const w = img.naturalWidth || img.width || 1;
+            const h = img.naturalHeight || img.height || 1;
 
-          const scale = w > maxW ? (maxW / w) : 1;
-          const cw = Math.max(1, Math.round(w * scale));
-          const ch = Math.max(1, Math.round(h * scale));
+            const scale = w > maxW ? (maxW / w) : 1;
+            const cw = Math.max(1, Math.round(w * scale));
+            const ch = Math.max(1, Math.round(h * scale));
 
-          const canvas = document.createElement("canvas");
-          canvas.width = cw;
-          canvas.height = ch;
+            const canvas = document.createElement("canvas");
+            canvas.width = cw;
+            canvas.height = ch;
 
-          const ctx2d = canvas.getContext("2d");
-          if (!ctx2d) return reject(new Error("No canvas ctx"));
+            const ctx2d = canvas.getContext("2d");
+            if (!ctx2d) return reject(new Error("No canvas ctx"));
 
-          ctx2d.drawImage(img, 0, 0, cw, ch);
+            ctx2d.drawImage(img, 0, 0, cw, ch);
 
-          // JPEG pesa menos
-          const out = canvas.toDataURL("image/jpeg", quality);
-          resolve(out);
-        } catch (e) {
-          reject(e);
-        }
+            // JPEG pesa menos
+            const out = canvas.toDataURL("image/jpeg", quality);
+            resolve(out);
+          } catch (e) {
+            reject(e);
+          }
+        };
+
+        img.onerror = () => reject(new Error("No se pudo cargar la imagen seleccionada"));
+        img.src = src;
       };
 
-      img.onerror = () => reject(new Error("No se pudo cargar la imagen seleccionada"));
-      img.src = src;
-    };
+      fr.onerror = () => {
+        const err = fr.error;
+        const msg =
+          err?.name === "NotReadableError"
+            ? "El navegador no pudo leer el archivo (permisos / OneDrive / archivo bloqueado). Prueba moviéndolo a Desktop y vuelve a elegir."
+            : (err?.message || "No se pudo leer el archivo");
+        reject(new Error(msg));
+      };
 
-    fr.onerror = () => {
-      // Aquí cae tu NotReadableError
-      const err = fr.error;
-      const msg =
-        err?.name === "NotReadableError"
-          ? "El navegador no pudo leer el archivo (permisos / OneDrive / archivo bloqueado). Prueba moviéndolo a Desktop y vuelve a elegir."
-          : (err?.message || "No se pudo leer el archivo");
-      reject(new Error(msg));
-    };
+      fr.onabort = () => reject(new Error("Lectura cancelada"));
 
-    fr.onabort = () => reject(new Error("Lectura cancelada"));
-
-    try {
-      fr.readAsDataURL(file);
-    } catch (e) {
-      reject(e);
-    }
-  });
-}
+      try {
+        fr.readAsDataURL(file);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
 
   let __jcBgBound = false;
 
-function jcBindGlobalBackgroundUI() {
-  jcBindGlobalBackgroundUI()
+  // ✅ Devuelve true si encontró UI y quedó bindeado
+  function jcBindGlobalBackgroundUI() {
+    if (__jcBgBound) return true;
 
-  btnPick.addEventListener("click", () => {
-  try { input.value = ""; } catch {}
-  input.click();
-});
+    // IDs flexibles (por si tu HTML cambió)
+    const input =
+      document.getElementById("bgInput") ||
+      document.getElementById("jcBgInput") ||
+      document.getElementById("bgFile") ||
+      document.getElementById("inputPickBg") ||
+      document.querySelector('input[type="file"][data-jc-bg]') ||
+      document.querySelector('input[type="file"]#boxBgInput') ||
+      null;
 
-input.addEventListener("change", async () => {
-  const file = input.files?.[0];
-  if (!file) return;
+    const btnPick =
+      document.getElementById("btnPickBg") ||
+      document.getElementById("btnBgPick") ||
+      document.getElementById("btnBg") ||
+      document.getElementById("btnPickBackground") ||
+      document.querySelector('[data-act="pick-bg"]') ||
+      document.querySelector('button#pickBgBtn') ||
+      null;
 
-  if (estado) estado.textContent = "Cargando fondo…";
+    const btnClear =
+      document.getElementById("btnClearBg") ||
+      document.getElementById("btnBgClear") ||
+      document.querySelector('[data-act="clear-bg"]') ||
+      null;
 
-  try {
-    const dataUrl = await jcReadImageAsCompressedDataURL(file, { maxW: 1400, quality: 0.82 });
-    jcSaveGlobalBackground(dataUrl);
-    if (estado) estado.textContent = "✅ Fondo aplicado";
-    try { logAviso({ title: "Fondo", body: "Fondo global actualizado 🖼️" }); } catch {}
-  } catch (e) {
-    console.error("Fondo global:", e);
-    if (estado) estado.textContent = e?.message || "No se pudo aplicar el fondo.";
-  } finally {
-    try { input.value = ""; } catch {}
+    const estado =
+      document.getElementById("bgEstado") ||
+      document.getElementById("bgStatus") ||
+      document.getElementById("jcBgStatus") ||
+      document.querySelector('[data-bg-status]') ||
+      null;
+
+    // Si no existe la UI aún (ej: tab aún no renderizado)
+    if (!input || !btnPick) return false;
+
+    __jcBgBound = true;
+
+    btnPick.addEventListener("click", () => {
+      try { input.value = ""; } catch {}
+      input.click();
+    });
+
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      if (estado) estado.textContent = "Cargando fondo…";
+
+      try {
+        const dataUrl = await jcReadImageAsCompressedDataURL(file, { maxW: 1400, quality: 0.82 });
+        jcSaveGlobalBackground(dataUrl);
+        if (estado) estado.textContent = "✅ Fondo aplicado";
+        try { logAviso({ title: "Fondo", body: "Fondo global actualizado 🖼️" }); } catch {}
+      } catch (e) {
+        console.error("Fondo global:", e);
+        if (estado) estado.textContent = e?.message || "No se pudo aplicar el fondo.";
+      } finally {
+        try { input.value = ""; } catch {}
+      }
+    });
+
+    btnClear?.addEventListener("click", () => {
+      jcSaveGlobalBackground("");
+      if (estado) estado.textContent = "Fondo eliminado.";
+      try { logAviso({ title: "Fondo", body: "Fondo global eliminado 🧼" }); } catch {}
+    });
+
+    return true;
   }
-});
-}
 
   jcLoadGlobalBackground();
 
-// intentar bind ahora, y si no existe aún el DOM, reintentar
-(function bindBgWithRetries(){
-  if (jcBindGlobalBackgroundUI()) return;
+  // intentar bind ahora, y si no existe aún el DOM, reintentar
+  (function bindBgWithRetries() {
+    if (jcBindGlobalBackgroundUI()) return;
 
-  document.addEventListener("DOMContentLoaded", () => jcBindGlobalBackgroundUI(), { once: true });
+    document.addEventListener("DOMContentLoaded", () => jcBindGlobalBackgroundUI(), { once: true });
 
-  // reintentos cortos por si el tab BOX se renderiza después
-  setTimeout(() => jcBindGlobalBackgroundUI(), 300);
-  setTimeout(() => jcBindGlobalBackgroundUI(), 900);
-  setTimeout(() => jcBindGlobalBackgroundUI(), 1500);
-})();
-
+    // reintentos cortos por si el tab BOX se renderiza después
+    setTimeout(() => jcBindGlobalBackgroundUI(), 300);
+    setTimeout(() => jcBindGlobalBackgroundUI(), 900);
+    setTimeout(() => jcBindGlobalBackgroundUI(), 1500);
+  })();
 
   /* =========================
      Angie: Modal con herramienta
@@ -539,6 +582,13 @@ input.addEventListener("change", async () => {
       btn.textContent = "🤖";
       actions.insertBefore(btn, document.getElementById("btnAngie") || actions.lastElementChild);
     }
+
+    // ✅ evita duplicar listener
+    if (btn.dataset.bound === "1") {
+      updateBotsButtonUI();
+      return;
+    }
+    btn.dataset.bound = "1";
 
     btn.addEventListener("click", () => setBotsEnabled(!botsEnabled));
     updateBotsButtonUI();
@@ -1608,25 +1658,25 @@ input.addEventListener("change", async () => {
   };
 
   function syncChatVisibility(tabKey) {
-  if (!jcChatWidget) return;
+    if (!jcChatWidget) return;
 
-  const t = normalizeTab(tabKey);
-  const shouldShow = botsEnabled && t === "box";
+    const t = normalizeTab(tabKey);
+    const shouldShow = botsEnabled && t === "box";
 
-  moveChatToMount();
+    moveChatToMount();
 
-  if (shouldShow) {
-    jcChatWidget.style.display = "";
-    // 🔥 FORZAR ABIERTO SIEMPRE
-    jcChatWidget.classList.remove("jc-chat--collapsed");
-    if (jcChatToggle) {
-      jcChatToggle.setAttribute("aria-expanded", "true");
-      jcChatToggle.title = "Colapsar";
+    if (shouldShow) {
+      jcChatWidget.style.display = "";
+      // 🔥 FORZAR ABIERTO SIEMPRE
+      jcChatWidget.classList.remove("jc-chat--collapsed");
+      if (jcChatToggle) {
+        jcChatToggle.setAttribute("aria-expanded", "true");
+        jcChatToggle.title = "Colapsar";
+      }
+    } else {
+      jcChatWidget.style.display = "none";
     }
-  } else {
-    jcChatWidget.style.display = "none";
   }
-}
 
   function hideBotsUI() {
     document.getElementById("angieWidget")?.classList.remove("angie-widget--visible");
@@ -1685,13 +1735,10 @@ input.addEventListener("change", async () => {
     updateBotsButtonUI();
   }
 
-    ensureBotsButton();
+  ensureBotsButton();
   if (!botsEnabled) hideBotsUI();
 
   const JC_CHAT_SCENES = {
-    // =========================
-    // BOX (drama sentimental + propósito)
-    // =========================
     box: [
       { from: "system", text: "Bienvenido a Box 📦 — aquí se habla con calma.", delay: 200 },
 
@@ -1723,9 +1770,6 @@ input.addEventListener("change", async () => {
       { from: "system", text: "🕊️ Promesa del equipo: servir juntos, sin máscaras, con amor y fuerza.", delay: 900 }
     ],
 
-  
-    // MIEMBROS ACTIVOS (drama largo)
-    // =========================
     "miembros-activos": [
       { from: "system", text: "Miembros activos 👥 — se siente la familia creciendo.", delay: 250 },
       { from: "mia", text: "Me da paz verlos aquí. Somos equipo, familia… y sí, los cuido como a mis hermanos 🤍", estado: "apoyo", delay: 900 },
@@ -1739,8 +1783,6 @@ input.addEventListener("change", async () => {
       { from: "system", text: "Plot twist guardado 😇 — aquí lo importante: servir juntos, con respeto y corazón.", delay: 1200 }
     ]
   };
-
-  
 
   function jcChatPlayScene(viewKey) {
     if (!botsEnabled) return;
@@ -1760,10 +1802,10 @@ input.addEventListener("change", async () => {
   }
 
   jcChatToggle?.addEventListener("click", () => {
-  jcChatWidget?.classList.toggle("jc-chat--collapsed");
-  const collapsed = jcChatWidget?.classList.contains("jc-chat--collapsed");
-  jcChatToggle?.setAttribute("aria-expanded", collapsed ? "false" : "true");
-});
+    jcChatWidget?.classList.toggle("jc-chat--collapsed");
+    const collapsed = jcChatWidget?.classList.contains("jc-chat--collapsed");
+    jcChatToggle?.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  });
 
   setTimeout(() => {
     const initialTab = (location.hash || "#inicio").replace("#", "");
@@ -2001,13 +2043,14 @@ input.addEventListener("change", async () => {
     const t = normalizeTab(tRaw);
 
     if (t === "inicio") {
-  cargarMensajeSemanal();
-  cargarEventosHome();
-}
+      cargarMensajeSemanal();
+      cargarEventosHome();
+    }
 
-if (t === "box") {
-  jcBindGlobalBackgroundUI();
-}
+    // ✅ bind UI del fondo cuando entras a BOX
+    if (t === "box") {
+      jcBindGlobalBackgroundUI();
+    }
 
     tabs.forEach((b) => {
       const on = normalizeTab(b.dataset.tab) === t;
@@ -2030,10 +2073,10 @@ if (t === "box") {
     if (t === "recursos") listarRecursos();
   }
 
-  $$("[data-tab]").forEach((el) => {
-    el.addEventListener("click", (e) => {
+  $$("[data-tab]").forEach((node) => {
+    node.addEventListener("click", (e) => {
       e.preventDefault();
-      activate(el.getAttribute("data-tab"));
+      activate(node.getAttribute("data-tab"));
       closeDrawer();
     });
   });
@@ -2115,7 +2158,6 @@ if (t === "box") {
   const perfilEstado = document.getElementById("perfilEstado");
   const btnCerrarPerfil = document.getElementById("btnCerrarPerfil");
 
-  const perfilAvatar = document.getElementById("perfilAvatar");
   const perfilAvatarImg = document.getElementById("perfilAvatarImg");
   const perfilAvatarInitial = document.getElementById("perfilAvatarInitial");
   const perfilAvatarInput = document.getElementById("perfilAvatarInput");
@@ -2141,8 +2183,8 @@ if (t === "box") {
   }
 
   async function ensureUserId() {
-  return await jcEnsureAnonSession();
-}
+    return await jcEnsureAnonSession();
+  }
 
   async function cargarPerfil() {
     if (!sb?.from) return;
@@ -2217,7 +2259,6 @@ if (t === "box") {
     e.preventDefault();
     if (perfilEstado) perfilEstado.textContent = "Guardando…";
 
-    // ✅ FIX: nada de renderWeeklyMessage aquí
     if (!sb?.from) {
       if (perfilEstado) perfilEstado.textContent = "Sin conexión al servidor. No se puede guardar el perfil ahora.";
       angieSetEstado?.("confundida");
@@ -2234,10 +2275,11 @@ if (t === "box") {
         return;
       }
 
+      const edadNum = Number(formMiembro.edad.value || 0);
       const payload = {
         user_id: userId,
         nombre: formMiembro.nombre.value.trim(),
-        edad: Number(formMiembro.edad.value || 0),
+        edad: Number.isFinite(edadNum) ? edadNum : 0,
         contacto: formMiembro.contacto.value.trim(),
         ministerio: formMiembro.ministerio.value.trim(),
         rol_key: formMiembro.rol_key.value.trim(),
@@ -2299,7 +2341,7 @@ if (t === "box") {
   });
 
   // =========================
-  // INICIAL: Comunidad module (ya existe createComunidadModule abajo)
+  // INICIAL: Comunidad module
   // =========================
   comunidad = createComunidadModule({
     sb,
@@ -2725,7 +2767,6 @@ function createComunidadModule(ctx = {}) {
     if (dom.modalTitle) dom.modalTitle.textContent = safeText(post.titulo || "Comentarios");
     if (dom.modalMeta) dom.modalMeta.textContent = `${safeText(post.autor_nombre || "Miembro")} · ${d ? fmtDateTime(d) : ""}`;
 
-    // ✅ respeta permisos actuales (y se auto-actualiza con refreshAuthAndMiembro)
     setCommentComposerVisible(!!state.canWrite);
     await cargarComentarios(post.id);
   }
@@ -2849,6 +2890,5 @@ function createComunidadModule(ctx = {}) {
     await cargarFeed();
   }
 
-  // ✅ FIX: exporta refreshAuthAndMiembro para que el onAuthStateChange lo llame
   return { init, onTab, cargarFeed, refreshAuthAndMiembro };
 }
