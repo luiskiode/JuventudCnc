@@ -33,6 +33,193 @@ const JC_BUILD = window.JC_BUILD || "dev";
 
 (() => {
   "use strict";
+  /* =========================
+   PAUSA 30s (Modal)
+   ========================= */
+const pauseModal = document.getElementById("pauseModal");
+const pauseClose = document.getElementById("pauseClose");
+const pauseStart = document.getElementById("pauseStart");
+const pauseStop  = document.getElementById("pauseStop");
+const pauseTimer = document.getElementById("pauseTimer");
+const pauseText  = document.getElementById("pauseText");
+const btnPause30 = document.getElementById("btnPause30");
+
+let pauseT = null;
+let pauseLeft = 30;
+
+function openPauseModal() {
+  if (!pauseModal) return;
+  state.loginOpen = state.loginOpen; // noop (solo para mantener coherencia)
+  state.angieOpen = state.angieOpen;
+
+  pauseLeft = 30;
+  if (pauseTimer) pauseTimer.textContent = String(pauseLeft);
+  if (pauseText) pauseText.textContent = "Inhala… exhala…";
+
+  state.loginOpen = false; // no afecta, solo evita overlay raro si alguien abre login
+  state.drawerOpen = false;
+  closeDrawer?.();
+
+  pauseModal.style.display = "flex";
+  pauseModal.classList.add("show");
+  state.loginOpen = state.loginOpen;
+  syncOverlay();
+
+  try { miaSetEstado?.("apoyo"); } catch {}
+}
+
+function closePauseModal() {
+  if (!pauseModal) return;
+  if (pauseT) clearInterval(pauseT);
+  pauseT = null;
+
+  pauseModal.classList.remove("show");
+  pauseModal.style.display = "none";
+  syncOverlay();
+}
+
+function startPause() {
+  if (pauseT) return;
+  pauseLeft = Number(pauseLeft || 30);
+  if (pauseText) pauseText.textContent = "Respira… suelta el peso…";
+
+  pauseT = setInterval(() => {
+    pauseLeft -= 1;
+    if (pauseTimer) pauseTimer.textContent = String(Math.max(0, pauseLeft));
+
+    if (pauseLeft === 20 && pauseText) pauseText.textContent = "“Jesús, confío en Ti.”";
+    if (pauseLeft === 10 && pauseText) pauseText.textContent = "“Señor, aquí estoy.”";
+
+    if (pauseLeft <= 0) {
+      clearInterval(pauseT);
+      pauseT = null;
+      if (pauseText) pauseText.textContent = "Listo ✅ vuelve con calma.";
+      try { logAviso?.({ title: "Pausa", body: "30s completados 🕊️" }); } catch {}
+      try { angieSetEstado?.("ok"); } catch {}
+    }
+  }, 1000);
+}
+
+function stopPause() {
+  if (pauseT) clearInterval(pauseT);
+  pauseT = null;
+  if (pauseText) pauseText.textContent = "Pausa detenida.";
+}
+
+btnPause30?.addEventListener("click", () => openPauseModal());
+pauseClose?.addEventListener("click", closePauseModal);
+pauseModal?.addEventListener("click", (e) => { if (e.target === pauseModal) closePauseModal(); });
+pauseStart?.addEventListener("click", startPause);
+pauseStop?.addEventListener("click", stopPause);
+
+/* =========================
+   CURSOS (UI)
+   ========================= */
+const CURSOS = [
+  {
+    key: "he-for-she",
+    titulo: "HeForShe (Jóvenes)",
+    desc: "Taller de respeto, dignidad, liderazgo y servicio.",
+    duracion: "4 sesiones",
+    link: "https://example.com/heforshe"
+  },
+  {
+    key: "save-for-home",
+    titulo: "Save For Home",
+    desc: "Taller para decisiones sanas, familia, futuro y fe.",
+    duracion: "6 sesiones",
+    link: "https://example.com/saveforhome"
+  }
+];
+
+function cursosRender() {
+  const gate = document.getElementById("cursosGate");
+  const list = document.getElementById("cursosList");
+  if (!list) return;
+
+  const hasSession = !!(sb?.auth?.getSession);
+  if (gate) gate.textContent = hasSession
+    ? "🎯 Selecciona un curso y envía invitación."
+    : "Modo local: puedes ver cursos, pero para registrar asistencia/participación se requiere perfil.";
+
+  list.innerHTML = "";
+
+  CURSOS.forEach((c) => {
+    const card = document.createElement("div");
+    card.className = "jc-course";
+
+    card.innerHTML = `
+      <div class="jc-course-title"><strong>${safeText(c.titulo)}</strong></div>
+      <div class="muted small">${safeText(c.duracion)} · ${safeText(c.desc)}</div>
+
+      <div class="jc-row" style="gap:.5rem; flex-wrap:wrap; margin-top:10px">
+        <button class="btn small" type="button" data-act="invite">Invitar</button>
+        <a class="btn small ghost" href="${c.link}" target="_blank" rel="noreferrer">Abrir</a>
+      </div>
+    `;
+
+    card.querySelector('[data-act="invite"]')?.addEventListener("click", async () => {
+      const text = `🎓 Te invito al curso: ${c.titulo}\n${c.desc}\n👉 ${c.link}`;
+      try {
+        if (navigator.share) await navigator.share({ text });
+        else {
+          await navigator.clipboard.writeText(text);
+          alert("Invitación copiada ✅");
+        }
+        logAviso?.({ title: "Cursos", body: `Invitación lista: ${c.titulo}` });
+        miaSetEstado?.("apoyo");
+      } catch {
+        // si el usuario cancela share, no pasa nada
+      }
+    });
+
+    list.appendChild(card);
+  });
+}
+
+function initCursosView() {
+  cursosRender();
+  document.getElementById("btnCursosRefresh")?.addEventListener("click", cursosRender, { once: true });
+}
+
+/* =========================
+   NOTIFICACIONES (permiso)
+   ========================= */
+function updateNotiEstado() {
+  const elx = document.getElementById("notiEstado");
+  if (!elx) return;
+
+  const supported = ("Notification" in window);
+  if (!supported) { elx.textContent = "Tu navegador no soporta notificaciones."; return; }
+
+  elx.textContent = `Permiso: ${Notification.permission}`;
+}
+
+async function requestNotiPermission() {
+  if (!("Notification" in window)) return;
+  try {
+    const res = await Notification.requestPermission();
+    updateNotiEstado();
+    logAviso?.({ title: "Notificaciones", body: `Permiso: ${res}` });
+  } catch {}
+}
+
+function testNoti() {
+  if (!("Notification" in window)) return;
+  if (Notification.permission !== "granted") {
+    alert("Activa el permiso primero.");
+    return;
+  }
+  new Notification("Juventud CNC", { body: "Notificación de prueba ✅" });
+  logAviso?.({ title: "Notificaciones", body: "Prueba enviada ✅" });
+}
+
+function initNotificacionesView() {
+  updateNotiEstado();
+  document.getElementById("btnNotiRequest")?.addEventListener("click", requestNotiPermission, { once: false });
+  document.getElementById("btnNotiTest")?.addEventListener("click", testNoti, { once: false });
+}
+
 
   /* =========================
      BOOT
@@ -2289,6 +2476,8 @@ async function catefaCrearNino() {
     if (!tRaw) return;
     const t = normalizeTab(tRaw);
     if (t === "judart") judart?.onTab?.("judart");
+    if (t === "cursos") initCursosView();
+    if (t === "notificaciones") initNotificacionesView();
 
 
     if (t === "inicio") {

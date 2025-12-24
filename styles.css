@@ -1977,3 +1977,56 @@ button.btn.ghost {
     border-radius: 16px;
   }
 }
+/* =========================
+   Drawer links uniformes
+   ========================= */
+.drawer-link{
+  width:100%;
+  text-align:left;
+  background:transparent;
+  border:0;
+  padding:.8rem .75rem;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  color:inherit;
+  font:inherit;
+}
+.drawer-link:active{ transform:scale(.99); }
+
+/* =========================
+   Cursos
+   ========================= */
+.jc-course{
+  background: rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;
+  padding:12px;
+}
+.jc-course-title{ margin-bottom:6px; }
+
+/* =========================
+   Pausa 30s
+   ========================= */
+.pause-wrap{ text-align:center; }
+.pause-timer{
+  font-size:56px;
+  line-height:1;
+  font-weight:800;
+  margin-top:4px;
+}
+.pause-text{
+  margin-top:10px;
+  font-size:16px;
+}
+
+/* =========================
+   Mobile safety: no overflow raro
+   ========================= */
+@media (max-width: 480px){
+  .drawer{ width:min(92vw, 360px); }
+  .jc-modal-card{ width:min(94vw, 520px); }
+  .grid{ grid-template-columns: 1fr !important; }
+}
+

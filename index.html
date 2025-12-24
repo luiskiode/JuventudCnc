@@ -36,21 +36,24 @@
       <button id="closeDrawer" class="icon-btn" type="button" aria-label="Cerrar menú">✕</button>
     </div>
 
-    <nav class="drawer-nav" aria-label="Secciones">
-      <a href="#inicio" data-tab="inicio">🏠 Inicio</a>
-      <a href="#eventos" data-tab="eventos">📅 Eventos</a>
-      <a href="#comunidad" data-tab="comunidad">👥 Comunidad</a>
-      <button type="button" data-tab="box" class="drawer-link">📦 Box</button>
-      <hr />
+   <nav class="drawer-nav" aria-label="Secciones">
 
-      <a href="#perfil" data-tab="perfil">👤 Mi perfil</a>
-      <a href="#judart" data-tab="judart">🎨 Judart</a>
-      <a href="#recursos" data-tab="recursos">📂 Recursos</a>
+  <!-- ACCIONES (NO duplicar con tabs de abajo) -->
+  <button type="button" data-tab="cursos" class="drawer-link">🎓 Mis cursos</button>
 
-      <hr />
+  <!-- Pausa: no cambia de vista, abre modal -->
+  <button type="button" id="btnPause30" class="drawer-link">⏱️ Pausa 30 segundos</button>
 
-      <a href="#miembros-activos" data-tab="miembros-activos">⭐ Miembros</a>
-    </nav>
+  <button type="button" data-tab="box" class="drawer-link">📦 Box</button>
+  <button type="button" data-tab="miembros-activos" class="drawer-link">⭐ Miembros</button>
+  <button type="button" data-tab="notificaciones" class="drawer-link">🔔 Notificaciones</button>
+
+  <hr />
+
+  <!-- PERFIL (opcional pero recomendado) -->
+  <button type="button" data-tab="perfil" class="drawer-link">👤 Mi perfil</button>
+
+</nav>
 
     <footer class="drawer-footer">
       v1.0 · Juventud CNC 💙💗
@@ -343,6 +346,48 @@
     </section>
 
       </main>
+      
+
+      <section class="view" data-view="cursos" aria-label="Mis cursos">
+  <section class="card">
+    <header class="card-header">
+      <div>
+        <h2 class="with-emoji" data-emoji="🎓">Mis cursos</h2>
+        <p class="muted small">Invitaciones, talleres y material para jóvenes (HeForShe, Save for Home, etc.).</p>
+      </div>
+      <button id="btnCursosRefresh" class="btn small ghost" type="button">Actualizar</button>
+    </header>
+
+    <div id="cursosGate" class="muted small">Cargando…</div>
+
+    <div id="cursosList" class="grid" style="margin-top:12px"></div>
+  </section>
+</section>
+
+<section class="view" data-view="notificaciones" aria-label="Notificaciones">
+  <section class="card">
+    <header class="card-header">
+      <div>
+        <h2 class="with-emoji" data-emoji="🔔">Notificaciones</h2>
+        <p class="muted small">Estado del permiso + registro de avisos del sistema.</p>
+      </div>
+    </header>
+
+    <div class="jc-card-mini" style="margin-top:10px">
+      <div class="jc-row" style="gap:.5rem; flex-wrap:wrap">
+        <button id="btnNotiRequest" class="btn small" type="button">Activar notificaciones</button>
+        <button id="btnNotiTest" class="btn small ghost" type="button">Probar</button>
+        <span id="notiEstado" class="muted small"></span>
+      </div>
+    </div>
+
+    <div class="jc-card-mini" style="margin-top:10px">
+      <h4>📌 Registro</h4>
+      <ul id="avisosList" class="notice-list"></ul>
+      <p class="muted small" style="margin-top:8px">Tip: aquí también caerán logs de acciones (paleta, recursos, cursos, etc.).</p>
+    </div>
+  </section>
+</section>
 
       <!-- RECURSOS (CATEFA) -->
 <section class="view" data-view="recursos" aria-label="Recursos">
@@ -631,6 +676,35 @@
       </div>
     </div>
   </div>
+
+
+  <div id="pauseModal" class="jc-modal" style="display:none">
+  <div class="jc-modal-card" role="dialog" aria-modal="true" aria-label="Pausa de 30 segundos">
+    <header class="jc-modal-header">
+      <div>
+        <h3>⏱️ Pausa (30s)</h3>
+        <p class="muted small" id="pauseHint">Respira… y vuelve con calma.</p>
+      </div>
+      <button id="pauseClose" class="icon-btn" type="button">✕</button>
+    </header>
+
+    <div class="jc-modal-body">
+      <div class="pause-wrap">
+        <div id="pauseTimer" class="pause-timer">30</div>
+        <div id="pauseText" class="pause-text">Inhala… exhala…</div>
+
+        <div class="jc-row" style="gap:.5rem; flex-wrap:wrap; margin-top:12px">
+          <button id="pauseStart" class="btn" type="button">Iniciar</button>
+          <button id="pauseStop" class="btn ghost" type="button">Detener</button>
+        </div>
+
+        <div class="muted small" style="margin-top:10px">
+          Sugerencia: “Jesús, confío en Ti” / “Señor, aquí estoy”.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body> 
 </html>
