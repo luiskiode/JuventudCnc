@@ -1,14 +1,31 @@
 // js/bots.js
 // Juventud CNC - Bots / Chat controller
 // Objetivo: encender/apagar el chat (#jcChat), moverlo al mount (#boxChatMount) cuando tab="box",
-// y evitar errores si JC/DOM aún no están listos.
+// y NO depender de eventos "ui:view" (porque tu router actual usa activate()).
 
 (function () {
   "use strict";
 
-  // ---------- Utils ----------
-  function safeGetJC() {
-    return window.JC && typeof window.JC === "object" ? window.JC : null;
+  const JC = (window.JC = window.JC || {});
+  JC.state = JC.state || {};
+
+  // ---------- helpers mínimos ----------
+  const $ = (JC.$ =
+    JC.$ ||
+    function (sel, root) {
+      return (root || document).querySelector(sel);
+    });
+
+  // Event bus unificado (usa JC:evt como en profile/community/events)
+  if (typeof JC.on !== "function") {
+    JC.on = function (evt, cb) {
+      document.addEventListener(`JC:${evt}`, (e) => cb(e.detail), false);
+    };
+  }
+  if (typeof JC.emit !== "function") {
+    JC.emit = function (evt, detail) {
+      document.dispatchEvent(new CustomEvent(`JC:${evt}`, { detail }));
+    };
   }
 
   function domReady(cb) {
@@ -17,23 +34,7 @@
     } else cb();
   }
 
-  function ensureHelpers(JC) {
-    // Si tu core ya trae JC.$/JC.on/JC.emit, esto no hace nada.
-    // Si no existen, crea versiones seguras para evitar crasheos.
-    if (typeof JC.$ !== "function") {
-      JC.$ = (sel, root) => (root || document).querySelector(sel);
-    }
-    if (typeof JC.on !== "function") {
-      // Fallback a eventos DOM custom sobre window
-      JC.on = (name, fn) => window.addEventListener(name, fn);
-    }
-    if (typeof JC.emit !== "function") {
-      JC.emit = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }));
-    }
-    if (!JC.state || typeof JC.state !== "object") JC.state = {};
-  }
-
-  // Persistencia opcional del estado bots (no rompe si no quieres usarlo)
+  // Persistencia opcional
   const STORAGE_KEY = "jc_botsEnabled";
 
   function loadPersistedEnabled() {
@@ -50,137 +51,178 @@
   function savePersistedEnabled(enabled) {
     try {
       localStorage.setItem(STORAGE_KEY, enabled ? "1" : "0");
-    } catch {
-      /* ignore */
-    }
+    } catch {}
   }
 
-  // ---------- Core behavior ----------
-  function getChatEl(JC) {
-    return JC.$("#jcChat");
+  // ---------- DOM refs ----------
+  function getChatEl() {
+    return $("#jcChat");
+  }
+  function getToggleBtn() {
+    return $("#btnBots");
+  }
+  function getBoxMount() {
+    return $("#boxChatMount");
+  }
+  function getCollapseBtn() {
+    return $("#jcChatToggle");
+  }
+  function getChatBody() {
+    return $("#jcChatBody");
   }
 
-  function getToggleBtn(JC) {
-    return JC.$("#btnBots");
-  }
+  // ---------- Estado interno ----------
+  const st = {
+    bound: false,
+    mountedInBox: false,
+    collapsed: false
+  };
 
-  function getBoxMount(JC) {
-    return JC.$("#boxChatMount");
-  }
-
-  function applyChatVisibility(JC) {
-    const chat = getChatEl(JC);
+  // ---------- behavior ----------
+  function applyChatVisibility() {
+    const chat = getChatEl();
     if (!chat) return;
 
-    // Bloque/none, pero respetando si alguien ya usa flex
-    // (si necesitas flex, cambia "block" por "flex").
     chat.style.display = JC.state.botsEnabled ? "block" : "none";
-
-    // Accesibilidad / estado
     chat.setAttribute("aria-hidden", JC.state.botsEnabled ? "false" : "true");
 
-    const btn = getToggleBtn(JC);
+    const btn = getToggleBtn();
     if (btn) {
       btn.setAttribute("aria-pressed", JC.state.botsEnabled ? "true" : "false");
-      // Si usas un ícono/texto dentro del botón, puedes actualizarlo aquí
-      // btn.textContent = JC.state.botsEnabled ? "Bots: ON" : "Bots: OFF";
+      // feedback visual mínimo
+      btn.classList.toggle("is-on", !!JC.state.botsEnabled);
     }
   }
 
-  function placeChatForTab(JC, tab) {
-    const chatEl = getChatEl(JC);
+  function placeChatForTab(tab) {
+    const chatEl = getChatEl();
     if (!chatEl) return;
 
-    // Si no hay mount, siempre lo mandamos al body
-    const mount = getBoxMount(JC);
+    const mount = getBoxMount();
     if (tab === "box" && mount) {
       if (chatEl.parentElement !== mount) mount.appendChild(chatEl);
+      st.mountedInBox = true;
     } else {
       if (chatEl.parentElement !== document.body) document.body.appendChild(chatEl);
+      st.mountedInBox = false;
     }
   }
 
-  function toggleBots(JC) {
+  function toggleBots() {
     JC.state.botsEnabled = !JC.state.botsEnabled;
     savePersistedEnabled(JC.state.botsEnabled);
-    applyChatVisibility(JC);
+    applyChatVisibility();
     JC.emit("bots:toggled", { enabled: JC.state.botsEnabled });
   }
 
-  // ---------- Public init ----------
-  function init() {
-    const JC = safeGetJC();
-    if (!JC) {
-      // Si se carga antes de JC, reintenta una vez cuando DOM esté listo
-      domReady(() => {
-        const JC2 = safeGetJC();
-        if (!JC2) return;
-        ensureHelpers(JC2);
-        initWithJC(JC2);
-      });
-      return;
-    }
+  // Collapsable mini chat (si existe el botón)
+  function setCollapsed(collapsed) {
+    const chat = getChatEl();
+    const body = getChatBody();
+    if (!chat || !body) return;
 
-    ensureHelpers(JC);
-    initWithJC(JC);
+    st.collapsed = !!collapsed;
+    body.style.display = st.collapsed ? "none" : "";
+    const btn = getCollapseBtn();
+    if (btn) btn.textContent = st.collapsed ? "⌃" : "⌄";
   }
 
-  function initWithJC(JC) {
-    // Evita doble init
-    if (JC.bots && JC.bots.__inited) return;
+  function bindUIOnce() {
+    if (st.bound) return;
+    st.bound = true;
 
+    const btn = getToggleBtn();
+    if (btn && !btn.__jcBotsBound) {
+      btn.__jcBotsBound = true;
+      btn.addEventListener("click", toggleBots);
+    }
+
+    const collapseBtn = getCollapseBtn();
+    if (collapseBtn && !collapseBtn.__jcCollapseBound) {
+      collapseBtn.__jcCollapseBound = true;
+      collapseBtn.addEventListener("click", () => setCollapsed(!st.collapsed));
+    }
+
+    // MUY IMPORTANTE:
+    // Tu router (main.js) usa activate() y NO está emitiendo "ui:view".
+    // Aquí nos enganchamos a "tab:changed" (si lo emites) y además a hashchange.
+    JC.on("tab:changed", (d) => {
+      const tab = d?.tab;
+      if (tab) {
+        JC.state.activeTab = tab;
+        placeChatForTab(tab);
+        applyChatVisibility();
+      }
+    });
+
+    window.addEventListener("hashchange", () => {
+      const tab = (location.hash || "#inicio").replace("#", "").trim();
+      JC.state.activeTab = tab || "inicio";
+      placeChatForTab(JC.state.activeTab);
+      applyChatVisibility();
+    });
+  }
+
+  // API para que main.js pueda montar el chat grande cuando entra a Box
+  function mountBox() {
+    placeChatForTab("box");
+    applyChatVisibility();
+  }
+
+  // Inicializa chat con contenido mínimo para que “se vea algo” (sin chat real aún)
+  function ensureWelcomeLine() {
+    const body = getChatBody();
+    if (!body) return;
+    if (body.__jcSeeded) return;
+    body.__jcSeeded = true;
+
+    const div = document.createElement("div");
+    div.className = "jc-chat-line";
+    div.innerHTML = `<div class="muted small">🤖 Bots listos. Usa el botón 🤖 para mostrar/ocultar.</div>`;
+    body.appendChild(div);
+  }
+
+  function init() {
     // Estado inicial
     const persisted = loadPersistedEnabled();
     if (typeof persisted === "boolean") JC.state.botsEnabled = persisted;
     else if (typeof JC.state.botsEnabled !== "boolean") JC.state.botsEnabled = false;
 
-    // Set inicial de visibilidad (por defecto oculto)
-    applyChatVisibility(JC);
+    // Bind UI + seed
+    bindUIOnce();
+    ensureWelcomeLine();
 
-    // Bind botón toggle
-    const btn = getToggleBtn(JC);
-    if (btn && !btn.__jcBotsBound) {
-      btn.__jcBotsBound = true;
-      btn.addEventListener("click", () => toggleBots(JC));
-    }
+    // Ubicación inicial según hash
+    const tab = (location.hash || "#inicio").replace("#", "").trim() || "inicio";
+    JC.state.activeTab = tab;
+    placeChatForTab(tab);
 
-    // Al cambiar de vista, mover el chat si estás en "box"
-    // Nota: tu core emite "ui:view" con detail.tab
-    JC.on("ui:view", (ev) => {
-      const detail = ev?.detail || {};
-      const tab = detail.tab;
-      placeChatForTab(JC, tab);
-      // Importante: al moverlo, no pierdas el estado de visible/oculto
-      applyChatVisibility(JC);
-    });
+    // Visibilidad inicial
+    applyChatVisibility();
+    setCollapsed(false);
 
-    // Si el chat ya existía en el DOM y la vista inicial es "box", puedes forzarlo:
-    // Si tu app emite ui:view al inicio, esto no hace falta.
-    // Aquí solo lo dejamos estable:
-    placeChatForTab(JC, JC.state.activeTab || null);
-
-    // Exponer API pública
-    JC.bots = {
-      __inited: true,
-      init,
-      toggle: () => toggleBots(JC),
-      show: () => {
-        JC.state.botsEnabled = true;
-        savePersistedEnabled(true);
-        applyChatVisibility(JC);
-        JC.emit("bots:toggled", { enabled: true });
-      },
-      hide: () => {
-        JC.state.botsEnabled = false;
-        savePersistedEnabled(false);
-        applyChatVisibility(JC);
-        JC.emit("bots:toggled", { enabled: false });
-      },
-      placeForTab: (tab) => placeChatForTab(JC, tab),
-      refresh: () => applyChatVisibility(JC)
+    // Exponer API pública (sin pisarte si ya existe)
+    JC.bots = JC.bots || {};
+    JC.bots.__inited = true;
+    JC.bots.init = init;
+    JC.bots.toggle = toggleBots;
+    JC.bots.show = () => {
+      JC.state.botsEnabled = true;
+      savePersistedEnabled(true);
+      applyChatVisibility();
+      JC.emit("bots:toggled", { enabled: true });
     };
+    JC.bots.hide = () => {
+      JC.state.botsEnabled = false;
+      savePersistedEnabled(false);
+      applyChatVisibility();
+      JC.emit("bots:toggled", { enabled: false });
+    };
+    JC.bots.placeForTab = placeChatForTab;
+    JC.bots.refresh = applyChatVisibility;
+    JC.bots.mountBox = mountBox;
+    JC.bots.setCollapsed = setCollapsed;
   }
 
-  // Auto-init cuando el DOM esté listo
   domReady(init);
 })();
