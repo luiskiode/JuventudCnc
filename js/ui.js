@@ -576,19 +576,13 @@
   }
   window.initNotificacionesView = initNotificacionesView;
 
-  // ============================================================
-  // INIT UI
-  // ============================================================
-  function init() {
+   // ---- INIT UI
+  function initUI() {
     initDrawer();
     restoreTokensOnLoad();
-
-    // Fondo: carga lo guardado y luego engancha UI
     jcLoadGlobalBackground();
-
     initPause30();
 
-    // Reintentos de bind del fondo por si el DOM tarda
     (function bindBgWithRetries() {
       if (jcBindGlobalBackgroundUI()) return;
       document.addEventListener("DOMContentLoaded", () => jcBindGlobalBackgroundUI(), { once: true });
@@ -598,10 +592,12 @@
     })();
   }
 
-  // Exporta en JC.ui para que main.js lo llame
-  JC.ui = JC.ui || {};
-  JC.ui.init = init;
-
-  // Mantén compatibilidad con nombres antiguos si algo los usa
-  window.jcUI = { state, syncOverlay, initUI: init };
+  // ✅ EXPORTS CORRECTOS (para que main.js lo encuentre)
+  window.jcUI = { state, syncOverlay, initUI };
+  window.JC = window.JC || {};
+  window.JC.ui = {
+    init: initUI,
+    state,
+    syncOverlay
+  };
 })();

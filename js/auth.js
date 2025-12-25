@@ -194,4 +194,14 @@
   JC.auth.isLoggedIn = function () {
     return !!window.currentUser;
   };
+
+
+  // ✅ Export para main.js
+  window.JC = window.JC || {};
+  window.JC.auth = {
+    init: async () => {
+      // intenta tener sesión anon si está disponible
+      try { await window.jcEnsureAnonSession?.(); } catch {}
+    }
+  };
 })();
