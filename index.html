@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="description" content="Juventud CNC — Un espacio para crecer, servir y caminar juntos." />
   <title>Juventud CNC</title>
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b1020" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
 
   <!-- Build -->
   <script>
@@ -23,11 +26,25 @@
   <!-- Config (SIN defer, debe correr después del SDK) -->
   <script src="supabase-config.js"></script>
 
-  <!-- App (defer OK) -->
-  <script src="app.js?v=2025-12-20.02" defer></script>
+  <!-- App modules (DEFER para no bloquear y asegurar DOM listo) -->
+  <script defer src="js/config.js?v=2025-12-24"></script>
+  <script defer src="js/ui.js?v=2025-12-24"></script>
+  <script defer src="js/auth.js?v=2025-12-24"></script>
+  <script defer src="js/bots.js?v=2025-12-24"></script>
+  <script defer src="js/events.js?v=2025-12-24"></script>
+  <script defer src="js/profile.js?v=2025-12-24"></script>
+  <script defer src="js/community.js?v=2025-12-24"></script>
+  <script defer src="js/resources.js?v=2025-12-24"></script>
+  <script defer src="js/main.js?v=2025-12-24"></script>
 </head>
 
 <body class="app-shell">
+
+  <noscript>
+    <div style="padding:12px; margin:12px; border-radius:12px; background:#111827; color:#fff;">
+      ⚠️ Esta app necesita JavaScript para funcionar.
+    </div>
+  </noscript>
 
   <!-- OVERLAY GLOBAL -->
   <div id="overlay" class="overlay" aria-hidden="true"></div>
@@ -115,7 +132,8 @@
       <section class="card" aria-label="Eventos próximos">
         <div class="card-header">
           <h3 class="with-emoji" data-emoji="📅">Próximos eventos</h3>
-          <a href="#eventos" data-tab="eventos" class="link">Ver todos</a>
+          <!-- Cambiado a button para evitar saltos por hash -->
+          <button type="button" data-tab="eventos" class="link" aria-label="Ver todos los eventos">Ver todos</button>
         </div>
         <ul id="eventListHome" class="event-list"></ul>
       </section>
@@ -131,7 +149,7 @@
           <button id="btnBgPick" type="button">Elegir fondo</button>
           <button id="btnBgClear" type="button">Quitar fondo</button>
           <input id="bgPickerInput" type="file" accept="image/*" hidden />
-          <small id="bgPickEstado"></small>
+          <small id="bgPickEstado" aria-live="polite"></small>
         </div>
       </div>
 
@@ -303,7 +321,7 @@
               <button id="btnComuClear" class="btn ghost" type="button">Limpiar</button>
             </div>
 
-            <p id="comuEstado" class="small muted" style="margin:0"></p>
+            <p id="comuEstado" class="small muted" style="margin:0" aria-live="polite"></p>
           </form>
         </div>
 
@@ -339,7 +357,7 @@
                   <button class="btn" type="submit">Comentar</button>
                   <button id="btnComuCommentClear" class="btn ghost" type="button">Limpiar</button>
                 </div>
-                <p id="comuCommentEstado" class="small muted" style="margin:0"></p>
+                <p id="comuCommentEstado" class="small muted" style="margin:0" aria-live="polite"></p>
               </form>
             </div>
 
@@ -365,9 +383,25 @@
 
         <div class="jc-row" style="margin-top:.75rem; gap:.5rem; flex-wrap:wrap;">
           <button class="btn small" type="button" id="btnCatefaRefresh">🔄 Actualizar</button>
+
+          <!-- Botones (JS puede abrir estos links) -->
           <button class="btn small" type="button" id="btnVaticano">🌍 Vaticano</button>
           <button class="btn small" type="button" id="btnBiblia">📖 Biblia Online</button>
-          <span id="catefaEstado" class="muted small" style="margin-left:auto;"></span>
+
+          <!-- Fallback accesible por si JS falla -->
+          <a id="linkVaticano"
+             href="https://www.vatican.va/content/vatican/es.html"
+             target="_blank" rel="noopener noreferrer"
+             class="link"
+             style="display:none">Abrir Vaticano</a>
+
+          <a id="linkBiblia"
+             href="https://es.jesus.net/biblia/salmo-23?gad_source=1&gad_campaignid=22037241986&gbraid=0AAAAAo9sgALt2dICRTY7UBIEnOuLX4rgD&gclid=CjwKCAiA3rPKBhBZEiwAhPNFQFVqLZ8BJr1VNGmQ4zNdEwYwTxM_EQFkFLu8jj0iI9UctfSBU8Kk6BoCtvcQAvD_BwE"
+             target="_blank" rel="noopener noreferrer"
+             class="link"
+             style="display:none">Abrir Biblia</a>
+
+          <span id="catefaEstado" class="muted small" style="margin-left:auto;" aria-live="polite"></span>
         </div>
       </div>
 
@@ -501,7 +535,6 @@
               </select>
 
               <input id="judUrl" placeholder="https://..." style="display:none" />
-
               <input id="judFile" type="file" accept="image/*" />
 
               <div style="display:flex; gap:10px; flex-wrap:wrap">
@@ -509,7 +542,7 @@
                 <button id="judClear" class="btn ghost" type="button">Limpiar</button>
               </div>
 
-              <p id="judEstado" class="small muted" style="margin:0"></p>
+              <p id="judEstado" class="small muted" style="margin:0" aria-live="polite"></p>
             </form>
           </div>
         </div>
@@ -587,7 +620,7 @@
           <div class="jc-row" style="gap:.5rem; flex-wrap:wrap">
             <button id="btnNotiRequest" class="btn small" type="button">Activar notificaciones</button>
             <button id="btnNotiTest" class="btn small ghost" type="button">Probar</button>
-            <span id="notiEstado" class="muted small"></span>
+            <span id="notiEstado" class="muted small" aria-live="polite"></span>
           </div>
         </div>
 
@@ -649,7 +682,7 @@
             <input id="perfilNombreInput" placeholder="Tu nombre" />
             <input id="perfilRolInput" placeholder="Rol (ej: miembro, animador)" />
             <button class="btn small" type="submit">Guardar</button>
-            <p id="perfilEstado" class="small muted" style="margin:0"></p>
+            <p id="perfilEstado" class="small muted" style="margin:0" aria-live="polite"></p>
           </form>
         </div>
 
@@ -734,9 +767,9 @@
 
       <div class="jc-modal-body">
         <form id="loginForm" class="grid perfil-form" aria-label="Formulario login">
-          <input id="loginEmail" type="email" placeholder="tu-correo@gmail.com" required />
+          <input id="loginEmail" type="email" inputmode="email" autocomplete="email" placeholder="tu-correo@gmail.com" required />
           <button class="btn" type="submit">Enviar enlace</button>
-          <p id="loginEstado" class="small muted" style="margin:0"></p>
+          <p id="loginEstado" class="small muted" style="margin:0" aria-live="polite"></p>
         </form>
 
         <div class="muted small" style="margin-top:10px">
