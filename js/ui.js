@@ -1,15 +1,16 @@
 /* ============================================================
    ui.js — drawer/overlay + tema + fondo global + pausa + cursos + notis
    (robusto: no revienta si faltan helpers / IDs / módulos)
+   Compatible con tu index (IDs reales) + AngieHerramientas (postMessage)
    ============================================================ */
 
 (function () {
   "use strict";
 
-  // Asegura namespace global
+  // ============================================================
+  // Namespace + Helpers
+  // ============================================================
   const JC = (window.JC = window.JC || {});
-
-  // Helpers locales (no dependas de que estén definidos en otro archivo)
   const $ = JC.$ || ((sel, root = document) => root.querySelector(sel));
   const $$ = JC.$$ || ((sel, root = document) => Array.from(root.querySelectorAll(sel)));
 
@@ -21,7 +22,7 @@
     }
   }
 
-  // Escape de texto para innerHTML (cuando no puedes usar textContent)
+  // Escape seguro si por alguna razón usan innerHTML
   JC.safeText =
     JC.safeText ||
     function (v) {
@@ -33,7 +34,7 @@
         .replaceAll("'", "&#039;");
     };
 
-  // LocalStorage seguro (evita crashes en Safari/privado/cuotas)
+  // LocalStorage seguro (Safari / privado / quota)
   function lsGet(key, fallback = "") {
     try {
       const v = localStorage.getItem(key);
@@ -60,8 +61,9 @@
     }
   }
 
-  const JC_BG_KEY = "jc_bg_main_dataurl";
-
+  // ============================================================
+  // State UI global
+  // ============================================================
   const state = (JC.uiState = JC.uiState || {
     drawerOpen: false,
     angieOpen: false,
@@ -105,49 +107,70 @@
     $("#openDrawer")?.addEventListener("click", openDrawer);
     $("#closeDrawer")?.addEventListener("click", closeDrawer);
 
-    // overlay click cierra drawer + modales globales si existen
+    // Overlay: cierra drawer y modales globales (no pausa)
     $("#overlay")?.addEventListener("click", () => {
       closeDrawer();
       window.jcCloseAngieModal?.();
       window.jcCloseLoginModal?.();
-      // NO cerramos pausa aquí; se cierra con su propio handler (click fuera)
+      // pausa no se cierra aquí a propósito (se cierra con click fuera del modal)
     });
 
-    // opcional: ESC cierra drawer/modales
+    // ESC cierra drawer + login + angie
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       closeDrawer();
       window.jcCloseAngieModal?.();
       window.jcCloseLoginModal?.();
     });
+
+    // Click en links del drawer (data-tab) — activa vista si existe activate()
+    $$("#drawer [data-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tab = btn.getAttribute("data-tab");
+        closeDrawer();
+        // Si main.js exporta activate(tab)
+        window.activate?.(tab);
+      });
+    });
   }
 
   // ============================================================
-  // Theme tokens
+  // Theme tokens + presets
   // ============================================================
   function jcApplyTokens(tokens) {
     if (!tokens) return;
     const root = document.documentElement;
 
+    // Mapa base + soporte para IDs del AngieHerramientas
     const map = {
       brand: "--brand",
       brand2: "--brand-2",
       "brand-2": "--brand-2",
       accent: "--accent",
-      neutral900: "--neutral-900",
+
       "neutral-900": "--neutral-900",
-      neutral800: "--neutral-800",
       "neutral-800": "--neutral-800",
-      neutral700: "--neutral-700",
       "neutral-700": "--neutral-700",
-      neutral600: "--neutral-600",
       "neutral-600": "--neutral-600",
-      neutral400: "--neutral-400",
       "neutral-400": "--neutral-400",
-      neutral200: "--neutral-200",
       "neutral-200": "--neutral-200",
-      neutral100: "--neutral-100",
-      "neutral-100": "--neutral-100"
+      "neutral-100": "--neutral-100",
+
+      // UI
+      "topbar-bg": "--topbar-bg",
+      "tabs-bg": "--tabs-bg",
+      "drawer-bg": "--drawer-bg",
+      "overlay-bg": "--overlay-bg",
+      "icon-glow": "--icon-glow",
+
+      // Fondo animado (si tu CSS los usa)
+      "bg-a": "--bg-a",
+      "bg-b": "--bg-b",
+      "bg-c": "--bg-c",
+      "bg-base-1": "--bg-base-1",
+      "bg-base-2": "--bg-base-2",
+      "veil-a": "--veil-a",
+      "veil-b": "--veil-b"
     };
 
     for (const [k, v] of Object.entries(tokens)) {
@@ -159,15 +182,15 @@
 
   function applyThemePreset(mode = "auto") {
     const presets = {
-      chicos: { brand: "#38bdf8", brand2: "#0ea5e9", "brand-2": "#0ea5e9", accent: "#60a5fa" },
-      chicas: { brand: "#f472b6", brand2: "#ec4899", "brand-2": "#ec4899", accent: "#fb7185" },
-      mix: { brand: "#2563eb", brand2: "#1d4ed8", "brand-2": "#1d4ed8", accent: "#ec4899" },
+      chicos: { brand: "#38bdf8", "brand-2": "#0ea5e9", accent: "#60a5fa" },
+      chicas: { brand: "#f472b6", "brand-2": "#ec4899", accent: "#fb7185" },
+      mix: { brand: "#2563eb", "brand-2": "#1d4ed8", accent: "#ec4899" },
       auto: null
     };
 
     const p = presets[mode] ?? null;
 
-    // auto: no pisa tokens; solo deja lo guardado
+    // auto: no pisa tokens; solo aplica lo guardado
     const current = safeParse(lsGet("jc_tokens", "")) || {};
     const merged = p ? { ...current, ...p } : current;
 
@@ -187,12 +210,51 @@
       const m = themePicker.value || "auto";
       lsSet("jc_theme_mode", m);
       applyThemePreset(m);
+      window.logAviso?.({ title: "Tema", body: `Tema aplicado: ${m}` });
     });
   }
 
   // ============================================================
-  // Fondo global
+  // AngieHerramientas (postMessage) — aplica tokens y estados
   // ============================================================
+  function initAngieToolMessaging() {
+    window.addEventListener("message", (event) => {
+      const data = event?.data || {};
+      if (!data || typeof data !== "object") return;
+
+      // 1) Tokens
+      if (data.type === "applyTokens" && data.tokens) {
+        try {
+          const tokens = data.tokens || {};
+          // Guardamos + aplicamos
+          lsSet("jc_tokens", JSON.stringify(tokens));
+          jcApplyTokens(tokens);
+          window.logAviso?.({ title: "Angie", body: "Paleta aplicada 🎨" });
+        } catch (e) {
+          console.warn("[JC] applyTokens message error", e);
+        }
+      }
+
+      // 2) Estado Angie
+      if (data.type === "angieEstado") {
+        const estado = data.estado || data.value;
+        if (estado) {
+          try {
+            window.angieSetEstado?.(estado);
+            window.logAviso?.({ title: "Angie", body: `Estado: ${estado}` });
+          } catch (e) {
+            console.warn("[JC] angieEstado message error", e);
+          }
+        }
+      }
+    });
+  }
+
+  // ============================================================
+  // Fondo global (Box)
+  // ============================================================
+  const JC_BG_KEY = "jc_bg_main_dataurl";
+
   function jcApplyGlobalBackground(dataUrl) {
     try {
       if (dataUrl) {
@@ -213,11 +275,9 @@
   }
 
   function jcSaveGlobalBackground(dataUrl) {
-    // Guardar primero (puede fallar por quota)
     if (dataUrl) {
       const ok = lsSet(JC_BG_KEY, dataUrl);
       if (!ok) {
-        // Si no entra, limpiamos para evitar estados corruptos
         lsRemove(JC_BG_KEY);
         jcApplyGlobalBackground("");
         throw new Error("No se pudo guardar el fondo (memoria llena). Usa una imagen más liviana.");
@@ -225,7 +285,6 @@
     } else {
       lsRemove(JC_BG_KEY);
     }
-
     jcApplyGlobalBackground(dataUrl || "");
   }
 
@@ -234,7 +293,6 @@
       if (!file || !file.type?.startsWith("image/")) return reject(new Error("Archivo no es imagen"));
 
       const fr = new FileReader();
-
       fr.onload = () => {
         const src = String(fr.result || "");
         const img = new Image();
@@ -289,39 +347,11 @@
   function jcBindGlobalBackgroundUI() {
     if (__jcBgBound) return true;
 
-    // ✅ IDs reales según tu index
-    const input =
-      document.getElementById("bgPickerInput") ||
-      document.getElementById("bgInput") ||
-      document.getElementById("jcBgInput") ||
-      document.getElementById("bgFile") ||
-      document.getElementById("inputPickBg") ||
-      document.querySelector('input[type="file"][data-jc-bg]') ||
-      document.querySelector('input[type="file"]#boxBgInput') ||
-      null;
-
-    const btnPick =
-      document.getElementById("btnBgPick") ||
-      document.getElementById("btnPickBg") ||
-      document.getElementById("btnBg") ||
-      document.getElementById("btnPickBackground") ||
-      document.querySelector('[data-act="pick-bg"]') ||
-      document.querySelector("button#pickBgBtn") ||
-      null;
-
-    const btnClear =
-      document.getElementById("btnBgClear") ||
-      document.getElementById("btnClearBg") ||
-      document.querySelector('[data-act="clear-bg"]') ||
-      null;
-
-    const estado =
-      document.getElementById("bgPickEstado") || // ✅ tu index
-      document.getElementById("bgEstado") ||
-      document.getElementById("bgStatus") ||
-      document.getElementById("jcBgStatus") ||
-      document.querySelector("[data-bg-status]") ||
-      null;
+    // IDs reales en tu index
+    const input = document.getElementById("bgPickerInput") || null;
+    const btnPick = document.getElementById("btnBgPick") || null;
+    const btnClear = document.getElementById("btnBgClear") || null;
+    const estado = document.getElementById("bgPickEstado") || null;
 
     if (!input || !btnPick) return false;
 
@@ -393,9 +423,7 @@
       if (pauseTimer) pauseTimer.textContent = String(pauseLeft);
       if (pauseText) pauseText.textContent = "Inhala… exhala…";
 
-      // Cierra drawer y otros modales
-      state.loginOpen = false;
-      state.drawerOpen = false;
+      // cierra drawer
       closeDrawer();
 
       state.pauseOpen = true;
@@ -438,7 +466,7 @@
           pauseT = null;
           if (pauseText) pauseText.textContent = "Listo ✅ vuelve con calma.";
           window.logAviso?.({ title: "Pausa", body: "30s completados 🕊️" });
-          window.angieSetEstado?.("ok");
+          window.angieSetEstado?.("feliz");
         }
       }, 1000);
     }
@@ -457,12 +485,11 @@
     pauseStart?.addEventListener("click", startPause);
     pauseStop?.addEventListener("click", stopPause);
 
-    // expone por si alguien más quiere cerrarlo
     window.jcClosePauseModal = closePauseModal;
   }
 
   // ============================================================
-  // Cursos + Notis
+  // Cursos (demo local) + Notificaciones
   // ============================================================
   const CURSOS = [
     {
@@ -487,7 +514,6 @@
     const list = document.getElementById("cursosList");
     if (!list) return;
 
-    // Señal más realista (si auth.js expone session)
     const hasSession =
       typeof JC.auth?.isLoggedIn === "function"
         ? !!JC.auth.isLoggedIn()
@@ -496,7 +522,7 @@
     if (gate) {
       gate.textContent = hasSession
         ? "🎯 Selecciona un curso y envía invitación."
-        : "Modo local: puedes ver cursos, pero para registrar asistencia/participación se requiere perfil.";
+        : "Modo local: puedes ver cursos, pero para registrar participación se requiere perfil.";
     }
 
     list.innerHTML = "";
@@ -511,6 +537,7 @@
           <a class="btn small ghost" href="${c.link}" target="_blank" rel="noreferrer">Abrir</a>
         </div>
       `;
+
       card.querySelector('[data-act="invite"]')?.addEventListener("click", async () => {
         const text = `🎓 Te invito al curso: ${c.titulo}\n${c.desc}\n👉 ${c.link}`;
         try {
@@ -523,13 +550,13 @@
           window.miaSetEstado?.("apoyo");
         } catch {}
       });
+
       list.appendChild(card);
     });
   }
 
   function initCursosView() {
     cursosRender();
-    // ❌ antes estaba { once:true } y se moría al 2do click
     document.getElementById("btnCursosRefresh")?.addEventListener("click", cursosRender);
   }
   window.initCursosView = initCursosView;
@@ -538,8 +565,7 @@
     const elx = document.getElementById("notiEstado");
     if (!elx) return;
 
-    const supported = "Notification" in window;
-    if (!supported) {
+    if (!("Notification" in window)) {
       elx.textContent = "Tu navegador no soporta notificaciones.";
       return;
     }
@@ -561,8 +587,12 @@
       alert("Activa el permiso primero.");
       return;
     }
-    new Notification("Juventud CNC", { body: "Notificación de prueba ✅" });
-    window.logAviso?.({ title: "Notificaciones", body: "Prueba enviada ✅" });
+    try {
+      new Notification("Juventud CNC", { body: "Notificación de prueba ✅" });
+      window.logAviso?.({ title: "Notificaciones", body: "Prueba enviada ✅" });
+    } catch (e) {
+      console.warn("[JC] Notification error", e);
+    }
   }
 
   let __notiBound = false;
@@ -576,10 +606,13 @@
   }
   window.initNotificacionesView = initNotificacionesView;
 
-   // ---- INIT UI
+  // ============================================================
+  // INIT UI
+  // ============================================================
   function initUI() {
     initDrawer();
     restoreTokensOnLoad();
+    initAngieToolMessaging();
     jcLoadGlobalBackground();
     initPause30();
 
@@ -592,12 +625,8 @@
     })();
   }
 
-  // ✅ EXPORTS CORRECTOS (para que main.js lo encuentre)
+  // Exports para main.js
   window.jcUI = { state, syncOverlay, initUI };
   window.JC = window.JC || {};
-  window.JC.ui = {
-    init: initUI,
-    state,
-    syncOverlay
-  };
+  window.JC.ui = { init: initUI, state, syncOverlay };
 })();
