@@ -1,10 +1,10 @@
 /* ==========================================================
    JUVENTUD CNC — styles.css (LIMPIO / SIN DUPLICADOS)
+   - Fondo dinámico por defecto
+   - Fondo con imagen (cambiar/quitar) FUNCIONA (no tapado)
    - Overlay animable (sin display:none)
-   - card-header unificado
-   - event-item unificado
-   - Mobile chat + widgets en UNA sola regla
-   - Se mantienen tus estilos y estética
+   - Chat mini + chat grande en BOX (sin duplicados)
+   - Widgets Angie/Mia/Ciro + responsive unificado
    ========================================================== */
 
 /* ==========================================================
@@ -21,7 +21,7 @@
   --neutral-200: #e5e7eb;
   --neutral-100: #f3f4f6;
 
-  /* Z-index bots (unificado) */
+  /* Z-index bots */
   --z-bots: 200;
   --z-angie: 205;
   --z-mia: 210;
@@ -31,7 +31,7 @@
   --text-main: #e5e7eb;
   --text-muted: #9ca3af;
 
-  /* Dinámicos (Angie) */
+  /* Dinámicos (Angie / theme tokens) */
   --brand: #2563eb;
   --brand-2: #1d4ed8;
   --accent: #ec4899;
@@ -62,9 +62,6 @@
   --radius-pill: 999px;
   --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.55);
 
-  /* Widgets */
-  --widget-z: 120;
-
   /* Superficies controlables */
   --topbar-bg: rgba(15, 23, 42, 0.92);
   --tabs-bg: rgba(15, 23, 42, 0.96);
@@ -74,7 +71,7 @@
   /* Glow header */
   --icon-glow: rgba(236, 72, 153, 0.18);
 
-  /* Fondo dinámico */
+  /* Fondo dinámico (DEFAULT) */
   --bg-a: rgba(56, 189, 248, 0.15);
   --bg-b: rgba(244, 114, 182, 0.18);
   --bg-c: rgba(59, 130, 246, 0.17);
@@ -83,11 +80,23 @@
 
   --veil-a: rgba(15, 23, 42, 0.8);
   --veil-b: rgba(15, 23, 42, 0.94);
+
+  /* =========================================
+     Fondo con imagen (CONTROLADO POR JS)
+     - Para “cambiar fondo”: setea --jc-bg-image a url(...)
+     - Para “quitar fondo”: remueve .jc-has-bg o añade .jc-bg-off
+     ========================================= */
+  --jc-bg-image: none;                 /* url("assets/bg.jpg") */
+  --jc-bg-overlay: rgba(2, 6, 23, 0.55);
 }
 
 /* ==========================================================
    BASE
    ========================================================== */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
 
 html {
   height: 100%;
@@ -105,10 +114,14 @@ body {
   position: relative;
 }
 
-/* ============================
-   FONDO DINÁMICO (OPTIMIZADO)
-   ============================ */
+/* ==========================================================
+   FONDO GLOBAL (2 MODOS)
+   1) Default: fondo dinámico con ::before/::after
+   2) Imagen: body.jc-has-bg usa #jcAppBgLayer/#jcAppBgOverlay
+      y APAGA el fondo dinámico para que NO lo tape.
+   ========================================================== */
 
+/* Fondo dinámico por defecto */
 body::before {
   content: "";
   position: fixed;
@@ -121,6 +134,8 @@ body::before {
     linear-gradient(135deg, var(--bg-base-1), var(--bg-base-2));
   animation: bg-flow 22s ease-in-out infinite alternate;
   filter: saturate(1.15);
+  opacity: 1;
+  transition: opacity .18s ease;
 }
 
 body::after {
@@ -129,11 +144,66 @@ body::after {
   inset: 0;
   z-index: -1;
   background: radial-gradient(circle at top, var(--veil-a), var(--veil-b));
+  opacity: 1;
+  transition: opacity .18s ease;
 }
 
+/* Cuando hay imagen de fondo -> apagamos el fondo dinámico para que NO tape */
+body.jc-has-bg::before,
+body.jc-has-bg::after{
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Cuando el usuario “quita fondo” total */
+body.jc-bg-off::before,
+body.jc-bg-off::after{
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Capas de fondo por imagen (si existen en HTML, o si las crea JS) */
+#jcAppBgLayer,
+#jcAppBgOverlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#jcAppBgLayer {
+  z-index: -2;
+  background-image: var(--jc-bg-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity .18s ease;
+}
+
+/* Overlay para legibilidad */
+#jcAppBgOverlay {
+  z-index: -1;
+  background: var(--jc-bg-overlay);
+  opacity: 0;
+  transition: opacity .18s ease;
+}
+
+/* Activo cuando hay imagen */
+body.jc-has-bg #jcAppBgLayer,
+body.jc-has-bg #jcAppBgOverlay{
+  opacity: 1;
+}
+
+/* Si el usuario “quita fondo total” también apagamos imagen */
+body.jc-bg-off #jcAppBgLayer,
+body.jc-bg-off #jcAppBgOverlay{
+  opacity: 0;
+}
+
+/* Anim del fondo dinámico */
 @keyframes bg-flow {
-  0% { transform: translate3d(0,0,0) scale(1); }
-  50% { transform: translate3d(-20px, 10px, 0) scale(1.03); }
+  0%   { transform: translate3d(0,0,0) scale(1); }
+  50%  { transform: translate3d(-20px, 10px, 0) scale(1.03); }
   100% { transform: translate3d(25px, -10px, 0) scale(1.04); }
 }
 
@@ -145,11 +215,9 @@ h1, h2, h3 {
   font-weight: 600;
   margin: 0;
 }
-
 p { margin: 0; }
 
 .small { font-size: 12px; }
-
 .muted { color: var(--text-muted); }
 
 .with-emoji[data-emoji]::before {
@@ -197,7 +265,6 @@ p { margin: 0; }
   color: var(--text-main);
   outline: none;
 }
-
 .theme-picker:focus{
   border-color: rgba(56,189,248,0.65);
   box-shadow: 0 0 0 3px rgba(56,189,248,0.14);
@@ -226,10 +293,8 @@ p { margin: 0; }
   max-width: 960px;
   margin: 0 auto;
   padding: 18px 14px calc(70px + env(safe-area-inset-bottom));
-  box-sizing: border-box;
 }
 
-/* FIX: evitar montado en móvil */
 .view { display: none !important; width: 100%; }
 .view.active { display: block !important; }
 
@@ -238,11 +303,7 @@ p { margin: 0; }
    ========================================================== */
 
 .card {
-  background: linear-gradient(
-    to bottom right,
-    rgba(15, 23, 42, 0.92),
-    rgba(15, 23, 42, 0.85)
-  );
+  background: linear-gradient(to bottom right, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.85));
   border-radius: var(--radius-lg);
   padding: 16px 14px;
   border: 1px solid var(--card-border);
@@ -275,7 +336,6 @@ p { margin: 0; }
   border: 1px solid rgba(255,255,255,0.14);
   animation: heroGlow 6s ease-in-out infinite alternate;
 }
-
 @keyframes heroGlow {
   0% { filter: brightness(1); }
   100% { filter: brightness(1.2); }
@@ -298,26 +358,24 @@ p { margin: 0; }
   align-items: center;
   justify-content: center;
 }
-
 .btn.small { padding: 6px 10px; font-size: 11px; }
-
 .btn.ghost {
   background: transparent;
   border: 1px solid rgba(148,163,184,0.35);
   color: var(--text-main);
 }
 
-input,
-select {
+input, select, textarea {
   width: 100%;
   padding: 9px 12px;
   background: rgba(15, 23, 42, 0.92);
   border: 1px solid rgba(148,163,184,0.4);
   border-radius: 10px;
   color: var(--text-main);
+  max-width: 100%;
 }
+textarea { resize: vertical; }
 
-/* Links / badges */
 .link{
   color: rgba(255,255,255,0.92);
   text-decoration: none;
@@ -369,7 +427,6 @@ select {
   border-radius:12px;
   background: rgba(15,23,42,0.92);
   border: 1px solid rgba(148,163,184,0.3);
-
   display:flex;
   gap:12px;
   justify-content:space-between;
@@ -385,7 +442,7 @@ select {
   white-space:nowrap;
 }
 
-/* Eventos — calendario + acciones */
+/* Toolbar */
 .event-toolbar{
   display:flex;
   gap:8px;
@@ -475,10 +532,7 @@ select {
   margin-bottom:8px;
 }
 
-.event-cal-label{
-  font-weight:700;
-  letter-spacing:.2px;
-}
+.event-cal-label{ font-weight:700; letter-spacing:.2px; }
 
 .event-cal-weekdays{
   display:grid;
@@ -507,9 +561,7 @@ select {
   user-select:none;
   min-height:42px;
 }
-
 .ev-day.muted{ opacity:.45; }
-
 .ev-day.active{
   outline:2px solid rgba(255,255,255,.20);
   background:rgba(255,255,255,.08);
@@ -525,7 +577,6 @@ select {
   align-items:center;
   justify-content:center;
 }
-
 .ev-dot i{
   width:6px;
   height:6px;
@@ -533,11 +584,7 @@ select {
   background:rgba(255,255,255,.8);
   display:inline-block;
 }
-
-.ev-dot span{
-  font-size:11px;
-  opacity:.9;
-}
+.ev-dot span{ font-size:11px; opacity:.9; }
 
 .event-cal-foot{
   display:flex;
@@ -578,7 +625,6 @@ select {
   cursor: pointer;
   transition: 0.18s ease;
 }
-
 .tab.active {
   background: linear-gradient(135deg, var(--guy-soft), var(--girl-soft));
   color: #fff;
@@ -621,7 +667,6 @@ select {
   transition: transform 0.22s;
   z-index: 110;
 }
-
 .drawer.open { transform: translateX(0); }
 
 .drawer-header{
@@ -694,11 +739,9 @@ select {
   background: var(--overlay-bg);
   backdrop-filter: blur(2px);
   z-index: 100 !important;
-
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-
   transition: opacity .18s ease, visibility .18s ease;
 }
 .overlay.show{
@@ -727,7 +770,6 @@ select {
   transition: transform .4s ease, opacity .35s ease-out;
 }
 
-/* Estados visibles */
 .angie-widget--visible,
 .mia-widget--visible,
 .ciro-widget--visible {
@@ -736,24 +778,10 @@ select {
   pointer-events: auto;
 }
 
-/* Ubicaciones individuales */
-.angie-widget {
-  left: 16px;
-  bottom: 86px;
-  z-index: var(--z-angie);
-}
-.mia-widget {
-  right: 16px;
-  bottom: 175px;
-  z-index: var(--z-mia);
-}
-.ciro-widget {
-  right: 16px;
-  bottom: 285px;
-  z-index: var(--z-ciro);
-}
+.angie-widget { left: 16px; bottom: 86px; z-index: var(--z-angie); }
+.mia-widget   { right: 16px; bottom: 175px; z-index: var(--z-mia); }
+.ciro-widget  { right: 16px; bottom: 285px; z-index: var(--z-ciro); }
 
-/* Avatares */
 .bot-avatar {
   width: 64px;
   height: 64px;
@@ -765,21 +793,12 @@ select {
   justify-content: center;
   box-shadow: 0 12px 24px rgba(0,0,0,.55);
 }
-
-/* Angie: tonos rosados/cálidos */
 .angie-avatar { background: radial-gradient(circle at 30% 25%, #f472b6, #be185d); }
-/* Mia: pastel suave */
 .mia-avatar   { background: radial-gradient(circle at 30% 25%, #c084fc, #6b21a8); }
-/* Ciro: tonos azules/energía */
 .ciro-avatar  { background: radial-gradient(circle at 30% 25%, #60a5fa, #1d4ed8); }
 
-.bot-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
+.bot-avatar img { width: 100%; height: 100%; object-fit: contain; }
 
-/* Burbujas */
 .bot-bubble {
   max-width: 260px;
   padding: 10px 14px;
@@ -793,7 +812,6 @@ select {
   line-height: 1.35;
 }
 
-/* colitas personalizadas */
 .angie-bubble::before,
 .mia-bubble::before,
 .ciro-bubble::before {
@@ -806,26 +824,22 @@ select {
   transform: rotate(-45deg);
 }
 
-/* Angie: colita izquierda */
 .angie-bubble::before {
   left: -6px;
   border-right: 1px solid rgba(244,114,182,.6);
   border-bottom: 1px solid rgba(244,114,182,.6);
 }
-/* Mia: colita derecha pastel */
 .mia-bubble::before {
   right: -6px;
   border-left: 1px solid rgba(192,132,252,.6);
   border-bottom: 1px solid rgba(192,132,252,.6);
 }
-/* Ciro: colita derecha azul */
 .ciro-bubble::before {
   right: -6px;
   border-left: 1px solid rgba(96,165,250,.6);
   border-bottom: 1px solid rgba(96,165,250,.6);
 }
 
-/* Cabeceras */
 .bot-name {
   font-weight: 700;
   font-size: 11px;
@@ -833,12 +847,10 @@ select {
   text-transform: uppercase;
   margin-bottom: 4px;
 }
-
 .angie-name { color: #f472b6; }
 .mia-name   { color: #c084fc; }
 .ciro-name  { color: #60a5fa; }
 
-/* Cierre */
 .bot-close {
   position: absolute;
   top: 6px;
@@ -851,32 +863,20 @@ select {
 }
 .bot-close:hover { color: #e5e7eb; }
 
-/* Stickers dentro de burbuja (opcional) */
-.angie-bubble .bot-sticker {
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
-  object-fit: contain;
-  margin-left: auto;
-  opacity: 0.95;
-  filter: drop-shadow(0 10px 20px rgba(0,0,0,.35));
-}
-
-/* Animaciones */
 @keyframes bot-pop {
   0%   { transform: translateY(20%) scale(.5); opacity: 0; }
   60%  { transform: translateY(-6%) scale(1.08); opacity: 1; }
-  100% { transform: translateY(0)    scale(1);   opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 .angie-widget--visible .angie-avatar { animation: bot-pop .55s ease-out; }
 .mia-widget--visible   .mia-avatar   { animation: bot-pop .55s ease-out; }
 .ciro-widget--visible  .ciro-avatar  { animation: bot-pop .55s ease-out; }
 
 @keyframes angie-wiggle {
-  0%   { transform: rotate(0deg); }
-  25%  { transform: rotate(-3deg); }
-  50%  { transform: rotate(3deg); }
-  75%  { transform: rotate(-2deg); }
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+  75% { transform: rotate(-2deg); }
   100% { transform: rotate(0deg); }
 }
 .angie-widget--wiggle .angie-avatar { animation: angie-wiggle 1s ease-in-out infinite; }
@@ -897,8 +897,16 @@ select {
 }
 .ciro-widget--visible .ciro-avatar { animation: ciro-energy .6s ease-in-out infinite; }
 
+/* Si el chat está abierto, ocultar widgets */
+body.chat-open .angie-widget,
+body.chat-open .mia-widget,
+body.chat-open .ciro-widget {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ==========================================================
-   CHAT JUVENTUD CNC
+   CHAT JUVENTUD CNC (mini flotante por defecto)
    ========================================================== */
 
 .jc-chat {
@@ -914,7 +922,7 @@ select {
   box-shadow: 0 18px 40px rgba(0,0,0,0.75);
   border: 1px solid rgba(148,163,184,0.5);
   overflow: hidden;
-  z-index: 180;   /* debajo de bots */
+  z-index: 180;
   font-size: 11px;
 }
 
@@ -924,11 +932,7 @@ select {
   justify-content: space-between;
   padding: 6px 9px;
   border-bottom: 1px solid rgba(148,163,184,0.4);
-  background: linear-gradient(
-    135deg,
-    rgba(56,189,248,0.18),
-    rgba(244,114,182,0.18)
-  );
+  background: linear-gradient(135deg, rgba(56,189,248,0.18), rgba(244,114,182,0.18));
 }
 
 .jc-chat-title {
@@ -964,12 +968,7 @@ select {
 }
 
 /* Mensajes */
-.jc-chat-msg {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
-
+.jc-chat-msg { display: flex; align-items: flex-start; gap: 6px; }
 .jc-chat-avatar {
   flex-shrink: 0;
   width: 22px;
@@ -982,7 +981,6 @@ select {
   font-weight: 600;
   color: #0b1120;
 }
-
 .jc-chat-bubble {
   max-width: 195px;
   padding: 5px 8px;
@@ -990,13 +988,7 @@ select {
   border: 1px solid rgba(148,163,184,0.4);
   background: rgba(15,23,42,0.96);
 }
-
-.jc-chat-name {
-  font-weight: 600;
-  margin-bottom: 1px;
-  font-size: 11px;
-}
-
+.jc-chat-name { font-weight: 600; margin-bottom: 1px; font-size: 11px; }
 .jc-chat-text { font-size: 11px; }
 
 /* Colores por personaje */
@@ -1016,6 +1008,49 @@ select {
 .jc-chat--collapsed { max-height: 36px; }
 .jc-chat--collapsed .jc-chat-body { display: none; }
 .jc-chat--collapsed .jc-chat-toggle { transform: rotate(180deg); }
+
+/* ==========================================================
+   BOX — chat grande “encerrado” (SOLO en la vista box)
+   ========================================================== */
+
+#boxChatMount,
+.box-chat-mount { width: 100%; position: relative; }
+
+.view[data-view="box"] .box-wrap{
+  padding: 1rem;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.view[data-view="box"] .jc-chat{
+  position: relative !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+
+  width: 100% !important;
+  max-width: 980px !important;
+  margin: 0 auto !important;
+
+  height: min(70vh, 680px);
+  max-height: none !important;
+}
+
+.view[data-view="box"] .jc-chat-body{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Herramientas de fondo (si las tienes dentro de BOX) */
+.box-bg-tools {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: .75rem;
+}
+.box-bg-tools .btn.small { padding: .45rem .65rem; }
 
 /* ==========================================================
    LISTA MIEMBROS
@@ -1070,7 +1105,6 @@ select {
   background: rgba(2,6,23,0.25);
 }
 
-/* Perfil avatar */
 .perfil-resumen { display: flex; align-items: center; gap: 12px; }
 
 .perfil-avatar {
@@ -1085,9 +1119,7 @@ select {
   box-shadow: 0 12px 26px rgba(0,0,0,0.5);
   flex: 0 0 auto;
 }
-
 .perfil-avatar img { width: 100%; height: 100%; object-fit: cover; }
-
 .perfil-avatar span {
   font-weight: 800;
   font-size: 18px;
@@ -1207,38 +1239,6 @@ select {
 
 .jc-row{ display:flex; gap: 10px; flex-wrap: wrap; }
 
-.jc-iframe{
-  width: 100%;
-  border-radius: 18px;
-  overflow:hidden;
-  border: 1px solid rgba(148,163,184,0.22);
-  background: rgba(2,6,23,0.45);
-}
-.jc-iframe iframe{
-  width: 100%;
-  height: min(68vh, 560px);
-  border: 0;
-  display:block;
-}
-
-.jc-pills{ display:flex; flex-wrap: wrap; gap: 8px; }
-.pill{
-  border: 1px solid rgba(148,163,184,0.22);
-  background: rgba(2,6,23,0.25);
-  color: rgba(255,255,255,0.92);
-  padding: 7px 10px;
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background .14s ease, border-color .14s ease, transform .14s ease;
-}
-.pill:hover{
-  background: rgba(244,114,182,0.12);
-  border-color: rgba(244,114,182,0.45);
-  transform: translateY(-1px);
-}
-.pill:active{ transform: translateY(0); }
-
 /* ==========================================================
    COMUNIDAD (Retos / Dinámicas / Foro)
    ========================================================== */
@@ -1262,7 +1262,6 @@ select {
   white-space: nowrap;
   transition: 0.18s ease;
 }
-
 .comu-tab.active {
   background: linear-gradient(135deg, rgba(56,189,248,0.22), rgba(244,114,182,0.22));
   border-color: rgba(229,231,235,0.35);
@@ -1290,16 +1289,6 @@ select {
   margin-bottom: 10px;
 }
 
-.comu-form textarea {
-  width: 100%;
-  padding: 10px 12px;
-  background: rgba(15, 23, 42, 0.92);
-  border: 1px solid rgba(148,163,184,0.4);
-  border-radius: 10px;
-  color: var(--text-main);
-  resize: vertical;
-}
-
 .comu-actions { display: flex; gap: 10px; align-items: center; }
 
 .comu-feed-head {
@@ -1312,7 +1301,6 @@ select {
 
 .comu-list { display: grid; gap: 10px; }
 
-/* Post card */
 .comu-post {
   padding: 12px;
   border-radius: 16px;
@@ -1328,16 +1316,8 @@ select {
   margin-bottom: 8px;
 }
 
-.comu-post-title {
-  font-weight: 650;
-  font-size: 14px;
-  margin: 0;
-}
-
-.comu-post-meta {
-  font-size: 11px;
-  color: var(--text-muted);
-}
+.comu-post-title { font-weight: 650; font-size: 14px; margin: 0; }
+.comu-post-meta { font-size: 11px; color: var(--text-muted); }
 
 .comu-post-body {
   margin-top: 6px;
@@ -1367,19 +1347,16 @@ select {
   gap: 6px;
   transition: 0.18s ease;
 }
-
 .comu-heart:hover,
 .comu-comment-btn:hover {
   transform: translateY(-1px);
   border-color: rgba(229,231,235,0.35);
 }
-
 .comu-heart.on {
   background: rgba(236,72,153,0.14);
   border-color: rgba(236,72,153,0.35);
 }
 
-/* Comentarios */
 .comu-comments { display: grid; gap: 10px; }
 
 .comu-comment {
@@ -1388,13 +1365,11 @@ select {
   border: 1px solid rgba(148,163,184,0.25);
   background: rgba(15,23,42,0.55);
 }
-
 .comu-comment-meta {
   font-size: 11px;
   color: var(--text-muted);
   margin-bottom: 4px;
 }
-
 .comu-comment-body {
   font-size: 13px;
   white-space: pre-wrap;
@@ -1402,40 +1377,7 @@ select {
 }
 
 /* ==========================================================
-   BOX: el chat vive aquí
-   ========================================================== */
-
-.view[data-view="box"] .box-wrap{
-  padding: 1rem;
-  max-width: 980px;
-  margin: 0 auto;
-}
-
-.view[data-view="box"] .jc-chat{
-  position: relative !important;
-  right: auto !important;
-  bottom: auto !important;
-  left: auto !important;
-  width: 100% !important;
-  max-width: none !important;
-  margin-top: .75rem;
-}
-
-.view[data-view="box"] .jc-chat-body{
-  height: min(60vh, 520px);
-  overflow: auto;
-}
-
-/* Si el chat está abierto, ocultar widgets */
-body.chat-open .angie-widget,
-body.chat-open .mia-widget,
-body.chat-open .ciro-widget {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* ==========================================================
-   RESPONSIVE — ÚNICO BLOQUE (chat + widgets + topbar + eventos)
+   RESPONSIVE (ÚNICO BLOQUE)
    ========================================================== */
 
 @media (max-width: 560px) {
@@ -1463,7 +1405,7 @@ body.chat-open .ciro-widget {
 
   .icon-btn { padding: 7px; font-size: 18px; }
 
-  /* Chat fijo abajo, adaptable */
+  /* Chat fijo abajo, adaptable (cuando NO estás en box) */
   .jc-chat{
     left: 10px;
     right: 10px;
@@ -1484,10 +1426,8 @@ body.chat-open .ciro-widget {
   .mia-widget{ right:10px; bottom: 170px; }
   .ciro-widget{ right:10px; bottom: 260px; }
 
-  /* FAB no tapa */
   .fab{ bottom: 92px; }
 
-  /* Eventos */
   .event-item{ flex-direction:column; align-items:flex-start; }
   .event-meta{ white-space:normal; text-align:left; }
   .event-search-row{ flex-direction:column; align-items:stretch; }
@@ -1495,19 +1435,7 @@ body.chat-open .ciro-widget {
 
 @media (max-width: 480px){
   .jc-modal-card{ max-height: calc(100vh - 40px); }
-  .jc-iframe iframe{ height: 62vh; }
 }
-
-@media (max-width: 560px) {
-  .jc-modal-card {
-    width: calc(100% - 20px);
-    max-width: 520px;
-  }
-}
-
-/* ==========================================================
-   ACCESIBILIDAD / PERFORMANCE
-   ========================================================== */
 
 @media (prefers-reduced-motion: reduce){
   body::before{ animation:none !important; }
@@ -1517,516 +1445,3 @@ body.chat-open .ciro-widget {
     animation:none !important;
   }
 }
-/* ============================
-   FIX: chat dentro de Box
-   ============================ */
-
-#boxChatMount,
-.box-chat-mount {
-  position: relative;
-  width: 100%;
-}
-
-/* cuando el chat esté dentro del box */
-.jc-chat.in-box {
-  position: relative !important;
-  inset: auto !important;
-  right: auto !important;
-  bottom: auto !important;
-
-  width: 100% !important;
-  max-width: 100% !important;
-
-  /* evita que se salga visualmente */
-  overflow: hidden;
-  border-radius: 16px; /* ajusta si quieres */
-}
-
-/* controla la altura del body del chat para que no rompa el box */
-.jc-chat.in-box .jc-chat-body {
-  max-height: 320px;
-  overflow: auto;
-}
-
-/* móvil: menos alto */
-@media (max-width: 720px) {
-  .jc-chat.in-box .jc-chat-body {
-    max-height: 40vh;
-  }
-}
-
-/* ============================================================
-   BOX — Chat en grande (full) dentro de #boxChatMount
-   (sobrescribe el modo "widget pequeño" SOLO en la vista box)
-   ============================================================ */
-
-.view[data-view="box"]{
-  padding: 0 !important;
-}
-
-#boxChatMount.box-chat-mount{
-  width: 100%;
-  /* ocupa toda la altura útil del viewport (mejor en móvil) */
-  height: calc(100dvh - var(--topbar-h, 64px));
-  display: flex;
-  padding: 12px;
-  box-sizing: border-box;
-}
-
-/* En BOX: el chat deja de ser flotante y pasa a ser "panel grande" */
-.view[data-view="box"] .jc-chat{
-  position: relative !important;
-  inset: auto !important;
-  right: auto !important;
-  left: auto !important;
-  bottom: auto !important;
-
-  width: min(980px, 100%) !important;
-  height: 100% !important;
-  margin: 0 auto !important;
-
-  display: flex !important;
-  flex-direction: column !important;
-
-  border-radius: 18px;
-  overflow: hidden;
-}
-
-/* Header fijo arriba */
-.view[data-view="box"] .jc-chat-header{
-  flex: 0 0 auto;
-}
-
-/* Body ocupa todo el resto */
-.view[data-view="box"] .jc-chat-body{
-  flex: 1 1 auto;
-  min-height: 0;              /* clave para que el scroll funcione */
-  overflow: auto;
-  padding-bottom: 6px;
-}
-
-/* Colapsado: deja el panel mini sin romper altura */
-.view[data-view="box"] .jc-chat.jc-chat--collapsed{
-  height: auto !important;
-  max-height: 64px;
-}
-
-.view[data-view="box"] .jc-chat.jc-chat--collapsed .jc-chat-body{
-  display: none;
-}
-
-/* Ajuste móvil extra */
-@media (max-width: 640px){
-  #boxChatMount.box-chat-mount{
-    padding: 8px;
-    height: calc(100dvh - var(--topbar-h, 56px));
-  }
-  .view[data-view="box"] .jc-chat{
-    border-radius: 14px;
-  }
-}
-/* ===== BOX: chat grande ===== */
-.box-chat-mount {
-  width: 100%;
-}
-
-.view[data-view="box"] .jc-chat {
-  position: relative;
-  inset: auto;
-  width: 100%;
-  max-width: 100%;
-  height: min(70vh, 680px);
-  display: flex;
-  flex-direction: column;
-  border-radius: 16px;
-}
-
-.view[data-view="box"] .jc-chat .jc-chat-body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-}
-
-.view[data-view="box"] .jc-chat.jc-chat--collapsed {
-  height: auto;
-}
-
-/* =========================
-   FONDO CON IMAGEN + OVERLAY
-   ========================= */
-
-/* Cambia esta ruta por tu imagen */
-:root{
-  --app-bg-img: url("assets/bg-floral.webp");
-  --app-bg-dim: rgba(4, 10, 26, .68); /* overlay oscuro */
-}
-
-/* Asegura que todo el contenido quede por encima */
-.app-shell, body.app-shell{
-  position: relative;
-  background: #0b1020; /* fallback si no carga imagen */
-}
-
-/* Imagen de fondo */
-body.app-shell::before{
-  content:"";
-  position: fixed;
-  inset: 0;
-  background-image: var(--app-bg-img);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  z-index: -2;
-  transform: translateZ(0);
-}
-
-/* Overlay oscuro para legibilidad */
-body.app-shell::after{
-  content:"";
-  position: fixed;
-  inset: 0;
-  background: var(--app-bg-dim);
-  z-index: -1;
-}
-
-/* En algunos Android, fixed puede ir raro; lo hacemos más estable */
-@media (max-width: 820px){
-  body.app-shell::before{
-    background-attachment: scroll;
-  }
-}
-
-body[data-theme="chicos"]{ --app-bg-img: url("assets/bg-blue.webp"); }
-body[data-theme="chicas"]{ --app-bg-img: url("assets/bg-pink.webp"); }
-body[data-theme="mix"]{ --app-bg-img: url("assets/bg-floral.webp"); }
-
-/* Box: el chat ocupa el ancho y se ve grande */
-.view[data-view="box"] #jcChat,
-.view[data-view="box"] .jc-chat{
-  width: 100%;
-  max-width: 980px;
-  margin: 0 auto;
-}
-
-.view[data-view="box"] .jc-chat-body{
-  min-height: 55vh;
-}
-/* =========================
-   FONDO GLOBAL (pantalla principal)
-   ========================= */
-#jcAppBgLayer,
-#jcAppBgOverlay {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-}
-
-#jcAppBgLayer {
-  z-index: -2;
-  background-image: var(--jc-app-bg, none);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-#jcAppBgOverlay {
-  z-index: -1;
-  background: rgba(2, 6, 23, 0.55); /* overlay para legibilidad */
-}
-
-/* UI mini del selector (vive en pestaña box) */
-.box-bg-tools {
-  display: flex;
-  gap: .5rem;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: .75rem;
-}
-.box-bg-tools .btn.small { padding: .45rem .65rem; }
-/* Fondo global (imagen desde galería) */
-:root { --jc-bg-image: none; }
-
-body.jc-has-bg {
-  background-image: var(--jc-bg-image);
-  background-size: cover;
-  background-position: center center;
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-}
-/* ============================================================
-   CATEFA / RECURSOS — Responsive + Mobile-safe
-   (Pegar al FINAL de styles.css)
-   ============================================================ */
-
-/* Asegura que todo calcule bien tamaños en móvil */
-*, *::before, *::after { box-sizing: border-box; }
-
-/* Evita overflow horizontal fantasma en móviles */
-html, body { overflow-x: hidden; }
-
-/* Contenedor principal más estable en celular */
-.container {
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 14px;
-}
-
-/* Views: evita que un panel se “coma” el alto y empuje feo */
-.view {
-  min-height: calc(100dvh - 110px);
-  padding-bottom: 90px; /* espacio para tabs bottom */
-}
-
-/* Cards mini: mejor en móvil */
-.jc-card-mini,
-.card {
-  width: 100%;
-  max-width: 100%;
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-/* Grid genérico: en desktop 2 cols, en móvil 1 col */
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-/* Formularios dentro de recursos/catefa */
-.grid label { display: grid; gap: 6px; }
-
-/* Inputs/textarea/select: full width y sin romper layout */
-input, textarea, select, button {
-  max-width: 100%;
-}
-
-/* Botones fila: que no se descuadre */
-.jc-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Permite que filas “salten” en celular */
-.jc-row[style*="flex-wrap"],
-.jc-row.flex-wrap {
-  flex-wrap: wrap;
-}
-
-/* Enlaces útiles / listados */
-#catefaNinos, #catefaSesiones, #catefaAsistenciaPanel {
-  width: 100%;
-  max-width: 100%;
-}
-
-/* Tarjetas internas para listas */
-.catefa-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.catefa-item {
-  border-radius: 14px;
-  padding: 12px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  overflow: hidden;
-}
-
-.catefa-item h4,
-.catefa-item h5 {
-  margin: 0 0 6px 0;
-}
-
-.catefa-item .muted {
-  opacity: .85;
-}
-
-/* Tabla de asistencias: nunca debe romper en móvil */
-.catefa-table-wrap {
-  width: 100%;
-  overflow-x: auto;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(0,0,0,0.15);
-}
-
-.catefa-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 520px; /* fuerza scroll horizontal si es necesario */
-}
-
-.catefa-table th,
-.catefa-table td {
-  padding: 10px 10px;
-  text-align: left;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  white-space: nowrap;
-}
-
-.catefa-table th {
-  font-weight: 700;
-  opacity: .95;
-}
-
-.catefa-badge {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-/* Botones pequeños consistentes */
-.btn.small,
-button.btn.small {
-  padding: 8px 10px;
-  border-radius: 12px;
-}
-
-/* Botón ghost visible en fondos oscuros */
-.btn.ghost,
-button.btn.ghost {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-}
-
-/* CTA / estado */
-#catefaEstado,
-#catefaGate {
-  line-height: 1.3;
-}
-
-/* ============================================================
-   MOBILE BREAKPOINTS
-   ============================================================ */
-@media (max-width: 820px) {
-  .container { padding: 12px; }
-  .grid { grid-template-columns: 1fr; }
-  .jc-row { flex-wrap: wrap; align-items: stretch; }
-
-  /* Inputs más cómodos */
-  input, textarea, select {
-    font-size: 16px; /* evita zoom iOS */
-  }
-
-  /* Topbar + tabs: evitar que se monten */
-  .topbar-title { font-size: 16px; }
-  .theme-picker { max-width: 120px; }
-
-  /* Reduce padding en cards para móvil */
-  .jc-card-mini, .card { border-radius: 14px; }
-}
-
-@media (max-width: 420px) {
-  .container { padding: 10px; }
-
-  /* Botones full-width en teléfonos pequeños */
-  .jc-row button,
-  .jc-row .btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  /* Tabs inferiores: texto pequeño */
-  .tabs .tab span { font-size: 11px; }
-}
-
-/* ============================================================
-   FIX: CHAT en BOX que no tape nada (siempre dentro)
-   ============================================================ */
-.jc-chat.in-box {
-  width: 100%;
-  max-width: 100%;
-  border-radius: 16px;
-  position: relative;
-  margin-top: 10px;
-}
-
-.jc-chat.in-box .jc-chat-body {
-  max-height: 52vh;
-  overflow: auto;
-}
-
-/* En móvil: reduce alto para que no empuje todo */
-@media (max-width: 820px) {
-  .jc-chat.in-box .jc-chat-body { max-height: 42vh; }
-}
-
-/* ============================================================
-   FIX: modales en móvil
-   ============================================================ */
-.jc-modal-card {
-  width: min(720px, 92vw);
-  max-height: 88dvh;
-  overflow: auto;
-  border-radius: 18px;
-}
-
-@media (max-width: 820px) {
-  .jc-modal-card {
-    width: 94vw;
-    max-height: 86dvh;
-    border-radius: 16px;
-  }
-}
-/* =========================
-   Drawer links uniformes
-   ========================= */
-.drawer-link{
-  width:100%;
-  text-align:left;
-  background:transparent;
-  border:0;
-  padding:.8rem .75rem;
-  border-radius:12px;
-  display:flex;
-  align-items:center;
-  gap:.5rem;
-  color:inherit;
-  font:inherit;
-}
-.drawer-link:active{ transform:scale(.99); }
-
-/* =========================
-   Cursos
-   ========================= */
-.jc-course{
-  background: rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:16px;
-  padding:12px;
-}
-.jc-course-title{ margin-bottom:6px; }
-
-/* =========================
-   Pausa 30s
-   ========================= */
-.pause-wrap{ text-align:center; }
-.pause-timer{
-  font-size:56px;
-  line-height:1;
-  font-weight:800;
-  margin-top:4px;
-}
-.pause-text{
-  margin-top:10px;
-  font-size:16px;
-}
-
-/* =========================
-   Mobile safety: no overflow raro
-   ========================= */
-@media (max-width: 480px){
-  .drawer{ width:min(92vw, 360px); }
-  .jc-modal-card{ width:min(94vw, 520px); }
-  .grid{ grid-template-columns: 1fr !important; }
-}
-
