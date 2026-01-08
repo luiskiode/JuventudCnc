@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Angie · Herramienta de colores</title>
   <style>
     :root {
@@ -67,9 +68,7 @@
       background: white;
       cursor: pointer;
     }
-    .pill:hover {
-      border-color: #2563eb;
-    }
+    .pill:hover { border-color: #2563eb; }
     small {
       font-size: 0.7rem;
       color: #6b7280;
@@ -79,126 +78,155 @@
       border-top: 1px solid #e5e7eb;
       margin: 0.75rem 0;
     }
+    .sep {
+      grid-column: 1 / -1;
+      border: none;
+      border-top: 1px solid rgba(148,163,184,.25);
+      margin: 12px 0;
+    }
+    .grid p.section-title{
+      grid-column: 1 / -1;
+      margin: 0 0 .25rem;
+      font-size: .85rem;
+    }
+    .hint {
+      margin-top: .5rem;
+      padding: .5rem .75rem;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: .75rem;
+      font-size: .75rem;
+      color: #374151;
+      line-height: 1.25;
+    }
+    .hint code{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: .72rem;
+    }
   </style>
 </head>
+
 <body>
   <h1>🎨 Angie – Paleta y emociones</h1>
 
   <section>
-  <small>Cambia un color y se aplicará directo en Juventud CNC.</small>
+    <small>Cambia un color y se aplicará directo en Juventud CNC.</small>
 
-  <div class="grid" style="margin-top:0.5rem;">
+    <div class="grid" style="margin-top:0.5rem;">
 
-    <!-- Brand / base -->
-    <label>
-      Principal (brand)
-      <input type="color" id="brand" value="#2563eb" />
-    </label>
+      <!-- Brand / base -->
+      <label>
+        Principal (brand)
+        <input type="color" id="brand" value="#2563eb" />
+      </label>
 
-    <label>
-      Secundario (brand-2)
-      <input type="color" id="brand-2" value="#1d4ed8" />
-    </label>
+      <label>
+        Secundario (brand-2)
+        <input type="color" id="brand-2" value="#1d4ed8" />
+      </label>
 
-    <label>
-      Acento (accent)
-      <input type="color" id="accent" value="#ec4899" />
-    </label>
+      <label>
+        Acento (accent)
+        <input type="color" id="accent" value="#ec4899" />
+      </label>
 
-    <label>
-      Fondo oscuro (neutral-900)
-      <input type="color" id="neutral-900" value="#020617" />
-    </label>
+      <label>
+        Fondo oscuro (neutral-900)
+        <input type="color" id="neutral-900" value="#020617" />
+      </label>
 
-    <label>
-      Texto suave (neutral-700)
-      <input type="color" id="neutral-700" value="#0b1120" />
-    </label>
+      <label>
+        Texto suave (neutral-700)
+        <input type="color" id="neutral-700" value="#0b1120" />
+      </label>
 
-    <label>
-      Bordes (neutral-400)
-      <input type="color" id="neutral-400" value="#9ca3af" />
-    </label>
+      <label>
+        Bordes (neutral-400)
+        <input type="color" id="neutral-400" value="#9ca3af" />
+      </label>
 
-    <label>
-      Fondo tarjetas (neutral-100)
-      <input type="color" id="neutral-100" value="#f3f4f6" />
-    </label>
+      <label>
+        Fondo tarjetas (neutral-100)
+        <input type="color" id="neutral-100" value="#f3f4f6" />
+      </label>
 
-    <hr style="border:none;border-top:1px solid rgba(148,163,184,.25);margin:12px 0">
+      <hr class="sep" />
 
-    <p style="margin:0 0 .25rem;"><strong>UI (barra / menú / overlay)</strong></p>
+      <p class="section-title"><strong>UI (barra / menú / overlay)</strong></p>
 
-    <label>
-      Topbar (topbar-bg)
-      <input type="color" id="topbar-bg" value="#0f172a" />
-    </label>
+      <label>
+        Topbar (topbar-bg)
+        <input type="color" id="topbar-bg" value="#0f172a" />
+      </label>
 
-    <label>
-      Tabs (tabs-bg)
-      <input type="color" id="tabs-bg" value="#0f172a" />
-    </label>
+      <label>
+        Tabs (tabs-bg)
+        <input type="color" id="tabs-bg" value="#0f172a" />
+      </label>
 
-    <label>
-      Drawer (drawer-bg)
-      <input type="color" id="drawer-bg" value="#0b1120" />
-    </label>
+      <label>
+        Drawer (drawer-bg)
+        <input type="color" id="drawer-bg" value="#0b1120" />
+      </label>
 
-    <label>
-      Overlay (overlay-bg)
-      <input type="color" id="overlay-bg" value="#000000" />
-    </label>
+      <label>
+        Overlay (overlay-bg)
+        <input type="color" id="overlay-bg" value="#000000" />
+      </label>
 
-    <label>
-      Glow botón (icon-glow)
-      <input type="color" id="icon-glow" value="#ec4899" />
-    </label>
+      <label>
+        Glow botón (icon-glow)
+        <input type="color" id="icon-glow" value="#ec4899" />
+      </label>
 
-    <hr style="border:none;border-top:1px solid rgba(148,163,184,.25);margin:12px 0">
+      <hr class="sep" />
 
-    <p style="margin:0 0 .25rem;"><strong>Fondo animado</strong></p>
+      <p class="section-title"><strong>Fondo animado</strong></p>
 
-    <label>
-      Radial A (bg-a)
-      <input type="color" id="bg-a" value="#38bdf8" />
-    </label>
+      <label>
+        Radial A (bg-a)
+        <input type="color" id="bg-a" value="#38bdf8" />
+      </label>
 
-    <label>
-      Radial B (bg-b)
-      <input type="color" id="bg-b" value="#f472b6" />
-    </label>
+      <label>
+        Radial B (bg-b)
+        <input type="color" id="bg-b" value="#f472b6" />
+      </label>
 
-    <label>
-      Radial C (bg-c)
-      <input type="color" id="bg-c" value="#3b82f6" />
-    </label>
+      <label>
+        Radial C (bg-c)
+        <input type="color" id="bg-c" value="#3b82f6" />
+      </label>
 
-    <label>
-      Base 1 (bg-base-1)
-      <input type="color" id="bg-base-1" value="#020617" />
-    </label>
+      <label>
+        Base 1 (bg-base-1)
+        <input type="color" id="bg-base-1" value="#020617" />
+      </label>
 
-    <label>
-      Base 2 (bg-base-2)
-      <input type="color" id="bg-base-2" value="#000000" />
-    </label>
+      <label>
+        Base 2 (bg-base-2)
+        <input type="color" id="bg-base-2" value="#000000" />
+      </label>
 
-    <label>
-      Velo A (veil-a)
-      <input type="color" id="veil-a" value="#0f172a" />
-    </label>
+      <label>
+        Velo A (veil-a)
+        <input type="color" id="veil-a" value="#0f172a" />
+      </label>
 
-    <label>
-      Velo B (veil-b)
-      <input type="color" id="veil-b" value="#0b1120" />
-    </label>
-
-  </div>
-</section>
+      <label>
+        Velo B (veil-b)
+        <input type="color" id="veil-b" value="#0b1120" />
+      </label>
+    </div>
 
     <div class="row">
-      <button id="btnAplicar" class="btn-primary">Aplicar ahora</button>
-      <button id="btnReset" class="btn-ghost">Reset normal</button>
+      <button id="btnAplicar" class="btn-primary" type="button">Aplicar ahora</button>
+      <button id="btnReset" class="btn-ghost" type="button">Reset normal</button>
+    </div>
+
+    <div class="hint">
+      <strong>Nota:</strong> Esto manda mensajes a la app principal vía <code>postMessage</code>.
+      En la app, debes escuchar <code>type: "applyTokens"</code> y <code>type: "angieEstado"</code>.
     </div>
   </section>
 
@@ -209,22 +237,76 @@
     <small>Solo cambia imagen y frase en el widget.</small>
 
     <div class="row" style="margin-top:0.5rem;">
-      <button class="pill" data-estado="saludo">👋 Saludo</button>
-      <button class="pill" data-estado="feliz">😊 Feliz</button>
-      <button class="pill" data-estado="rezando">🙏 Rezando</button>
-      <button class="pill" data-estado="enojada">😡 Enojada</button>
-      <button class="pill" data-estado="confundida">🤔 Pensando</button>
-      <button class="pill" data-estado="llorando">😭 Llorando</button>
-      <button class="pill" data-estado="enamorada">😍 Enamorada</button>
-      <button class="pill" data-estado="cansada">🥱 Cansada</button>
-      <button class="pill" data-estado="traviesa">😏 Traviesa</button>
+      <button class="pill" data-estado="saludo" type="button">👋 Saludo</button>
+      <button class="pill" data-estado="feliz" type="button">😊 Feliz</button>
+      <button class="pill" data-estado="rezando" type="button">🙏 Rezando</button>
+      <button class="pill" data-estado="enojada" type="button">😡 Enojada</button>
+      <button class="pill" data-estado="confundida" type="button">🤔 Pensando</button>
+      <button class="pill" data-estado="llorando" type="button">😭 Llorando</button>
+      <button class="pill" data-estado="enamorada" type="button">😍 Enamorada</button>
+      <button class="pill" data-estado="cansada" type="button">🥱 Cansada</button>
+      <button class="pill" data-estado="traviesa" type="button">😏 Traviesa</button>
     </div>
   </section>
 
   <script>
+    // ==========================
+    // Angie Herramientas (v2)
+    // Correcciones:
+    // - Reset completo (incluye UI + fondo animado)
+    // - PostMessage seguro: por defecto al mismo origen (recomendado)
+    // - Restore: aplica valores sin spamear mensajes; luego sync 1 vez
+    // - Guardado consistente en localStorage
+    // ==========================
+    const STORAGE_KEY = 'angie_tokens_ui';
+
     const inputs = [...document.querySelectorAll('input[type="color"]')];
     const btnAplicar = document.getElementById('btnAplicar');
     const btnReset   = document.getElementById('btnReset');
+
+    const DEFAULTS = {
+      "brand": "#2563eb",
+      "brand-2": "#1d4ed8",
+      "accent": "#ec4899",
+      "neutral-900": "#020617",
+      "neutral-700": "#0b1120",
+      "neutral-400": "#9ca3af",
+      "neutral-100": "#f3f4f6",
+
+      "topbar-bg": "#0f172a",
+      "tabs-bg": "#0f172a",
+      "drawer-bg": "#0b1120",
+      "overlay-bg": "#000000",
+      "icon-glow": "#ec4899",
+
+      "bg-a": "#38bdf8",
+      "bg-b": "#f472b6",
+      "bg-c": "#3b82f6",
+      "bg-base-1": "#020617",
+      "bg-base-2": "#000000",
+      "veil-a": "#0f172a",
+      "veil-b": "#0b1120"
+    };
+
+    // IMPORTANT:
+    // Por seguridad, intenta enviar solo al mismo origen (GitHub Pages / localhost).
+    // Si lo cargas como archivo local (file://) o cross-domain, puedes cambiar a '*'.
+    function getTargetOrigin() {
+      try {
+        // Si no hay parent o es la misma ventana, no envía
+        if (!window.parent || window.parent === window) return null;
+
+        // Si estamos en http(s), usa el mismo origen (recomendado)
+        if (location.protocol === 'http:' || location.protocol === 'https:') {
+          return location.origin;
+        }
+
+        // En casos raros (file://), usa '*' para no bloquear pruebas locales
+        return '*';
+      } catch {
+        return '*';
+      }
+    }
 
     function buildTokens() {
       const tokens = {};
@@ -232,54 +314,68 @@
       return tokens;
     }
 
+    function persistTokens(tokens) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens)); } catch {}
+    }
+
     function sendTokens(tokens) {
-      if (!window.parent) return;
-      window.parent.postMessage({ type: 'applyTokens', tokens }, '*');
-      localStorage.setItem('angie_tokens_ui', JSON.stringify(tokens));
+      const targetOrigin = getTargetOrigin();
+      if (!targetOrigin) return;
+      window.parent.postMessage({ type: 'applyTokens', tokens }, targetOrigin);
+      persistTokens(tokens);
     }
 
     function syncTokens() {
       sendTokens(buildTokens());
     }
 
+    // Envío en vivo (input)
     inputs.forEach(i => i.addEventListener('input', syncTokens));
+
+    // Botón aplicar
     btnAplicar.addEventListener('click', syncTokens);
 
+    // Reset completo
     btnReset.addEventListener('click', () => {
-      const defaults = {
-        "brand": "#2563eb",
-        "brand-2": "#1d4ed8",
-        "accent": "#ec4899",
-        "neutral-900": "#020617",
-        "neutral-700": "#0b1120",
-        "neutral-400": "#9ca3af",
-        "neutral-100": "#f3f4f6"
-      };
-      for (const k in defaults) {
-        document.getElementById(k).value = defaults[k];
+      for (const [k, v] of Object.entries(DEFAULTS)) {
+        const el = document.getElementById(k);
+        if (el) el.value = v;
       }
       syncTokens();
     });
 
-    // Emociones (enviar "estado" y "value" para compat)
-document.querySelectorAll('[data-estado]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const estado = btn.dataset.estado;
-    window.parent.postMessage({ type: 'angieEstado', estado, value: estado }, '*');
-  });
-});
-    
+    // Emociones: enviar "estado" y "value" para compatibilidad
+    document.querySelectorAll('[data-estado]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const estado = btn.dataset.estado;
+        const targetOrigin = getTargetOrigin();
+        if (!targetOrigin) return;
+        window.parent.postMessage({ type: 'angieEstado', estado, value: estado }, targetOrigin);
+      });
+    });
 
+    // Restore: primero setea valores; luego manda 1 sync (no spam)
     (function restore() {
-      try {
-        const saved = JSON.parse(localStorage.getItem('angie_tokens_ui'));
-        if (!saved) return;
-        inputs.forEach(i => {
-          if (saved[i.id]) i.value = saved[i.id];
-        });
-      } catch {}
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch {}
+      if (!saved || typeof saved !== 'object') {
+        // si no hay saved, aplica defaults visualmente (sin enviar) y listo
+        for (const [k, v] of Object.entries(DEFAULTS)) {
+          const el = document.getElementById(k);
+          if (el) el.value = v;
+        }
+        return;
+      }
+
+      // aplica saved (si falta algo, cae a default)
+      for (const input of inputs) {
+        const id = input.id;
+        input.value = (saved[id] || DEFAULTS[id] || input.value);
+      }
+
+      // manda 1 vez para sincronizar con la app principal
+      syncTokens();
     })();
   </script>
-
 </body>
 </html>

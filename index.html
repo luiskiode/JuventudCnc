@@ -14,28 +14,28 @@
 
   <!-- Build -->
   <script>
-    window.JC_BUILD = "2025-12-20.02"; // cambia esto en cada release
+    window.JC_BUILD = "2026-01-08.01"; // cambia esto en cada release
   </script>
 
   <!-- Styles (solo una vez, versionado) -->
-  <link rel="stylesheet" href="styles.css?v=2025-12-20.02" />
+  <link rel="stylesheet" href="styles.css?v=2026-01-08.01" />
 
   <!-- Supabase SDK (SIN defer) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-  <!-- Config (SIN defer, debe correr después del SDK) -->
+  <!-- Config Supabase (SIN defer, debe correr después del SDK) -->
   <script src="supabase-config.js"></script>
 
   <!-- App modules (DEFER para no bloquear y asegurar DOM listo) -->
-  <script defer src="js/config.js?v=2025-12-24"></script>
-  <script defer src="js/ui.js?v=2025-12-24"></script>
-  <script defer src="js/auth.js?v=2025-12-24"></script>
-  <script defer src="js/bots.js?v=2025-12-24"></script>
-  <script defer src="js/events.js?v=2025-12-24"></script>
-  <script defer src="js/profile.js?v=2025-12-24"></script>
-  <script defer src="js/community.js?v=2025-12-24"></script>
-  <script defer src="js/resources.js?v=2025-12-24"></script>
-  <script defer src="js/main.js?v=2025-12-24"></script>
+  <script defer src="js/config.js?v=2026-01-08.01"></script>
+  <script defer src="js/ui.js?v=2026-01-08.01"></script>
+  <script defer src="js/auth.js?v=2026-01-08.01"></script>
+  <script defer src="js/bots.js?v=2026-01-08.01"></script>
+  <script defer src="js/events.js?v=2026-01-08.01"></script>
+  <script defer src="js/profile.js?v=2026-01-08.01"></script>
+  <script defer src="js/community.js?v=2026-01-08.01"></script>
+  <script defer src="js/resources.js?v=2026-01-08.01"></script>
+  <script defer src="js/main.js?v=2026-01-08.01"></script>
 </head>
 
 <body class="app-shell">
@@ -57,13 +57,9 @@
     </div>
 
     <nav class="drawer-nav" aria-label="Secciones">
-
-      <!-- ACCIONES (NO duplicar con tabs de abajo) -->
+      <!-- ACCIONES -->
       <button type="button" data-tab="cursos" class="drawer-link">🎓 Mis cursos</button>
-
-      <!-- Pausa: no cambia de vista, abre modal -->
       <button type="button" id="btnPause30" class="drawer-link">⏱️ Pausa 30 segundos</button>
-
       <button type="button" data-tab="box" class="drawer-link">📦 Box</button>
       <button type="button" data-tab="miembros-activos" class="drawer-link">⭐ Miembros</button>
       <button type="button" data-tab="notificaciones" class="drawer-link">🔔 Notificaciones</button>
@@ -72,7 +68,6 @@
 
       <!-- PERFIL -->
       <button type="button" data-tab="perfil" class="drawer-link">👤 Mi perfil</button>
-
     </nav>
 
     <footer class="drawer-footer">
@@ -132,7 +127,6 @@
       <section class="card" aria-label="Eventos próximos">
         <div class="card-header">
           <h3 class="with-emoji" data-emoji="📅">Próximos eventos</h3>
-          <!-- Cambiado a button para evitar saltos por hash -->
           <button type="button" data-tab="eventos" class="link" aria-label="Ver todos los eventos">Ver todos</button>
         </div>
         <ul id="eventListHome" class="event-list"></ul>
@@ -384,11 +378,9 @@
         <div class="jc-row" style="margin-top:.75rem; gap:.5rem; flex-wrap:wrap;">
           <button class="btn small" type="button" id="btnCatefaRefresh">🔄 Actualizar</button>
 
-          <!-- Botones (JS puede abrir estos links) -->
           <button class="btn small" type="button" id="btnVaticano">🌍 Vaticano</button>
           <button class="btn small" type="button" id="btnBiblia">📖 Biblia Online</button>
 
-          <!-- Fallback accesible por si JS falla -->
           <a id="linkVaticano"
              href="https://www.vatican.va/content/vatican/es.html"
              target="_blank" rel="noopener noreferrer"
@@ -396,7 +388,7 @@
              style="display:none">Abrir Vaticano</a>
 
           <a id="linkBiblia"
-             href="https://es.jesus.net/biblia/salmo-23?gad_source=1&gad_campaignid=22037241986&gbraid=0AAAAAo9sgALt2dICRTY7UBIEnOuLX4rgD&gclid=CjwKCAiA3rPKBhBZEiwAhPNFQFVqLZ8BJr1VNGmQ4zNdEwYwTxM_EQFkFLu8jj0iI9UctfSBU8Kk6BoCtvcQAvD_BwE"
+             href="https://es.jesus.net/biblia/salmo-23"
              target="_blank" rel="noopener noreferrer"
              class="link"
              style="display:none">Abrir Biblia</a>
@@ -507,7 +499,6 @@
           <button class="comu-tab" type="button" data-jud-tab="retos" aria-selected="false">🔥 Retos</button>
         </div>
 
-        <!-- GALERIA -->
         <div id="judPanelGaleria" style="margin-top:12px">
           <div class="jc-row" style="justify-content:space-between; flex-wrap:wrap; gap:10px">
             <input id="judSearch" type="search" placeholder="Buscar por título/autor…" style="flex:1; min-width:220px" />
@@ -519,7 +510,6 @@
           </div>
         </div>
 
-        <!-- SUBIR -->
         <div id="judPanelSubir" style="margin-top:12px; display:none">
           <div class="jc-card-mini">
             <h4>⬆️ Publicar en Judart</h4>
@@ -547,7 +537,6 @@
           </div>
         </div>
 
-        <!-- RETOS -->
         <div id="judPanelRetos" style="margin-top:12px; display:none">
           <div class="jc-card-mini">
             <h4>🔥 Reto de la semana</h4>
@@ -569,10 +558,8 @@
             </ul>
           </div>
         </div>
-
       </section>
 
-      <!-- MODAL PREVIEW -->
       <div id="judModal" class="jc-modal" style="display:none">
         <div class="jc-modal-card" role="dialog" aria-modal="true" aria-label="Judart preview">
           <header class="jc-modal-header">
@@ -691,7 +678,6 @@
             🔑 Si no estás logueado, usa el botón de arriba “Iniciar sesión”.
           </p>
         </div>
-
       </section>
     </section>
 
@@ -714,7 +700,7 @@
       <div id="angieText">¡Holaaa! Qué bueno verte 😄</div>
     </div>
     <div class="bot-avatar angie-avatar">
-      <img id="angieAvatarImg" src="assets/angie-feliz-saludo.png" alt="Angie" />
+      <img id="angieAvatarImg" src="assets/angie-feliz-saludo.png" alt="Angie" loading="lazy" />
     </div>
   </div>
 
@@ -726,7 +712,7 @@
       <div id="miaText">Soy Mia. Aquí todo lo coordinamos con calma 💗</div>
     </div>
     <div class="bot-avatar mia-avatar">
-      <img id="miaAvatarImg" src="assets/mia-casual-wink.png" alt="Mia" />
+      <img id="miaAvatarImg" src="assets/mia-casual-wink.png" alt="Mia" loading="lazy" />
     </div>
   </div>
 
@@ -738,7 +724,7 @@
       <div id="ciroText">¡Holaaa! ¡Vamos con fuerza! 💪🔥</div>
     </div>
     <div class="bot-avatar ciro-avatar">
-      <img id="ciroAvatarImg" src="assets/ciro-happy.png" alt="Ciro" />
+      <img id="ciroAvatarImg" src="assets/ciro-happy.png" alt="Ciro" loading="lazy" />
     </div>
   </div>
 
