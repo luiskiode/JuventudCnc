@@ -1,7 +1,7 @@
 /* ============================================================
    app.js (LEGACY BRIDGE) — Juventud CNC
    Objetivo: que NO reviente nada aunque ya se haya dividido en js/*
-   - Mantiene compat con funciones/vars antiguas (activate, listarRecursos, etc.)
+   - Compat con funciones/vars antiguas (activate, listarRecursos, etc.)
    - Crea modales faltantes (Angie herramientas) y handlers de overlay
    - Conecta AngieHerramientas.html vía postMessage (applyTokens / angieEstado)
    - Stubs seguros si algún módulo/ID no existe
@@ -20,13 +20,21 @@
   const $ = (JC.$ =
     JC.$ ||
     function (sel, root = document) {
-      return root.querySelector(sel);
+      try {
+        return root.querySelector(sel);
+      } catch {
+        return null;
+      }
     });
 
   const $$ = (JC.$$ =
     JC.$$ ||
     function (sel, root = document) {
-      return Array.from(root.querySelectorAll(sel));
+      try {
+        return Array.from(root.querySelectorAll(sel));
+      } catch {
+        return [];
+      }
     });
 
   JC.safeText =
@@ -85,6 +93,7 @@
         const t = new Date();
         const stamp = t.toLocaleString();
 
+        li.className = "notice-item";
         li.innerHTML = `
           <div class="notice-title"><strong>${JC.safeText(title)}</strong></div>
           <div class="notice-body">${JC.safeText(body)}</div>
@@ -100,13 +109,12 @@
 
   // ------------------------------------------------------------
   // Compat: constants para que NO fallen funciones viejas
-  // (si bots.js no cargó aún, no debería explotar)
   // ------------------------------------------------------------
   window.ANGIE_ESTADOS = window.ANGIE_ESTADOS || {};
   window.MIA_ESTADOS = window.MIA_ESTADOS || {};
   window.CIRO_ESTADOS = window.CIRO_ESTADOS || {};
 
-  // Compat: setters (si bots.js existe, delega; si no, no crashea)
+  // Compat: setters (delegan a bots.js si existe)
   window.angieSetEstado =
     window.angieSetEstado ||
     function (estado) {
@@ -114,7 +122,6 @@
         JC.bots?.angieSetEstado?.(estado);
         return;
       } catch {}
-      // fallback mínimo (solo cambia texto si existe)
       const txt = document.getElementById("angieText");
       if (txt) txt.textContent = `Angie: ${estado || "..."}`;
     };
@@ -142,12 +149,11 @@
     };
 
   // ------------------------------------------------------------
-  // Compat: funciones antiguas que a veces eran llamadas desde otros lados
+  // Compat: funciones antiguas que se llamaban desde otros lados
   // ------------------------------------------------------------
   window.listarRecursos =
     window.listarRecursos ||
     function (...args) {
-      // Antes se llamaba desde cargarPublic / recursos
       if (typeof JC.resources?.listarRecursos === "function") return JC.resources.listarRecursos(...args);
       if (typeof JC.resources?.cargarRecursos === "function") return JC.resources.cargarRecursos(...args);
       if (typeof JC.resources?.refresh === "function") return JC.resources.refresh({ force: true });
@@ -155,15 +161,16 @@
       return Promise.resolve([]);
     };
 
-  // Alias útiles para viejos accesos globales
+  // Alias para viejos accesos globales
   Object.defineProperty(window, "comunidad", {
+    configurable: true,
     get() {
       return JC.community || window.community || null;
     }
   });
 
   // ------------------------------------------------------------
-  // Modales: Login (para ui.js overlay calls)
+  // Modales base
   // ------------------------------------------------------------
   function openModal(el) {
     if (!el) return;
@@ -182,12 +189,14 @@
     } catch {}
   }
 
+  // ------------------------------------------------------------
+  // Modal: Login (para ui.js overlay calls)
+  // ------------------------------------------------------------
   window.jcOpenLoginModal =
     window.jcOpenLoginModal ||
     function () {
       const modal = document.getElementById("loginModal");
       if (!modal) return;
-      // marca estado si ui.js existe
       try {
         const st = (JC.uiState = JC.uiState || {});
         st.loginOpen = true;
@@ -225,12 +234,15 @@
 
   // ------------------------------------------------------------
   // Modal: Angie herramientas (creado dinámicamente)
-  // - btnAngie abre un iframe a "angie-herramientas.html" o "angieherramientas.html"
   // ------------------------------------------------------------
-  const ANGIE_TOOL_CANDIDATES = ["angie-herramientas.html", "angieherramientas.html", "angieHerramientas.html"];
+  const ANGIE_TOOL_CANDIDATES = [
+    "angieherramientas.html",
+    "angie-herramientas.html",
+    "angieHerramientas.html"
+  ];
 
   function pickAngieToolUrl() {
-    // Sin fetch (GitHub Pages a veces bloquea HEAD). Elegimos el primero; si 404, el iframe lo mostrará.
+    // Elegimos el más probable (tu nombre histórico primero)
     return ANGIE_TOOL_CANDIDATES[0];
   }
 
@@ -308,18 +320,14 @@
 
   // ------------------------------------------------------------
   // PostMessage: AngieHerramientas -> App
-  //  - { type:'applyTokens', tokens:{...} }
-  //  - { type:'angieEstado', estado:'feliz' }
   // ------------------------------------------------------------
   function applyTokensAndPersist(tokens) {
     if (!tokens || typeof tokens !== "object") return;
 
-    // merge con tokens guardados
     const current = safeParse(lsGet("jc_tokens", "")) || {};
     const merged = { ...current, ...tokens };
     lsSet("jc_tokens", JSON.stringify(merged));
 
-    // aplica a CSS vars vía ui.js si existe, o directo
     try {
       window.jcApplyTokens?.(merged);
     } catch {}
@@ -356,7 +364,6 @@
   }
 
   function hasMainRouter() {
-    // si main.js está, window.activate ya debería existir
     return typeof window.activate === "function" && window.activate !== activateFallback;
   }
 
@@ -372,14 +379,12 @@
     const newHash = `#${tab}`;
     if (location.hash !== newHash) history.replaceState(null, "", newHash);
 
-    // hooks mínimos
     try {
       if (tab === "cursos") window.initCursosView?.();
       if (tab === "notificaciones") window.initNotificacionesView?.();
     } catch {}
   }
 
-  // si no existe, expón fallback
   if (typeof window.activate !== "function") {
     window.activate = activateFallback;
     JC.activate = activateFallback;
@@ -390,7 +395,6 @@
   // ------------------------------------------------------------
   function registerSW() {
     if (!("serviceWorker" in navigator)) return;
-    // respeta si ya lo maneja otro módulo
     if (JC.flags.swRegistered) return;
     JC.flags.swRegistered = true;
 
@@ -421,14 +425,12 @@
 
     btn.addEventListener("click", () => {
       try {
-        // Si bots.js tiene toggle
         if (typeof JC.bots?.toggle === "function") {
           const on = JC.bots.toggle();
           window.logAviso?.({ title: "Bots", body: on ? "Bots activados 🤖" : "Bots apagados 📴" });
           return;
         }
 
-        // fallback simple: muestra/oculta chat mini
         const chat = document.getElementById("jcChat");
         if (!chat) return;
         const now = chat.style.display === "none" || getComputedStyle(chat).display === "none";
@@ -454,7 +456,6 @@
   // INIT
   // ------------------------------------------------------------
   onReady(() => {
-    // overlay sync helper siempre
     try {
       window.jcSyncOverlay?.();
     } catch {}
@@ -465,10 +466,8 @@
     bindProfileButton();
     bindEscClose();
 
-    // postMessage
     window.addEventListener("message", onMessage);
 
-    // registra SW
     registerSW();
 
     // Aplica tokens guardados si ui.js aún no lo hizo
