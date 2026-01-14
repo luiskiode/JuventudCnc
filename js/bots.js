@@ -128,6 +128,7 @@
   // Tarjetitas flotantes (overlay) — 2 en PC, 1 en móvil
   // ---------------------------
   function ensureFloatLayer() {
+    document.body.classList.add("jc-floats-on");
     if (document.getElementById("jcFloatLayer")) return;
 
     const style = document.createElement("style");
@@ -481,38 +482,41 @@
   // ---------------------------
   // Chat: show/hide + mount + collapse
   // ---------------------------
-  function applyChatVisibility() {
-    const chat = elChat();
-    if (!chat) return;
+function applyChatVisibility() {
+  const chat = elChat();
+  if (!chat) return;
 
-    const enabled = !!JC.state.botsEnabled;
-    chat.style.display = enabled ? "block" : "none";
-    chat.setAttribute("aria-hidden", enabled ? "false" : "true");
+  const enabled = !!JC.state.botsEnabled;
+  const inBox = (JC.state.activeTab || "") === "box";
 
-    const btn = btnBotsToggle();
-    if (btn) {
-      btn.setAttribute("aria-pressed", enabled ? "true" : "false");
-      btn.classList.toggle("is-on", enabled);
-      btn.title = enabled ? "Apagar bots" : "Encender bots";
-    }
+  const show = enabled && inBox;
+  chat.style.display = show ? "block" : "none";
+  chat.setAttribute("aria-hidden", show ? "false" : "true");
+
+  const btn = btnBotsToggle();
+  if (btn) {
+    btn.setAttribute("aria-pressed", enabled ? "true" : "false");
+    btn.classList.toggle("is-on", enabled);
+    btn.title = enabled ? "Apagar bots" : "Encender bots";
   }
+}
 
   function placeChatForTab(tab) {
-    const chat = elChat();
-    if (!chat) return;
+  const chat = elChat();
+  if (!chat) return;
 
-    const mount = elBoxMount();
+  const mount = elBoxMount();
 
-    if (tab === "box" && mount) {
-      if (chat.parentElement !== mount) mount.appendChild(chat);
-      st.mountedInBox = true;
-      setCollapsed(false);
-    } else {
-      if (chat.parentElement !== document.body) document.body.appendChild(chat);
-      st.mountedInBox = false;
-    }
+  if (tab === "box" && mount) {
+    if (chat.parentElement !== mount) mount.appendChild(chat);
+    st.mountedInBox = true;
+    setCollapsed(false);
+  } else {
+    // lo mandamos al body pero estará oculto por applyChatVisibility()
+    if (chat.parentElement !== document.body) document.body.appendChild(chat);
+    st.mountedInBox = false;
   }
-
+}
   function setCollapsed(collapsed) {
     const chat = elChat();
     const body = elChatBody();

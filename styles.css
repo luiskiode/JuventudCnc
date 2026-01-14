@@ -990,3 +990,38 @@ video, .bg-video, .video-bg, #bgVideo {
 html, body {
   overflow-x: hidden;
 }
+/* ============================================================
+   JC FLOATER MODE: usar tarjetitas, ocultar widgets grandes
+   ============================================================ */
+body.jc-floats-on #angieWidget,
+body.jc-floats-on #miaWidget,
+body.jc-floats-on #ciroWidget {
+  display: none !important;
+}
+
+/* Chat solo en box: por si algún estilo lo fuerza visible */
+body.jc-floats-on #jcChat {
+  z-index: 99995;
+}
+
+/* Tarjetitas: “movimiento” suave como antes */
+@keyframes jcFloatBob {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+}
+
+#jcFloatLayer .jc-float-card {
+  animation: jcFloatBob 3.2s ease-in-out infinite;
+}
+
+#jcFloatLayer .jc-float-card:nth-child(2) {
+  animation-delay: .35s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #jcFloatLayer .jc-float-card {
+    animation: none !important;
+    transition: none !important;
+  }
+}
