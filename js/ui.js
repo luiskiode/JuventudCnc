@@ -250,9 +250,11 @@
     });
   }
 
-  // ============================================================
-  // Fondo global (Box)
-  // ============================================================
+ // ============================================================
+// Fondo global (Box)
+// ============================================================
+const JC_BG_KEY = "jc_bg_main_dataurl";
+
 async function jcReadImageAsCompressedDataURL(file, opts = {}) {
   const maxW = opts.maxW ?? 1920;
   const maxH = opts.maxH ?? 1080;
@@ -284,6 +286,7 @@ async function jcReadImageAsCompressedDataURL(file, opts = {}) {
   }
   await loaded;
 
+  // Escalado proporcional
   let { width: w, height: h } = img;
   const ratio = Math.min(maxW / w, maxH / h, 1);
   w = Math.round(w * ratio);
@@ -297,6 +300,20 @@ async function jcReadImageAsCompressedDataURL(file, opts = {}) {
   ctx.drawImage(img, 0, 0, w, h);
 
   return canvas.toDataURL(mime, quality);
+}
+
+function jcApplyGlobalBackground(dataUrl) {
+  try {
+    if (dataUrl) {
+      document.documentElement.style.setProperty("--jc-bg-image", `url("${dataUrl}")`);
+      document.body.classList.add("jc-has-bg");
+    } else {
+      document.documentElement.style.removeProperty("--jc-bg-image");
+      document.body.classList.remove("jc-has-bg");
+    }
+  } catch (e) {
+    console.warn("[JC] jcApplyGlobalBackground failed", e);
+  }
 }
 
 function jcLoadGlobalBackground() {
@@ -316,56 +333,6 @@ function jcSaveGlobalBackground(dataUrl) {
     lsRemove(JC_BG_KEY);
   }
   jcApplyGlobalBackground(dataUrl || "");
-}
-
-// Lee + comprime SIN FileReader (más estable en Android)
-async function jcReadImageAsCompressedDataURL(file, opts = {}) {
-  const maxW = opts.maxW ?? 1920;
-  const maxH = opts.maxH ?? 1080;
-  const quality = opts.quality ?? 0.85;
-  const mime = opts.mime ?? "image/jpeg";
-
-  if (!file) throw new Error("Archivo inválido");
-
-  // 1) Lee como DataURL (evita blob: ERR_FAILED)
-  const dataUrlOriginal = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.readAsDataURL(file);
-  });
-
-  // 2) Carga imagen desde data:
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-
-  const loaded = new Promise((resolve, reject) => {
-    img.onload = () => resolve(true);
-    img.onerror = () => reject(new Error("No se pudo cargar la imagen seleccionada"));
-  });
-
-  img.src = dataUrlOriginal;
-
-  if (img.decode) {
-    await img.decode().catch(() => {});
-  }
-  await loaded;
-
-  // 3) Escalado proporcional
-  let { width: w, height: h } = img;
-  const ratio = Math.min(maxW / w, maxH / h, 1);
-  w = Math.round(w * ratio);
-  h = Math.round(h * ratio);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-
-  const ctx = canvas.getContext("2d", { alpha: false });
-  ctx.drawImage(img, 0, 0, w, h);
-
-  // 4) Export comprimido
-  return canvas.toDataURL(mime, quality);
 }
 
   // ============================================================
