@@ -68,7 +68,7 @@
     drawerOpen: false,
     angieOpen: false,
     loginOpen: false,
-    pauseOpen: false
+    pauseOpen: false,
   });
 
   // ============================================================
@@ -128,7 +128,6 @@
       btn.addEventListener("click", () => {
         const tab = btn.getAttribute("data-tab");
         closeDrawer();
-        // Si main.js exporta activate(tab)
         window.activate?.(tab);
       });
     });
@@ -141,7 +140,6 @@
     if (!tokens) return;
     const root = document.documentElement;
 
-    // Mapa base + soporte para IDs del AngieHerramientas
     const map = {
       brand: "--brand",
       brand2: "--brand-2",
@@ -156,21 +154,19 @@
       "neutral-200": "--neutral-200",
       "neutral-100": "--neutral-100",
 
-      // UI
       "topbar-bg": "--topbar-bg",
       "tabs-bg": "--tabs-bg",
       "drawer-bg": "--drawer-bg",
       "overlay-bg": "--overlay-bg",
       "icon-glow": "--icon-glow",
 
-      // Fondo animado (si tu CSS los usa)
       "bg-a": "--bg-a",
       "bg-b": "--bg-b",
       "bg-c": "--bg-c",
       "bg-base-1": "--bg-base-1",
       "bg-base-2": "--bg-base-2",
       "veil-a": "--veil-a",
-      "veil-b": "--veil-b"
+      "veil-b": "--veil-b",
     };
 
     for (const [k, v] of Object.entries(tokens)) {
@@ -185,12 +181,10 @@
       chicos: { brand: "#38bdf8", "brand-2": "#0ea5e9", accent: "#60a5fa" },
       chicas: { brand: "#f472b6", "brand-2": "#ec4899", accent: "#fb7185" },
       mix: { brand: "#2563eb", "brand-2": "#1d4ed8", accent: "#ec4899" },
-      auto: null
+      auto: null,
     };
 
     const p = presets[mode] ?? null;
-
-    // auto: no pisa tokens; solo aplica lo guardado
     const current = safeParse(lsGet("jc_tokens", "")) || {};
     const merged = p ? { ...current, ...p } : current;
 
@@ -217,7 +211,12 @@
   // ============================================================
   // AngieHerramientas (postMessage) — aplica tokens y estados
   // ============================================================
+  let __jcAngieMsgBound = false;
+
   function initAngieToolMessaging() {
+    if (__jcAngieMsgBound) return;
+    __jcAngieMsgBound = true;
+
     window.addEventListener("message", (event) => {
       const data = event?.data || {};
       if (!data || typeof data !== "object") return;
@@ -226,7 +225,6 @@
       if (data.type === "applyTokens" && data.tokens) {
         try {
           const tokens = data.tokens || {};
-          // Guardamos + aplicamos
           lsSet("jc_tokens", JSON.stringify(tokens));
           jcApplyTokens(tokens);
           window.logAviso?.({ title: "Angie", body: "Paleta aplicada 🎨" });
@@ -250,90 +248,158 @@
     });
   }
 
- // ============================================================
-// Fondo global (Box)
-// ============================================================
-const JC_BG_KEY = "jc_bg_main_dataurl";
+  // ============================================================
+  // Fondo global (Box)
+  // ============================================================
+  const JC_BG_KEY = "jc_bg_main_dataurl";
+  let __jcBgBound = false;
+  let __jcBgBusy = false;
 
-async function jcReadImageAsCompressedDataURL(file, opts = {}) {
-  const maxW = opts.maxW ?? 1920;
-  const maxH = opts.maxH ?? 1080;
-  const quality = opts.quality ?? 0.85;
-  const mime = opts.mime ?? "image/jpeg";
+  async function jcReadImageAsCompressedDataURL(file, opts = {}) {
+    const maxW = opts.maxW ?? 1920;
+    const maxH = opts.maxH ?? 1080;
+    const quality = opts.quality ?? 0.85;
+    const mime = opts.mime ?? "image/jpeg";
 
-  if (!file) throw new Error("Archivo inválido");
+    if (!file) throw new Error("Archivo inválido");
 
-  // Lee como DataURL (evita blob: ERR_FAILED)
-  const dataUrlOriginal = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.readAsDataURL(file);
-  });
+    // Lee como DataURL (evita blob: ERR_FAILED)
+    const dataUrlOriginal = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.readAsDataURL(file);
+    });
 
-  const img = new Image();
-  img.crossOrigin = "anonymous";
+    const img = new Image();
+    img.crossOrigin = "anonymous";
 
-  const loaded = new Promise((resolve, reject) => {
-    img.onload = () => resolve(true);
-    img.onerror = () => reject(new Error("No se pudo cargar la imagen seleccionada"));
-  });
+    const loaded = new Promise((resolve, reject) => {
+      img.onload = () => resolve(true);
+      img.onerror = () => reject(new Error("No se pudo cargar la imagen seleccionada"));
+    });
 
-  img.src = dataUrlOriginal;
+    img.src = dataUrlOriginal;
 
-  if (img.decode) {
-    await img.decode().catch(() => {});
+    if (img.decode) {
+      await img.decode().catch(() => {});
+    }
+    await loaded;
+
+    let { width: w, height: h } = img;
+    const ratio = Math.min(maxW / w, maxH / h, 1);
+    w = Math.round(w * ratio);
+    h = Math.round(h * ratio);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+
+    const ctx = canvas.getContext("2d", { alpha: false });
+    ctx.drawImage(img, 0, 0, w, h);
+
+    return canvas.toDataURL(mime, quality);
   }
-  await loaded;
 
-  // Escalado proporcional
-  let { width: w, height: h } = img;
-  const ratio = Math.min(maxW / w, maxH / h, 1);
-  w = Math.round(w * ratio);
-  h = Math.round(h * ratio);
+  function jcApplyGlobalBackground(dataUrl) {
+    try {
+      if (dataUrl) {
+        document.documentElement.style.setProperty("--jc-bg-image", `url("${dataUrl}")`);
+        document.body.classList.add("jc-has-bg");
+      } else {
+        document.documentElement.style.removeProperty("--jc-bg-image");
+        document.body.classList.remove("jc-has-bg");
+      }
+    } catch (e) {
+      console.warn("[JC] jcApplyGlobalBackground failed", e);
+    }
+  }
 
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
+  function jcLoadGlobalBackground() {
+    const dataUrl = lsGet(JC_BG_KEY, "");
+    jcApplyGlobalBackground(dataUrl || "");
+  }
 
-  const ctx = canvas.getContext("2d", { alpha: false });
-  ctx.drawImage(img, 0, 0, w, h);
-
-  return canvas.toDataURL(mime, quality);
-}
-
-function jcApplyGlobalBackground(dataUrl) {
-  try {
+  function jcSaveGlobalBackground(dataUrl) {
     if (dataUrl) {
-      document.documentElement.style.setProperty("--jc-bg-image", `url("${dataUrl}")`);
-      document.body.classList.add("jc-has-bg");
+      const ok = lsSet(JC_BG_KEY, dataUrl);
+      if (!ok) {
+        lsRemove(JC_BG_KEY);
+        jcApplyGlobalBackground("");
+        throw new Error("No se pudo guardar el fondo (memoria llena). Usa una imagen más liviana.");
+      }
     } else {
-      document.documentElement.style.removeProperty("--jc-bg-image");
-      document.body.classList.remove("jc-has-bg");
-    }
-  } catch (e) {
-    console.warn("[JC] jcApplyGlobalBackground failed", e);
-  }
-}
-
-function jcLoadGlobalBackground() {
-  const dataUrl = lsGet(JC_BG_KEY, "");
-  jcApplyGlobalBackground(dataUrl || "");
-}
-
-function jcSaveGlobalBackground(dataUrl) {
-  if (dataUrl) {
-    const ok = lsSet(JC_BG_KEY, dataUrl);
-    if (!ok) {
       lsRemove(JC_BG_KEY);
-      jcApplyGlobalBackground("");
-      throw new Error("No se pudo guardar el fondo (memoria llena). Usa una imagen más liviana.");
     }
-  } else {
-    lsRemove(JC_BG_KEY);
+    jcApplyGlobalBackground(dataUrl || "");
   }
-  jcApplyGlobalBackground(dataUrl || "");
-}
+
+  function jcBindGlobalBackgroundUI() {
+    if (__jcBgBound) return true;
+
+    // IDs reales en tu index (están dentro de la vista "box")
+    const input = document.getElementById("bgPickerInput");
+    const btnPick = document.getElementById("btnBgPick");
+    const btnClear = document.getElementById("btnBgClear");
+    const estado = document.getElementById("bgPickEstado");
+
+    if (!input || !btnPick) return false;
+
+    __jcBgBound = true;
+
+    btnPick.addEventListener("click", () => {
+      try {
+        input.value = "";
+      } catch {}
+      input.click();
+    });
+
+    input.addEventListener("change", async () => {
+      if (__jcBgBusy) return;
+      __jcBgBusy = true;
+
+      const file = input.files?.[0];
+      if (!file) {
+        __jcBgBusy = false;
+        return;
+      }
+
+      if (estado) estado.textContent = "Cargando fondo…";
+
+      try {
+        const dataUrl = await jcReadImageAsCompressedDataURL(file, { maxW: 1400, quality: 0.82 });
+        jcSaveGlobalBackground(dataUrl);
+        if (estado) estado.textContent = "✅ Fondo aplicado";
+        window.logAviso?.({ title: "Fondo", body: "Fondo global actualizado 🖼️" });
+      } catch (e) {
+        console.error("[JC] Fondo global:", e);
+        if (estado) estado.textContent = e?.message || "No se pudo aplicar el fondo.";
+      } finally {
+        __jcBgBusy = false;
+        try {
+          input.value = "";
+        } catch {}
+      }
+    });
+
+    btnClear?.addEventListener("click", () => {
+      try {
+        jcSaveGlobalBackground("");
+        if (estado) estado.textContent = "Fondo restaurado (default).";
+        window.logAviso?.({ title: "Fondo", body: "Fondo restaurado ✅" });
+      } catch (e) {
+        console.error("[JC] clear bg error", e);
+        if (estado) estado.textContent = "No se pudo restaurar el fondo.";
+      }
+    });
+
+    return true;
+  }
+
+  // Exports de fondo
+  window.jcBindGlobalBackgroundUI = jcBindGlobalBackgroundUI;
+  window.jcLoadGlobalBackground = jcLoadGlobalBackground;
+  window.jcSaveGlobalBackground = jcSaveGlobalBackground;
 
   // ============================================================
   // Pausa 30s
@@ -357,7 +423,6 @@ function jcSaveGlobalBackground(dataUrl) {
       if (pauseTimer) pauseTimer.textContent = String(pauseLeft);
       if (pauseText) pauseText.textContent = "Inhala… exhala…";
 
-      // cierra drawer
       closeDrawer();
 
       state.pauseOpen = true;
@@ -431,15 +496,15 @@ function jcSaveGlobalBackground(dataUrl) {
       titulo: "HeForShe (Jóvenes)",
       desc: "Taller de respeto, dignidad, liderazgo y servicio.",
       duracion: "4 sesiones",
-      link: "https://example.com/heforshe"
+      link: "https://example.com/heforshe",
     },
     {
       key: "save-for-home",
       titulo: "Save For Home",
       desc: "Taller para decisiones sanas, familia, futuro y fe.",
       duracion: "6 sesiones",
-      link: "https://example.com/saveforhome"
-    }
+      link: "https://example.com/saveforhome",
+    },
   ];
   window.jcCursos = CURSOS;
 
@@ -549,19 +614,6 @@ function jcSaveGlobalBackground(dataUrl) {
     initAngieToolMessaging();
     jcLoadGlobalBackground();
     initPause30();
-
-let __jcBgBusy = false;
-
-input.addEventListener("change", async () => {
-  if (__jcBgBusy) return;
-  __jcBgBusy = true;
-  try {
-    // ... tu código actual ...
-  } finally {
-    __jcBgBusy = false;
-    try { input.value = ""; } catch {}
-  }
-});
 
     (function bindBgWithRetries() {
       if (jcBindGlobalBackgroundUI()) return;
