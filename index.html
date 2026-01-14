@@ -10,6 +10,7 @@
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b1020" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
 
   <!-- Build -->
@@ -23,11 +24,13 @@
   <!-- Supabase SDK (SIN defer) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-  <!-- Config Supabase (SIN defer, debe correr después del SDK) -->
-  <script src="supabase-config.js"></script>
+  <!-- Config (SIN defer) - si define flags/constantes globales -->
+  <script src="js/config.js?v=2026-01-08.01"></script>
 
-  <!-- App modules (DEFER para no bloquear y asegurar DOM listo) -->
-  <script defer src="js/config.js?v=2026-01-08.01"></script>
+  <!-- Supabase client (SIN defer, después del SDK y config) -->
+  <script src="supabase-config.js?v=2026-01-08.01"></script>
+
+  <!-- App modules (DEFER) -->
   <script defer src="js/ui.js?v=2026-01-08.01"></script>
   <script defer src="js/auth.js?v=2026-01-08.01"></script>
   <script defer src="js/bots.js?v=2026-01-08.01"></script>
@@ -37,6 +40,7 @@
   <script defer src="js/resources.js?v=2026-01-08.01"></script>
   <script defer src="js/main.js?v=2026-01-08.01"></script>
 </head>
+
 
 <body class="app-shell">
 

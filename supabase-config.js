@@ -42,10 +42,14 @@
     );
   }
 
-  // ✅ Aliases de compatibilidad (para módulos antiguos o distintos estilos)
-  window.sb = window.supabaseClient;
-  window.supabase = window.supabase; // mantiene el SDK original
-  // (Opcional) si en tu código alguien usa window.supabaseClient o window.sb, ambos sirven.
+ // guarda SDK por si algún módulo lo necesita
+window.supabaseSDK = window.supabase;
+
+// alias “supabase” al cliente (para código antiguo: supabase.auth..., supabase.from...)
+window.supabase = window.supabaseClient;
+
+// alias corto
+window.sb = window.supabaseClient;
 
   // ✅ Helpers (opcionales, útiles para depurar)
   window.__JC_SUPABASE__ = {
@@ -62,3 +66,6 @@
     });
   }
 })();
+
+console.log("[JC] supabase client url:", window.supabaseClient?.supabaseUrl);
+console.log("[JC] supabase is client?", !!window.supabase?.from);
