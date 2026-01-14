@@ -293,125 +293,54 @@ function jcSaveGlobalBackground(dataUrl) {
 }
 
 // Lee + comprime SIN FileReader (más estable en Android)
-function jcReadImageAsCompressedDataURL(file, { maxW = 1400, quality = 0.82 } = {}) {
-  return new Promise((resolve, reject) => {
-    if (!file || !file.type?.startsWith("image/")) return reject(new Error("Archivo no es imagen"));
+async function jcReadImageAsCompressedDataURL(file, opts = {}) {
+  const maxW = opts.maxW ?? 1920;
+  const maxH = opts.maxH ?? 1080;
+  const quality = opts.quality ?? 0.85;
+  const mime = opts.mime ?? "image/jpeg";
 
-    // Tip: si es enorme, avisa (evita reventar memoria)
-    if (file.size > 12 * 1024 * 1024) {
-      return reject(new Error("La imagen es muy pesada. Elige una más liviana (ideal < 8MB)."));
-    }
+  if (!file) throw new Error("Archivo inválido");
 
-    const objectUrl = URL.createObjectURL(file);
-    const img = new Image();
-    img.decoding = "async";
-
-    img.onload = () => {
-      try {
-        const w = img.naturalWidth || img.width || 1;
-        const h = img.naturalHeight || img.height || 1;
-        const scale = w > maxW ? maxW / w : 1;
-
-        const cw = Math.max(1, Math.round(w * scale));
-        const ch = Math.max(1, Math.round(h * scale));
-
-        const canvas = document.createElement("canvas");
-        canvas.width = cw;
-        canvas.height = ch;
-
-        const ctx2d = canvas.getContext("2d");
-        if (!ctx2d) throw new Error("No canvas ctx");
-
-        ctx2d.drawImage(img, 0, 0, cw, ch);
-
-        // JPG comprimido (menos tamaño para localStorage)
-        const out = canvas.toDataURL("image/jpeg", quality);
-
-        // Limpieza
-        URL.revokeObjectURL(objectUrl);
-        resolve(out);
-      } catch (e) {
-        try { URL.revokeObjectURL(objectUrl); } catch {}
-        reject(e);
-      }
-    };
-
-    img.onerror = () => {
-      try { URL.revokeObjectURL(objectUrl); } catch {}
-      reject(new Error("No se pudo cargar la imagen seleccionada"));
-    };
-
-    // Dispara carga
-    try {
-      img.src = objectUrl;
-    } catch (e) {
-      try { URL.revokeObjectURL(objectUrl); } catch {}
-      reject(e);
-    }
+  // 1) Lee como DataURL (evita blob: ERR_FAILED)
+  const dataUrlOriginal = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.readAsDataURL(file);
   });
+
+  // 2) Carga imagen desde data:
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+
+  const loaded = new Promise((resolve, reject) => {
+    img.onload = () => resolve(true);
+    img.onerror = () => reject(new Error("No se pudo cargar la imagen seleccionada"));
+  });
+
+  img.src = dataUrlOriginal;
+
+  if (img.decode) {
+    await img.decode().catch(() => {});
+  }
+  await loaded;
+
+  // 3) Escalado proporcional
+  let { width: w, height: h } = img;
+  const ratio = Math.min(maxW / w, maxH / h, 1);
+  w = Math.round(w * ratio);
+  h = Math.round(h * ratio);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+
+  const ctx = canvas.getContext("2d", { alpha: false });
+  ctx.drawImage(img, 0, 0, w, h);
+
+  // 4) Export comprimido
+  return canvas.toDataURL(mime, quality);
 }
-
-let __jcBgBound = false;
-
-function jcBindGlobalBackgroundUI() {
-  if (__jcBgBound) return true;
-
-  // IDs reales en tu index
-  const input  = document.getElementById("bgPickerInput") || null;
-  const btnPick = document.getElementById("btnBgPick") || null;
-  const btnClear = document.getElementById("btnBgClear") || null;
-  const estado = document.getElementById("bgPickEstado") || null;
-
-  if (!input || !btnPick) return false;
-
-  __jcBgBound = true;
-
-  // Asegura default visible si no hay custom
-  // (si ya hay custom, load lo pondrá)
-  document.documentElement.style.setProperty("--jc-app-bg", "var(--jc-bg-default)");
-  document.body.classList.add("jc-bg-default");
-
-  btnPick.addEventListener("click", () => {
-    try { input.value = ""; } catch {}
-    input.click();
-  });
-
-  input.addEventListener("change", async () => {
-    const file = input.files?.[0];
-    if (!file) return;
-
-    if (estado) estado.textContent = "Cargando fondo…";
-
-    try {
-      const dataUrl = await jcReadImageAsCompressedDataURL(file, { maxW: 1400, quality: 0.82 });
-      jcSaveGlobalBackground(dataUrl);
-      if (estado) estado.textContent = "✅ Fondo aplicado";
-      window.logAviso?.({ title: "Fondo", body: "Fondo global actualizado 🖼️" });
-    } catch (e) {
-      console.error("[JC] Fondo global:", e);
-      if (estado) estado.textContent = e?.message || "No se pudo aplicar el fondo.";
-    } finally {
-      try { input.value = ""; } catch {}
-    }
-  });
-
-  // Clear = quitar personalizado y volver al default
-  btnClear?.addEventListener("click", () => {
-    try {
-      jcSaveGlobalBackground("");
-      if (estado) estado.textContent = "Fondo restaurado (default).";
-      window.logAviso?.({ title: "Fondo", body: "Fondo restaurado ✅" });
-    } catch (e) {
-      console.error("[JC] clear bg error", e);
-      if (estado) estado.textContent = "No se pudo restaurar el fondo.";
-    }
-  });
-
-  return true;
-}
-
-window.jcBindGlobalBackgroundUI = jcBindGlobalBackgroundUI;
-window.jcLoadGlobalBackground = jcLoadGlobalBackground;
 
   // ============================================================
   // Pausa 30s
@@ -627,6 +556,19 @@ window.jcLoadGlobalBackground = jcLoadGlobalBackground;
     initAngieToolMessaging();
     jcLoadGlobalBackground();
     initPause30();
+
+let __jcBgBusy = false;
+
+input.addEventListener("change", async () => {
+  if (__jcBgBusy) return;
+  __jcBgBusy = true;
+  try {
+    // ... tu código actual ...
+  } finally {
+    __jcBgBusy = false;
+    try { input.value = ""; } catch {}
+  }
+});
 
     (function bindBgWithRetries() {
       if (jcBindGlobalBackgroundUI()) return;
