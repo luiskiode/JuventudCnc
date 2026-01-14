@@ -124,6 +124,101 @@
   function btnBotsToggle() { return document.getElementById("btnBots"); }
   function elBoxMount() { return document.getElementById("boxChatMount"); }
 
+   // ---------------------------
+  // Tarjetitas flotantes (overlay) — 2 en PC, 1 en móvil
+  // ---------------------------
+  function ensureFloatLayer() {
+    if (document.getElementById("jcFloatLayer")) return;
+
+    const style = document.createElement("style");
+    style.id = "jcFloatStyle";
+    style.textContent = `
+      #jcFloatLayer{position:fixed;inset:0;pointer-events:none;z-index:99998}
+      .jc-float-wrap{position:fixed;left:12px;bottom:92px;display:flex;flex-direction:column;gap:10px;max-width:min(360px,calc(100vw - 24px));}
+      @media (max-width: 720px){ .jc-float-wrap{left:10px;right:10px;bottom:92px;max-width:calc(100vw - 20px);} }
+      .jc-float-card{pointer-events:auto;display:flex;gap:10px;align-items:flex-start;
+        padding:10px 12px;border-radius:16px;
+        background:rgba(10,16,32,.82);backdrop-filter: blur(10px);
+        box-shadow:0 10px 30px rgba(0,0,0,.35);
+        border:1px solid rgba(255,255,255,.10);
+        transform:translateY(8px);opacity:0;transition:opacity .28s ease, transform .28s ease;
+      }
+      .jc-float-card.show{opacity:1;transform:translateY(0)}
+      .jc-float-ava{width:44px;height:44px;border-radius:999px;flex:0 0 auto;object-fit:cover;background:rgba(255,255,255,.08)}
+      .jc-float-name{font-size:12px;opacity:.9;margin:0 0 2px 0}
+      .jc-float-text{font-size:13px;line-height:1.2;margin:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+      .jc-float-x{pointer-events:auto;position:absolute;right:10px;top:8px;border:0;background:transparent;color:#fff;opacity:.75;cursor:pointer;font-size:16px}
+      @media (max-width: 720px){
+        .jc-float-card.hide-mobile{display:none!important}
+      }
+    `;
+    document.head.appendChild(style);
+
+    const layer = document.createElement("div");
+    layer.id = "jcFloatLayer";
+    layer.innerHTML = `
+      <div class="jc-float-wrap" id="jcFloatWrap">
+        <div class="jc-float-card show" id="jcFloat1">
+          <img class="jc-float-ava" id="jcFloat1Img" alt="">
+          <div>
+            <div class="jc-float-name" id="jcFloat1Name">Bot</div>
+            <p class="jc-float-text" id="jcFloat1Text"></p>
+          </div>
+        </div>
+
+        <div class="jc-float-card show hide-mobile" id="jcFloat2">
+          <img class="jc-float-ava" id="jcFloat2Img" alt="">
+          <div>
+            <div class="jc-float-name" id="jcFloat2Name">Bot</div>
+            <p class="jc-float-text" id="jcFloat2Text"></p>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(layer);
+  }
+
+  function setFloatCard(n, { bot, text, estado } = {}) {
+    ensureFloatLayer();
+
+    const card = document.getElementById(n === 2 ? "jcFloat2" : "jcFloat1");
+    const img = document.getElementById(n === 2 ? "jcFloat2Img" : "jcFloat1Img");
+    const name = document.getElementById(n === 2 ? "jcFloat2Name" : "jcFloat1Name");
+    const p = document.getElementById(n === 2 ? "jcFloat2Text" : "jcFloat1Text");
+    if (!card || !img || !name || !p) return;
+
+    const b = normBot(bot);
+    const nice = b === "angie" ? "Angie" : b === "mia" ? "Mia" : b === "ciro" ? "Ciro" : "Sistema";
+    name.textContent = nice;
+    p.textContent = String(text || "").trim();
+
+    // set avatar src según bot+estado
+    if (b === "angie") {
+      const s = ANGIE_ESTADOS[normEstado("angie", estado) || "feliz"];
+      img.src = s?.img || "";
+    } else if (b === "mia") {
+      const s = MIA_ESTADOS[normEstado("mia", estado) || (st.miaModo === "elegante" ? "elegante" : "guiando")];
+      img.src = pick(s?.imgs || [], "") || "";
+    } else if (b === "ciro") {
+      const s = CIRO_ESTADOS[normEstado("ciro", estado) || "feliz"];
+      img.src = s?.img || "";
+    } else {
+      img.removeAttribute("src");
+    }
+
+    // anim “refresh”
+    card.classList.remove("show");
+    setTimeout(() => card.classList.add("show"), 20);
+  }
+
+  function setFloatVisible(on) {
+    const layer = document.getElementById("jcFloatLayer");
+    if (!layer) return;
+    layer.style.display = on ? "block" : "none";
+    layer.setAttribute("aria-hidden", on ? "false" : "true");
+  }
+
+
   // ---------------------------
   // Drama: Estados + frases + assets (trama antigua rescatada)
   // ---------------------------
@@ -618,6 +713,15 @@
     if (st.recentLineKeys.length > RECENT_LIMIT) st.recentLineKeys.length = RECENT_LIMIT;
   }
 
+   // ✅ Tarjetitas flotantes: actualiza 1 por tick (alternando 1 y 2)
+    st.__floatFlip = !st.__floatFlip;
+    const slot = st.__floatFlip ? 1 : 2;
+
+    if (pickOne.from !== "system") {
+      setFloatCard(slot, { bot: pickOne.from, text: pickOne.text, estado: pickOne.estado });
+    }
+
+
   function isRecent(key) {
     return st.recentLineKeys.includes(key);
   }
@@ -816,9 +920,10 @@
     lsSet(STORAGE_ENABLED, enabled ? "1" : "0");
   }
 
-  function applyAllVisibility() {
+   function applyAllVisibility() {
     applyWidgetsVisibility();
     applyChatVisibility();
+    setFloatVisible(!!JC.state.botsEnabled);
   }
 
   function toggleBots() {
