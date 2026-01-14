@@ -1055,6 +1055,51 @@
     if (JC.state.botsEnabled) setCollapsed(false);
   }
 
+   // ---------------------------
+  // Escenas: autoplay micro-escenas (necesario para playScene)
+  // ---------------------------
+  function playScene(sceneKey, { maxLines = AUTOPLAY_MAX_LINES, tag = "" } = {}) {
+    if (!JC.state.botsEnabled) return;
+
+    const scenes = getScenes();
+    const arr = Array.isArray(scenes?.[sceneKey]) ? scenes[sceneKey] : null;
+    if (!arr || !arr.length) return;
+
+    clearSceneTimers();
+
+    const slice = arr.slice(0, Math.max(1, Math.min(maxLines, arr.length)));
+
+    let totalDelay = 0;
+    for (let i = 0; i < slice.length; i++) {
+      const ln = slice[i] || {};
+      const from = normBot(ln.from);
+      const text = String(ln.text ?? "").trim();
+      if (!text) continue;
+
+      const estado = String(ln.estado ?? "").trim();
+      const delay = Number(ln.delay ?? 0) || 0;
+      totalDelay += Math.max(0, delay);
+
+      const t = setTimeout(() => {
+        if (!JC.state.botsEnabled) return;
+
+        if (from === "system") {
+          chatLine("Sistema", text, tag || sceneKey);
+          return;
+        }
+
+        if (from === "angie") setBotState("angie", estado || "feliz", { speak: false, from: tag || sceneKey, overrideText: text });
+        if (from === "mia") setBotState("mia", estado || (st.miaModo === "elegante" ? "elegante" : "guiando"), { speak: false, from: tag || sceneKey, overrideText: text });
+        if (from === "ciro") setBotState("ciro", estado || "feliz", { speak: false, from: tag || sceneKey, overrideText: text });
+
+        const name = from === "angie" ? "Angie" : from === "mia" ? "Mia" : "Ciro";
+        chatLine(name, text, tag || sceneKey);
+      }, totalDelay);
+
+      st.sceneTimers.push(t);
+    }
+  }
+  
   // ---------------------------
   // Init
   // ---------------------------
