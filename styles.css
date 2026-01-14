@@ -1093,16 +1093,21 @@ body.jc-floats-on #jcChat {
   opacity: .9 !important;
   margin: 0 0 4px 0 !important;
 }
-
 #jcFloatLayer .jc-float-text{
   font-size: 14px !important;
   line-height: 1.25 !important;
   margin: 0 !important;
 
-  display: -webkit-box !important;
-  -webkit-line-clamp: 3 !important;
-  -webkit-box-orient: vertical !important;
   overflow: hidden !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+
+  /* estándar + webkit */
+  line-clamp: 3 !important;
+  -webkit-line-clamp: 3 !important;
+
+  /* ayuda en textos largos */
+  overflow-wrap: anywhere !important;
 }
 
 /* Animación suave “flotante” (sin marear) */
