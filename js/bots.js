@@ -1100,6 +1100,63 @@
     }
   }
   
+  
+  // ---------------------------
+// playScene (anti-crash)
+// - Si existe JC_CHAT_SCENES: reproduce micro-escena
+// - Si no existe: no hace nada (pero NO rompe init)
+// ---------------------------
+function playScene(sceneKey, { maxLines = (typeof AUTOPLAY_MAX_LINES !== "undefined" ? AUTOPLAY_MAX_LINES : 6), tag = "" } = {}) {
+  try {
+    if (!JC.state.botsEnabled) return;
+
+    const scenes = (typeof getScenes === "function") ? getScenes() : (window.JC_CHAT_SCENES || {});
+    const arr = Array.isArray(scenes?.[sceneKey]) ? scenes[sceneKey] : null;
+    if (!arr || !arr.length) return;
+
+    if (typeof clearSceneTimers === "function") clearSceneTimers();
+
+    const slice = arr.slice(0, Math.max(1, Math.min(maxLines, arr.length)));
+
+    let totalDelay = 0;
+    for (let i = 0; i < slice.length; i++) {
+      const ln = slice[i] || {};
+      const from = (typeof normBot === "function") ? normBot(ln.from) : String(ln.from || "system").toLowerCase();
+      const text = String(ln.text ?? "").trim();
+      if (!text) continue;
+
+      const estado = String(ln.estado ?? "").trim();
+      const delay = Number(ln.delay ?? 0) || 0;
+      totalDelay += Math.max(0, delay);
+
+      const t = setTimeout(() => {
+        if (!JC.state.botsEnabled) return;
+
+        if (from === "system") {
+          if (typeof chatLine === "function") chatLine("Sistema", text, tag || sceneKey);
+          return;
+        }
+
+        // sincroniza widgets sin reventar
+        if (typeof setBotState === "function") {
+          if (from === "angie") setBotState("angie", estado || "feliz", { speak: false, from: tag || sceneKey, overrideText: text });
+          if (from === "mia") setBotState("mia", estado || "guiando", { speak: false, from: tag || sceneKey, overrideText: text });
+          if (from === "ciro") setBotState("ciro", estado || "feliz", { speak: false, from: tag || sceneKey, overrideText: text });
+        }
+
+        if (typeof chatLine === "function") {
+          const name = from === "angie" ? "Angie" : from === "mia" ? "Mia" : "Ciro";
+          chatLine(name, text, tag || sceneKey);
+        }
+      }, totalDelay);
+
+      if (Array.isArray(st?.sceneTimers)) st.sceneTimers.push(t);
+    }
+  } catch (e) {
+    console.warn("[JC] playScene failed (safe)", e);
+  }
+}
+
   // ---------------------------
   // Init
   // ---------------------------
@@ -1128,6 +1185,17 @@
     // UI reflect
     applyAllVisibility();
     setCollapsed(false);
+    
+    // Fallback: si los textos quedaron vacíos, pon una frase rápida
+try {
+  const aT = elAngieText?.();
+  const mT = elMiaText?.();
+  const cT = elCiroText?.();
+
+  if (aT && !String(aT.textContent || "").trim()) aT.textContent = "¡Holaaa! Qué bueno verte 😄";
+  if (mT && !String(mT.textContent || "").trim()) mT.textContent = "Te acompaño paso a paso 💗";
+  if (cT && !String(cT.textContent || "").trim()) cT.textContent = "Hoy se sirve con alegría 🙌";
+} catch {}
 
     // Hook router
     activateHookRetries();
