@@ -1025,3 +1025,116 @@ body.jc-floats-on #jcChat {
     transition: none !important;
   }
 }
+
+/* ============================================================
+   JC FLOAT CARDS — Mobile polish (avatar full height + orden)
+   Pegar al FINAL de styles.css
+   ============================================================ */
+
+#jcFloatLayer {
+  z-index: 99998 !important;
+}
+
+/* contenedor: margen seguro sobre nav/gestos */
+#jcFloatLayer .jc-float-wrap{
+  left: 10px !important;
+  right: 10px !important;
+  bottom: calc(78px + env(safe-area-inset-bottom)) !important;
+  max-width: none !important;
+  gap: 12px !important;
+}
+
+/* Card: más limpio, sin “colas” raras, alineación estable */
+#jcFloatLayer .jc-float-card{
+  width: 100% !important;
+  max-width: 520px !important;
+  margin: 0 !important;
+
+  display: grid !important;
+  grid-template-columns: 64px 1fr !important;
+  align-items: stretch !important;
+  gap: 12px !important;
+
+  padding: 10px 12px !important;
+  border-radius: 18px !important;
+
+  background: rgba(10,16,32,.86) !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  box-shadow: 0 14px 32px rgba(0,0,0,.35) !important;
+
+  /* que no herede colas/triángulos de estilos viejos */
+  clip-path: none !important;
+}
+
+/* mata pseudo-elementos si algún estilo viejo les pone “cola” */
+#jcFloatLayer .jc-float-card::before,
+#jcFloatLayer .jc-float-card::after{
+  content: none !important;
+  display: none !important;
+}
+
+/* ✅ Avatar ocupa “todo el espacio” del lado izquierdo */
+#jcFloatLayer .jc-float-ava{
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 16px !important;    /* thumbnail, no bolita */
+  object-fit: cover !important;
+  align-self: stretch !important;
+  justify-self: stretch !important;
+  background: rgba(255,255,255,.08) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.10) !important;
+}
+
+/* Tipografía: compacta y legible */
+#jcFloatLayer .jc-float-name{
+  font-size: 12px !important;
+  letter-spacing: .06em !important;
+  text-transform: uppercase !important;
+  opacity: .9 !important;
+  margin: 0 0 4px 0 !important;
+}
+
+#jcFloatLayer .jc-float-text{
+  font-size: 14px !important;
+  line-height: 1.25 !important;
+  margin: 0 !important;
+
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+/* Animación suave “flotante” (sin marear) */
+@keyframes jcFloatBob2 {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-3px); }
+  100% { transform: translateY(0); }
+}
+
+#jcFloatLayer .jc-float-card{
+  animation: jcFloatBob2 3.6s ease-in-out infinite !important;
+}
+#jcFloatLayer .jc-float-card.hide-mobile{
+  animation-delay: .35s !important;
+}
+
+/* Respeta accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+  #jcFloatLayer .jc-float-card{
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Extra: en pantallas muy pequeñas reduce un poco el avatar */
+@media (max-width: 360px){
+  #jcFloatLayer .jc-float-card{
+    grid-template-columns: 56px 1fr !important;
+  }
+  #jcFloatLayer .jc-float-ava{
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 14px !important;
+  }
+}
