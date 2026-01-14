@@ -713,124 +713,101 @@
     if (st.recentLineKeys.length > RECENT_LIMIT) st.recentLineKeys.length = RECENT_LIMIT;
   }
 
-   // ✅ Tarjetitas flotantes: actualiza 1 por tick (alternando 1 y 2)
-    st.__floatFlip = !st.__floatFlip;
-    const slot = st.__floatFlip ? 1 : 2;
-
-    if (pickOne.from !== "system") {
-      setFloatCard(slot, { bot: pickOne.from, text: pickOne.text, estado: pickOne.estado });
-    }
-
-
+   
   function isRecent(key) {
     return st.recentLineKeys.includes(key);
   }
 
-  function rotateOnceGlobal() {
-    if (!JC.state.botsEnabled) return;
+ function rotateOnceGlobal() {
+  if (!JC.state.botsEnabled) return;
 
-    // respeta widgets visibles: si todos ocultos, no tiene sentido rotar
-    const anyWidgetOn =
-      (st.widgets.angie && !!elAngieWidget()) ||
-      (st.widgets.mia && !!elMiaWidget()) ||
-      (st.widgets.ciro && !!elCiroWidget());
-    if (!anyWidgetOn) return;
+  // respeta widgets visibles: si todos ocultos, no tiene sentido rotar
+  const anyWidgetOn =
+    (st.widgets.angie && !!elAngieWidget()) ||
+    (st.widgets.mia && !!elMiaWidget()) ||
+    (st.widgets.ciro && !!elCiroWidget());
+  if (!anyWidgetOn) return;
 
-    const pool = flattenScenePool();
+  const pool = flattenScenePool();
 
-    // si no hay escenas, caemos a frases base
-    if (!pool.length) {
-      // alterna bot sin spamear
-      const order = ["angie", "mia", "ciro"];
-      const next = order[(order.indexOf(st.lastSpeaker) + 1 + order.length) % order.length] || "angie";
-      st.lastSpeaker = next;
+  // si no hay escenas, caemos a frases base
+  if (!pool.length) {
+    const order = ["angie", "mia", "ciro"];
+    const next = order[(order.indexOf(st.lastSpeaker) + 1 + order.length) % order.length] || "angie";
+    st.lastSpeaker = next;
 
-      if (next === "angie" && st.widgets.angie) angieSetEstado("feliz", { speak: true, from: "rotación" });
-      if (next === "mia" && st.widgets.mia) miaSetEstado(st.miaModo === "elegante" ? "elegante" : "guiando", { speak: true, from: "rotación" });
-      if (next === "ciro" && st.widgets.ciro) ciroSetEstado("feliz", { speak: true, from: "rotación" });
-      return;
-    }
+    if (next === "angie" && st.widgets.angie) angieSetEstado("feliz", { speak: true, from: "rotación" });
+    if (next === "mia" && st.widgets.mia) miaSetEstado(st.miaModo === "elegante" ? "elegante" : "guiando", { speak: true, from: "rotación" });
+    if (next === "ciro" && st.widgets.ciro) ciroSetEstado("feliz", { speak: true, from: "rotación" });
 
-    // filtro: preferimos NO system, y evitamos repetir speaker 3 veces seguidas
-    const candidates = pool.filter((x) => x.from !== "system" && !isRecent(x.key));
-    const usable = candidates.length ? candidates : pool.filter((x) => x.from !== "system");
-
-    // intento de elegir bot diferente al último
-    let pickOne = null;
-    for (let tries = 0; tries < 12; tries++) {
-      const c = usable[Math.floor(Math.random() * usable.length)];
-      if (!c) break;
-      if (c.from === st.lastSpeaker) continue;
-      pickOne = c;
-      break;
-    }
-    if (!pickOne) pickOne = usable[Math.floor(Math.random() * usable.length)] || pool[0];
-
-    pushRecent(pickOne.key);
-    st.lastSpeaker = pickOne.from;
-
-    // aplica a widget y chat (una línea por tick)
-    if (pickOne.from === "angie" && st.widgets.angie) {
-      setBotState("angie", pickOne.estado || "feliz", { speak: true, from: `mix:${pickOne.sceneKey}`, overrideText: pickOne.text });
-    } else if (pickOne.from === "mia" && st.widgets.mia) {
-      setBotState("mia", pickOne.estado || (st.miaModo === "elegante" ? "elegante" : "guiando"), { speak: true, from: `mix:${pickOne.sceneKey}`, overrideText: pickOne.text });
-    } else if (pickOne.from === "ciro" && st.widgets.ciro) {
-      setBotState("ciro", pickOne.estado || "feliz", { speak: true, from: `mix:${pickOne.sceneKey}`, overrideText: pickOne.text });
-    } else {
-      // si el widget de ese bot está apagado, intentamos otro bot visible rápidamente
-      const order = ["angie", "mia", "ciro"];
-      for (const b of order) {
-        if (b === "angie" && st.widgets.angie) { angieSetEstado("feliz", { speak: true, from: "rotación" }); break; }
-        if (b === "mia" && st.widgets.mia) { miaSetEstado(st.miaModo === "elegante" ? "elegante" : "guiando", { speak: true, from: "rotación" }); break; }
-        if (b === "ciro" && st.widgets.ciro) { ciroSetEstado("feliz", { speak: true, from: "rotación" }); break; }
+    // Tarjetitas: refleja lo mismo (si existe overlay)
+    try {
+      if (typeof setFloatCard === "function") {
+        st.__floatFlip = !st.__floatFlip;
+        const slot = st.__floatFlip ? 1 : 2;
+        setFloatCard(slot, { bot: next, text: "", estado: st.last?.[next]?.estado || "" });
       }
-    }
+    } catch {}
+    return;
   }
 
-  function playScene(sceneKey, { maxLines = AUTOPLAY_MAX_LINES, tag = "" } = {}) {
-    if (!JC.state.botsEnabled) return;
+  // filtro: preferimos NO system, y evitamos repetir recent
+  const candidates = pool.filter((x) => x.from !== "system" && !isRecent(x.key));
+  const usable = candidates.length ? candidates : pool.filter((x) => x.from !== "system");
+  if (!usable.length) return;
 
-    const scenes = getScenes();
-    const arr = Array.isArray(scenes?.[sceneKey]) ? scenes[sceneKey] : null;
-    if (!arr || !arr.length) return;
+  // elegir un bot diferente al último si se puede
+  let pickOne = null;
+  for (let tries = 0; tries < 12; tries++) {
+    const c = usable[Math.floor(Math.random() * usable.length)];
+    if (!c) break;
+    if (c.from === st.lastSpeaker) continue;
+    pickOne = c;
+    break;
+  }
+  if (!pickOne) pickOne = usable[Math.floor(Math.random() * usable.length)] || usable[0];
 
-    clearSceneTimers();
+  pushRecent(pickOne.key);
+  st.lastSpeaker = pickOne.from;
 
-    // micro-escena: 3–6 líneas, empezando desde el inicio
-    const slice = arr.slice(0, Math.max(1, Math.min(maxLines, arr.length)));
+  // ✅ Tarjetitas flotantes: actualiza 1 por tick (alternando slot 1/2)
+  try {
+    if (typeof setFloatCard === "function") {
+      st.__floatFlip = !st.__floatFlip;
+      const slot = st.__floatFlip ? 1 : 2;
+      setFloatCard(slot, { bot: pickOne.from, text: pickOne.text, estado: pickOne.estado });
+    }
+  } catch {}
 
-    let totalDelay = 0;
-    for (let i = 0; i < slice.length; i++) {
-      const ln = slice[i] || {};
-      const from = normBot(ln.from);
-      const text = String(ln.text ?? "").trim();
-      if (!text) continue;
-
-      const estado = String(ln.estado ?? "").trim();
-      const delay = Number(ln.delay ?? 0) || 0;
-      totalDelay += Math.max(0, delay);
-
-      const t = setTimeout(() => {
-        if (!JC.state.botsEnabled) return;
-
-        if (from === "system") {
-          chatLine("Sistema", text, tag || sceneKey);
-          return;
-        }
-
-        // sincroniza widget/estado + escribe la misma línea al chat
-        if (from === "angie") setBotState("angie", estado || "feliz", { speak: false, from: tag || sceneKey, overrideText: text });
-        if (from === "mia") setBotState("mia", estado || (st.miaModo === "elegante" ? "elegante" : "guiando"), { speak: false, from: tag || sceneKey, overrideText: text });
-        if (from === "ciro") setBotState("ciro", estado || "feliz", { speak: false, from: tag || sceneKey, overrideText: text });
-
-        const name = from === "angie" ? "Angie" : from === "mia" ? "Mia" : "Ciro";
-        chatLine(name, text, tag || sceneKey);
-      }, totalDelay);
-
-      st.sceneTimers.push(t);
+  // aplica a widget y chat (una línea por tick)
+  if (pickOne.from === "angie" && st.widgets.angie) {
+    setBotState("angie", pickOne.estado || "feliz", {
+      speak: true,
+      from: `mix:${pickOne.sceneKey}`,
+      overrideText: pickOne.text
+    });
+  } else if (pickOne.from === "mia" && st.widgets.mia) {
+    setBotState("mia", pickOne.estado || (st.miaModo === "elegante" ? "elegante" : "guiando"), {
+      speak: true,
+      from: `mix:${pickOne.sceneKey}`,
+      overrideText: pickOne.text
+    });
+  } else if (pickOne.from === "ciro" && st.widgets.ciro) {
+    setBotState("ciro", pickOne.estado || "feliz", {
+      speak: true,
+      from: `mix:${pickOne.sceneKey}`,
+      overrideText: pickOne.text
+    });
+  } else {
+    // si el widget de ese bot está apagado, intenta uno visible
+    const order = ["angie", "mia", "ciro"];
+    for (const b of order) {
+      if (b === "angie" && st.widgets.angie) { angieSetEstado("feliz", { speak: true, from: "rotación" }); break; }
+      if (b === "mia" && st.widgets.mia) { miaSetEstado(st.miaModo === "elegante" ? "elegante" : "guiando", { speak: true, from: "rotación" }); break; }
+      if (b === "ciro" && st.widgets.ciro) { ciroSetEstado("feliz", { speak: true, from: "rotación" }); break; }
     }
   }
-
+}
   function markSceneSeen(key) {
     if (!key) return;
     st.seenScenes[key] = true;
