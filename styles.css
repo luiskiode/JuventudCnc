@@ -885,3 +885,108 @@ body.chat-open .ciro-widget{
 @media (prefers-reduced-motion: reduce){
   body.jc-bg-dynamic::before{ animation:none !important; }
 }
+/* ============================================================
+   JC BOTS UI — Widgets + Chat + Tarjetitas
+   Pegar al final de styles.css
+   ============================================================ */
+
+/* 1) Z-INDEX sane: fondo/overlay abajo, UI arriba */
+#jcAppBgLayer, #jcAppBgOverlay {
+  z-index: 0 !important;
+}
+
+/* Si tienes video/fondo animado con posición fija, que no tape */
+video, .bg-video, .video-bg, #bgVideo {
+  z-index: 0 !important;
+}
+
+/* 2) Widgets (Angie/Mia/Ciro) como flotantes */
+#angieWidget, #miaWidget, #ciroWidget {
+  position: fixed !important;
+  z-index: 99990 !important;
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  max-width: min(360px, calc(100vw - 24px));
+  pointer-events: auto;
+}
+
+/* 3) Layout PC: izquierda apilados */
+#angieWidget { left: 12px; bottom: 112px; }
+#miaWidget   { left: 12px; bottom: 248px; }
+#ciroWidget  { left: 12px; bottom: 384px; }
+
+/* 4) Chat flotante (derecha) */
+#jcChat {
+  position: fixed !important;
+  z-index: 99995 !important;
+  right: 12px;
+  bottom: 12px;
+  width: min(420px, calc(100vw - 24px));
+  max-height: min(520px, calc(100vh - 24px));
+  pointer-events: auto;
+}
+
+/* 5) Asegurar texto visible */
+#angieText, #miaText, #ciroText {
+  display: block;
+  font-size: 13px;
+  line-height: 1.25;
+  opacity: 1;
+  color: inherit;
+  margin: 0;
+  white-space: normal;
+}
+
+/* 6) Avatar nunca “0” */
+#angieAvatarImg, #miaAvatarImg, #ciroAvatarImg {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+/* 7) Tarjetitas flotantes overlay (si estás usando jcFloatLayer) */
+#jcFloatLayer {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99980 !important;
+  pointer-events: none;
+}
+
+/* 8) Responsive móvil: 1 widget visible (para no invadir), chat full ancho */
+@media (max-width: 720px) {
+  /* Chat abajo a todo el ancho */
+  #jcChat {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    bottom: 10px;
+    max-height: 46vh;
+  }
+
+  /* Widgets: solo 1 (Angie) por defecto */
+  #miaWidget, #ciroWidget {
+    display: none !important;
+  }
+
+  #angieWidget {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    bottom: calc(46vh + 18px); /* por encima del chat */
+    max-width: calc(100vw - 20px);
+  }
+}
+
+/* 9) Si usas clases de animación “is-speaking”, que no rompa layout */
+#angieWidget.is-speaking, #miaWidget.is-speaking, #ciroWidget.is-speaking {
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,.25));
+}
+
+/* 10) Seguridad: si alguna capa padre tiene transform, puede romper stacking.
+   Asegura que el body no limite la visibilidad */
+html, body {
+  overflow-x: hidden;
+}
