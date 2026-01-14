@@ -249,7 +249,7 @@
   }
 
  // ============================================================
-// Fondo global (Box)
+// Fondo global (Box) — robusto (Android/galería) + default OK
 // ============================================================
 const JC_BG_KEY = "jc_bg_main_dataurl";
 let __jcBgBound = false;
@@ -264,9 +264,7 @@ async function jcReadImageAsCompressedDataURL(file, opts = {}) {
   if (!file) throw new Error("Archivo inválido");
 
   const t = (file.type || "").toLowerCase();
-  if (!t.startsWith("image/")) {
-    throw new Error("El archivo seleccionado no es una imagen.");
-  }
+  if (!t.startsWith("image/")) throw new Error("El archivo seleccionado no es una imagen.");
 
   // HEIC/HEIF suele fallar en web (sin librerías)
   if (t.includes("heic") || t.includes("heif")) {
@@ -297,25 +295,42 @@ async function jcReadImageAsCompressedDataURL(file, opts = {}) {
     }
   }
 
-  // 2) Fallback: FileReader -> Image
+  // 2) Fallback robusto: arrayBuffer -> Blob -> dataURL -> Image
   if (!src) {
-    const dataUrlOriginal = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
+    const dataUrlOriginal = await (async () => {
+      // Intento A: arrayBuffer (a veces funciona cuando FileReader da NotReadableError)
+      try {
+        const buf = await file.arrayBuffer();
+        const blob = new Blob([buf], { type: file.type || "image/*" });
 
-      reader.onerror = () => {
-        const code = reader.error?.name || "FileReaderError";
-        reject(
-          new Error(
-            `No se pudo leer el archivo (${code}). ` +
-              `Intenta elegirlo desde “Archivos/Descargas” o usa otra imagen (JPG/PNG).`
-          )
-        );
-      };
+        return await new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onerror = () => reject(r.error || new Error("FileReaderError"));
+          r.onabort = () => reject(new Error("Lectura cancelada."));
+          r.onload = () => resolve(String(r.result || ""));
+          r.readAsDataURL(blob);
+        });
+      } catch (e) {
+        // Intento B: FileReader directo (último recurso)
+        return await new Promise((resolve, reject) => {
+          const reader = new FileReader();
 
-      reader.onabort = () => reject(new Error("Lectura cancelada. Intenta elegir la imagen otra vez."));
-      reader.onload = () => resolve(String(reader.result || ""));
-      reader.readAsDataURL(file);
-    });
+          reader.onerror = () => {
+            const code = reader.error?.name || "NotReadableError";
+            reject(
+              new Error(
+                `No se pudo leer el archivo (${code}). ` +
+                  `En Android, prueba elegirlo desde “Archivos/Descargas” o descarga la foto antes.`
+              )
+            );
+          };
+
+          reader.onabort = () => reject(new Error("Lectura cancelada. Intenta elegir la imagen otra vez."));
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.readAsDataURL(file);
+        });
+      }
+    })();
 
     const img = new Image();
     const loaded = new Promise((resolve, reject) => {
@@ -324,10 +339,7 @@ async function jcReadImageAsCompressedDataURL(file, opts = {}) {
     });
 
     img.src = dataUrlOriginal;
-
-    if (img.decode) {
-      await img.decode().catch(() => {});
-    }
+    if (img.decode) await img.decode().catch(() => {});
     await loaded;
 
     src = img;
@@ -349,9 +361,7 @@ async function jcReadImageAsCompressedDataURL(file, opts = {}) {
 
   // Libera bitmap si aplica
   if (src && typeof src.close === "function") {
-    try {
-      src.close();
-    } catch {}
+    try { src.close(); } catch {}
   }
 
   // Export
@@ -372,9 +382,12 @@ function jcApplyGlobalBackground(dataUrl) {
     if (dataUrl) {
       document.documentElement.style.setProperty("--jc-bg-image", `url("${dataUrl}")`);
       document.body.classList.add("jc-has-bg");
+      document.body.classList.remove("jc-bg-default");
     } else {
+      // Sin personalizado: usa fallback CSS (--jc-bg-default)
       document.documentElement.style.removeProperty("--jc-bg-image");
       document.body.classList.remove("jc-has-bg");
+      document.body.classList.add("jc-bg-default");
     }
   } catch (e) {
     console.warn("[JC] jcApplyGlobalBackground failed", e);
@@ -414,9 +427,7 @@ function jcBindGlobalBackgroundUI() {
   __jcBgBound = true;
 
   btnPick.addEventListener("click", () => {
-    try {
-      input.value = "";
-    } catch {}
+    try { input.value = ""; } catch {}
     input.click();
   });
 
@@ -438,7 +449,7 @@ function jcBindGlobalBackgroundUI() {
         maxH: 900,
         quality: 0.82,
         maxMB: 12,
-        maxOutMB: 2.0
+        maxOutMB: 2.0,
       });
 
       jcSaveGlobalBackground(dataUrl);
@@ -450,9 +461,7 @@ function jcBindGlobalBackgroundUI() {
       if (estado) estado.textContent = e?.message || "No se pudo aplicar el fondo.";
     } finally {
       __jcBgBusy = false;
-      try {
-        input.value = "";
-      } catch {}
+      try { input.value = ""; } catch {}
     }
   });
 

@@ -119,45 +119,42 @@ body{
    ========================================================== */
 #jcAppBgLayer,
 #jcAppBgOverlay{
-  position:fixed;
-  inset:0;
-  pointer-events:none;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
 }
 
+/* capa de imagen SIEMPRE detrás */
 #jcAppBgLayer{
-  background-image: var(--jc-bg-image);
+  z-index: -2;
+
+  /* usa personalizada si existe; si no, cae al default */
+  background-image: var(--jc-bg-image, var(--jc-bg-default, none));
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
+/* overlay para legibilidad */
 #jcAppBgOverlay{
-  z-index:-1;
-  background: var(--jc-bg-overlay);
-  opacity:1;
+  z-index: -1;
+  background: var(--jc-bg-overlay, rgba(0,0,0,.35));
+  opacity: 1;
   transition: opacity .18s ease;
 }
 
-/* Cambia el default por data-theme (si NO estás usando imagen local) */
+/* defaults por tema (asegúrate que estas vars existan) */
 body[data-theme="chicos"]{ --jc-bg-default: var(--jc-bg-chicos); }
 body[data-theme="chicas"]{ --jc-bg-default: var(--jc-bg-chicas); }
 body[data-theme="mix"]{ --jc-bg-default: url("assets/bg-floral.webp"); }
 
-/* Modo: restaurar default */
-body.jc-bg-default{
-  --jc-app-bg: var(--jc-bg-default);
-}
-
 /* Modo OFF (quitar fondo) */
-body.jc-bg-off{
-  --jc-app-bg: none;
-}
 body.jc-bg-off #jcAppBgLayer,
 body.jc-bg-off #jcAppBgOverlay{
-  opacity:0;
+  opacity: 0;
 }
 
-/* Si quieres mantener un “ambiente” aunque esté OFF */
+/* ambiente cuando está OFF */
 body.jc-bg-off{
   background: #020617;
 }
