@@ -125,15 +125,12 @@ body{
 }
 
 #jcAppBgLayer{
-  z-index:-2;
-  background-image: var(--jc-app-bg, none);
+  background-image: var(--jc-bg-image);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  transform: translateZ(0);
-  opacity:1;
-  transition: opacity .18s ease;
 }
+
 #jcAppBgOverlay{
   z-index:-1;
   background: var(--jc-bg-overlay);
