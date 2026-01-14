@@ -253,24 +253,50 @@
   // ============================================================
   // Fondo global (Box)
   // ============================================================
-  const JC_BG_KEY = "jc_bg_main_dataurl";
+async function jcReadImageAsCompressedDataURL(file, opts = {}) {
+  const maxW = opts.maxW ?? 1920;
+  const maxH = opts.maxH ?? 1080;
+  const quality = opts.quality ?? 0.85;
+  const mime = opts.mime ?? "image/jpeg";
 
-// Aplica fondo: si hay dataUrl => custom; si no => default del tema
-function jcApplyGlobalBackground(dataUrl) {
-  try {
-    // asegúrate de no estar en OFF
-    document.body.classList.remove("jc-bg-off", "jc-bg-dynamic");
-    document.body.classList.add("jc-bg-default");
+  if (!file) throw new Error("Archivo inválido");
 
-    if (dataUrl) {
-      document.documentElement.style.setProperty("--jc-app-bg", `url("${dataUrl}")`);
-    } else {
-      // vuelve al default del tema (bg-floral / bg-blue / bg-pink según data-theme)
-      document.documentElement.style.setProperty("--jc-app-bg", "var(--jc-bg-default)");
-    }
-  } catch (e) {
-    console.warn("[JC] jcApplyGlobalBackground failed", e);
+  // Lee como DataURL (evita blob: ERR_FAILED)
+  const dataUrlOriginal = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.readAsDataURL(file);
+  });
+
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+
+  const loaded = new Promise((resolve, reject) => {
+    img.onload = () => resolve(true);
+    img.onerror = () => reject(new Error("No se pudo cargar la imagen seleccionada"));
+  });
+
+  img.src = dataUrlOriginal;
+
+  if (img.decode) {
+    await img.decode().catch(() => {});
   }
+  await loaded;
+
+  let { width: w, height: h } = img;
+  const ratio = Math.min(maxW / w, maxH / h, 1);
+  w = Math.round(w * ratio);
+  h = Math.round(h * ratio);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+
+  const ctx = canvas.getContext("2d", { alpha: false });
+  ctx.drawImage(img, 0, 0, w, h);
+
+  return canvas.toDataURL(mime, quality);
 }
 
 function jcLoadGlobalBackground() {
