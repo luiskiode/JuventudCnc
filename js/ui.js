@@ -255,151 +255,163 @@
   // ============================================================
   const JC_BG_KEY = "jc_bg_main_dataurl";
 
-  function jcApplyGlobalBackground(dataUrl) {
-    try {
-      if (dataUrl) {
-        document.documentElement.style.setProperty("--jc-bg-image", `url("${dataUrl}")`);
-        document.body.classList.add("jc-has-bg");
-      } else {
-        document.documentElement.style.removeProperty("--jc-bg-image");
-        document.body.classList.remove("jc-has-bg");
-      }
-    } catch (e) {
-      console.warn("[JC] jcApplyGlobalBackground failed", e);
-    }
-  }
+// Aplica fondo: si hay dataUrl => custom; si no => default del tema
+function jcApplyGlobalBackground(dataUrl) {
+  try {
+    // asegúrate de no estar en OFF
+    document.body.classList.remove("jc-bg-off", "jc-bg-dynamic");
+    document.body.classList.add("jc-bg-default");
 
-  function jcLoadGlobalBackground() {
-    const dataUrl = lsGet(JC_BG_KEY, "");
-    if (dataUrl) jcApplyGlobalBackground(dataUrl);
-  }
-
-  function jcSaveGlobalBackground(dataUrl) {
     if (dataUrl) {
-      const ok = lsSet(JC_BG_KEY, dataUrl);
-      if (!ok) {
-        lsRemove(JC_BG_KEY);
-        jcApplyGlobalBackground("");
-        throw new Error("No se pudo guardar el fondo (memoria llena). Usa una imagen más liviana.");
-      }
+      document.documentElement.style.setProperty("--jc-app-bg", `url("${dataUrl}")`);
     } else {
-      lsRemove(JC_BG_KEY);
+      // vuelve al default del tema (bg-floral / bg-blue / bg-pink según data-theme)
+      document.documentElement.style.setProperty("--jc-app-bg", "var(--jc-bg-default)");
     }
-    jcApplyGlobalBackground(dataUrl || "");
+  } catch (e) {
+    console.warn("[JC] jcApplyGlobalBackground failed", e);
   }
+}
 
-  function jcReadImageAsCompressedDataURL(file, { maxW = 1400, quality = 0.82 } = {}) {
-    return new Promise((resolve, reject) => {
-      if (!file || !file.type?.startsWith("image/")) return reject(new Error("Archivo no es imagen"));
+function jcLoadGlobalBackground() {
+  const dataUrl = lsGet(JC_BG_KEY, "");
+  jcApplyGlobalBackground(dataUrl || "");
+}
 
-      const fr = new FileReader();
-      fr.onload = () => {
-        const src = String(fr.result || "");
-        const img = new Image();
+function jcSaveGlobalBackground(dataUrl) {
+  if (dataUrl) {
+    const ok = lsSet(JC_BG_KEY, dataUrl);
+    if (!ok) {
+      lsRemove(JC_BG_KEY);
+      jcApplyGlobalBackground("");
+      throw new Error("No se pudo guardar el fondo (memoria llena). Usa una imagen más liviana.");
+    }
+  } else {
+    lsRemove(JC_BG_KEY);
+  }
+  jcApplyGlobalBackground(dataUrl || "");
+}
 
-        img.onload = () => {
-          try {
-            const w = img.naturalWidth || img.width || 1;
-            const h = img.naturalHeight || img.height || 1;
-            const scale = w > maxW ? maxW / w : 1;
-            const cw = Math.max(1, Math.round(w * scale));
-            const ch = Math.max(1, Math.round(h * scale));
+// Lee + comprime SIN FileReader (más estable en Android)
+function jcReadImageAsCompressedDataURL(file, { maxW = 1400, quality = 0.82 } = {}) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type?.startsWith("image/")) return reject(new Error("Archivo no es imagen"));
 
-            const canvas = document.createElement("canvas");
-            canvas.width = cw;
-            canvas.height = ch;
-            const ctx2d = canvas.getContext("2d");
-            if (!ctx2d) return reject(new Error("No canvas ctx"));
+    // Tip: si es enorme, avisa (evita reventar memoria)
+    if (file.size > 12 * 1024 * 1024) {
+      return reject(new Error("La imagen es muy pesada. Elige una más liviana (ideal < 8MB)."));
+    }
 
-            ctx2d.drawImage(img, 0, 0, cw, ch);
-            const out = canvas.toDataURL("image/jpeg", quality);
-            resolve(out);
-          } catch (e) {
-            reject(e);
-          }
-        };
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.decoding = "async";
 
-        img.onerror = () => reject(new Error("No se pudo cargar la imagen seleccionada"));
-        img.src = src;
-      };
-
-      fr.onerror = () => {
-        const err = fr.error;
-        const msg =
-          err?.name === "NotReadableError"
-            ? "El navegador no pudo leer el archivo. Prueba moviéndolo a Desktop y vuelve a elegir."
-            : err?.message || "No se pudo leer el archivo";
-        reject(new Error(msg));
-      };
-
-      fr.onabort = () => reject(new Error("Lectura cancelada"));
-
+    img.onload = () => {
       try {
-        fr.readAsDataURL(file);
+        const w = img.naturalWidth || img.width || 1;
+        const h = img.naturalHeight || img.height || 1;
+        const scale = w > maxW ? maxW / w : 1;
+
+        const cw = Math.max(1, Math.round(w * scale));
+        const ch = Math.max(1, Math.round(h * scale));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = cw;
+        canvas.height = ch;
+
+        const ctx2d = canvas.getContext("2d");
+        if (!ctx2d) throw new Error("No canvas ctx");
+
+        ctx2d.drawImage(img, 0, 0, cw, ch);
+
+        // JPG comprimido (menos tamaño para localStorage)
+        const out = canvas.toDataURL("image/jpeg", quality);
+
+        // Limpieza
+        URL.revokeObjectURL(objectUrl);
+        resolve(out);
       } catch (e) {
+        try { URL.revokeObjectURL(objectUrl); } catch {}
         reject(e);
       }
-    });
-  }
+    };
 
-  let __jcBgBound = false;
+    img.onerror = () => {
+      try { URL.revokeObjectURL(objectUrl); } catch {}
+      reject(new Error("No se pudo cargar la imagen seleccionada"));
+    };
 
-  function jcBindGlobalBackgroundUI() {
-    if (__jcBgBound) return true;
+    // Dispara carga
+    try {
+      img.src = objectUrl;
+    } catch (e) {
+      try { URL.revokeObjectURL(objectUrl); } catch {}
+      reject(e);
+    }
+  });
+}
 
-    // IDs reales en tu index
-    const input = document.getElementById("bgPickerInput") || null;
-    const btnPick = document.getElementById("btnBgPick") || null;
-    const btnClear = document.getElementById("btnBgClear") || null;
-    const estado = document.getElementById("bgPickEstado") || null;
+let __jcBgBound = false;
 
-    if (!input || !btnPick) return false;
+function jcBindGlobalBackgroundUI() {
+  if (__jcBgBound) return true;
 
-    __jcBgBound = true;
+  // IDs reales en tu index
+  const input  = document.getElementById("bgPickerInput") || null;
+  const btnPick = document.getElementById("btnBgPick") || null;
+  const btnClear = document.getElementById("btnBgClear") || null;
+  const estado = document.getElementById("bgPickEstado") || null;
 
-    btnPick.addEventListener("click", () => {
-      try {
-        input.value = "";
-      } catch {}
-      input.click();
-    });
+  if (!input || !btnPick) return false;
 
-    input.addEventListener("change", async () => {
-      const file = input.files?.[0];
-      if (!file) return;
+  __jcBgBound = true;
 
-      if (estado) estado.textContent = "Cargando fondo…";
-      try {
-        const dataUrl = await jcReadImageAsCompressedDataURL(file, { maxW: 1400, quality: 0.82 });
-        jcSaveGlobalBackground(dataUrl);
-        if (estado) estado.textContent = "✅ Fondo aplicado";
-        window.logAviso?.({ title: "Fondo", body: "Fondo global actualizado 🖼️" });
-      } catch (e) {
-        console.error("[JC] Fondo global:", e);
-        if (estado) estado.textContent = e?.message || "No se pudo aplicar el fondo.";
-      } finally {
-        try {
-          input.value = "";
-        } catch {}
-      }
-    });
+  // Asegura default visible si no hay custom
+  // (si ya hay custom, load lo pondrá)
+  document.documentElement.style.setProperty("--jc-app-bg", "var(--jc-bg-default)");
+  document.body.classList.add("jc-bg-default");
 
-    btnClear?.addEventListener("click", () => {
-      try {
-        jcSaveGlobalBackground("");
-        if (estado) estado.textContent = "Fondo eliminado.";
-        window.logAviso?.({ title: "Fondo", body: "Fondo global eliminado 🧼" });
-      } catch (e) {
-        console.error("[JC] clear bg error", e);
-        if (estado) estado.textContent = "No se pudo quitar el fondo.";
-      }
-    });
+  btnPick.addEventListener("click", () => {
+    try { input.value = ""; } catch {}
+    input.click();
+  });
 
-    return true;
-  }
+  input.addEventListener("change", async () => {
+    const file = input.files?.[0];
+    if (!file) return;
 
-  window.jcBindGlobalBackgroundUI = jcBindGlobalBackgroundUI;
-  window.jcLoadGlobalBackground = jcLoadGlobalBackground;
+    if (estado) estado.textContent = "Cargando fondo…";
+
+    try {
+      const dataUrl = await jcReadImageAsCompressedDataURL(file, { maxW: 1400, quality: 0.82 });
+      jcSaveGlobalBackground(dataUrl);
+      if (estado) estado.textContent = "✅ Fondo aplicado";
+      window.logAviso?.({ title: "Fondo", body: "Fondo global actualizado 🖼️" });
+    } catch (e) {
+      console.error("[JC] Fondo global:", e);
+      if (estado) estado.textContent = e?.message || "No se pudo aplicar el fondo.";
+    } finally {
+      try { input.value = ""; } catch {}
+    }
+  });
+
+  // Clear = quitar personalizado y volver al default
+  btnClear?.addEventListener("click", () => {
+    try {
+      jcSaveGlobalBackground("");
+      if (estado) estado.textContent = "Fondo restaurado (default).";
+      window.logAviso?.({ title: "Fondo", body: "Fondo restaurado ✅" });
+    } catch (e) {
+      console.error("[JC] clear bg error", e);
+      if (estado) estado.textContent = "No se pudo restaurar el fondo.";
+    }
+  });
+
+  return true;
+}
+
+window.jcBindGlobalBackgroundUI = jcBindGlobalBackgroundUI;
+window.jcLoadGlobalBackground = jcLoadGlobalBackground;
 
   // ============================================================
   // Pausa 30s
