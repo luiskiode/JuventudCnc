@@ -100,6 +100,10 @@ JC.$$ = $$;
 
     setActiveUI(tab);
 
+  try {
+  document.body.setAttribute("data-view", tab);
+} catch {}
+
     // Hash (sin recargar)
     if (!silentHash) {
       const newHash = `#${tab}`;

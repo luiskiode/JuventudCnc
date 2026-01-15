@@ -897,16 +897,7 @@ video, .bg-video, .video-bg, #bgVideo {
   z-index: 0 !important;
 }
 
-/* 2) Widgets (Angie/Mia/Ciro) como flotantes */
-#angieWidget, #miaWidget, #ciroWidget {
-  position: fixed !important;
-  z-index: 99990 !important;
-  display: block;
-  visibility: visible;
-  opacity: 1;
-  max-width: min(360px, calc(100vw - 24px));
-  pointer-events: auto;
-}
+
 
 /* 3) Layout PC: izquierda apilados */
 #angieWidget { left: 12px; bottom: 112px; }
@@ -1185,3 +1176,47 @@ body.jc-floats-on #jcChat {
   position: relative;
   z-index: 1;
 }
+
+/* =========================================================
+   FIX UI: No invadir contenido fuera de Inicio/Box
+   ========================================================= */
+
+/* 1) En Recursos/Eventos/Comunidad/Judart/Cursos/Perfil/Miembros/Notificaciones
+      ocultar widgets grandes y floater-cards (si existen) */
+body[data-view="recursos"] #angieWidget,
+body[data-view="recursos"] #miaWidget,
+body[data-view="recursos"] #ciroWidget,
+body[data-view="eventos"] #angieWidget,
+body[data-view="eventos"] #miaWidget,
+body[data-view="eventos"] #ciroWidget,
+body[data-view="comunidad"] #angieWidget,
+body[data-view="comunidad"] #miaWidget,
+body[data-view="comunidad"] #ciroWidget,
+body[data-view="judart"] #angieWidget,
+body[data-view="judart"] #miaWidget,
+body[data-view="judart"] #ciroWidget,
+body[data-view="cursos"] #angieWidget,
+body[data-view="cursos"] #miaWidget,
+body[data-view="cursos"] #ciroWidget,
+body[data-view="perfil"] #angieWidget,
+body[data-view="perfil"] #miaWidget,
+body[data-view="perfil"] #ciroWidget,
+body[data-view="miembros-activos"] #angieWidget,
+body[data-view="miembros-activos"] #miaWidget,
+body[data-view="miembros-activos"] #ciroWidget,
+body[data-view="notificaciones"] #angieWidget,
+body[data-view="notificaciones"] #miaWidget,
+body[data-view="notificaciones"] #ciroWidget {
+  display: none !important;
+}
+
+/* Floater layer fuera de Inicio (si lo usas) */
+body:not([data-view="inicio"]) #jcFloatLayer {
+  display: none !important;
+}
+
+/* 2) Chat flotante fuera de Box: mantenerlo discreto (o apagarlo) */
+body:not([data-view="box"]) #jcChat {
+  display: none !important;
+}
+
