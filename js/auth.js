@@ -1,27 +1,41 @@
 /* ============================================================
-   auth.js — login modal + ensure anon + auth state change (UNA VEZ)
-   (robusto para carga por módulos + evita doble bind + no revienta si falta algo)
+   auth.js — Login modal + Magic Link (redirect a auth.html)
+   + Auth state change (UNA VEZ)
+   Robusto para módulos, evita doble bind, no pisa exports.
    ============================================================ */
 (function () {
   "use strict";
 
-  // 1) Namespace
+  // Namespace
   const JC = (window.JC = window.JC || {});
 
-  // 2) Supabase client (tu proyecto usa window.supabaseClient)
-  const sb = window.supabaseClient;
+  // Usa alias si existe
+  const sb = window.sb || window.supabaseClient;
   if (!sb || !sb.auth) {
-    console.warn("[JC] supabaseClient no disponible en auth.js");
-    JC.auth = JC.auth || { init: async () => {} };
+    console.warn("[JC][auth] Supabase client no disponible (sb/supabaseClient).");
+    JC.auth = JC.auth || { init: async () => false };
     return;
   }
 
-  // 3) Estado overlay (viene de ui.js)
-  const state = window.jcState || window.JC?.uiState || { loginOpen: false };
+  // Estado overlay (ui.js)
+  const state = window.jcState || window.JC?.uiState || (window.JC.uiState = {});
   const syncOverlay = window.jcSyncOverlay || (() => {});
 
   // ============================================================
-  // ensure anon session (si tu proyecto lo usa)
+  // Config de rutas (GitHub Pages)
+  // ============================================================
+  const APP_ORIGIN = "https://luiskiode.github.io";
+  const APP_BASE = "/JuventudCnc/";
+  const AUTH_CALLBACK_URL = `${APP_ORIGIN}${APP_BASE}auth.html`;
+
+  function jcSetLoginMsg(msg) {
+    const el = document.getElementById("loginEstado");
+    if (el) el.textContent = msg || "";
+  }
+
+  // ============================================================
+  // (Opcional) Anon session (solo si tu backend lo usa)
+  // OJO: Para tu caso (leer foro público sin sesión) NO es obligatorio.
   // ============================================================
   async function jcEnsureAnonSession() {
     try {
@@ -35,36 +49,40 @@
         return d2?.session?.user?.id || null;
       }
 
-      // Si no existe signInAnonymously, simplemente no forzamos nada.
       return null;
     } catch (e) {
-      console.warn("[JC] Anon session error:", e);
+      console.warn("[JC][auth] Anon session error:", e);
       return null;
     }
   }
   window.jcEnsureAnonSession = jcEnsureAnonSession;
 
   // ============================================================
-  // Login Modal
+  // Modal helpers (no asume que existan los nodos)
   // ============================================================
-  const btnLogin = document.getElementById("btnLogin");
-  const loginModal = document.getElementById("loginModal");
-  const loginClose = document.getElementById("loginClose");
-  const loginForm = document.getElementById("loginForm");
-  const loginEmail = document.getElementById("loginEmail");
-  const loginEstado = document.getElementById("loginEstado");
+  function getEls() {
+    return {
+      btnLogin: document.getElementById("btnLogin"),
+      loginModal: document.getElementById("loginModal"),
+      loginClose: document.getElementById("loginClose"),
+      loginForm: document.getElementById("loginForm"),
+      loginEmail: document.getElementById("loginEmail"),
+      loginEstado: document.getElementById("loginEstado")
+    };
+  }
 
   function openLoginModal() {
+    const { loginModal, loginEmail } = getEls();
     if (!loginModal) return;
     state.loginOpen = true;
     loginModal.style.display = "flex";
     loginModal.classList.add("show");
     syncOverlay();
-    // pequeño delay para asegurar focus en móviles
     setTimeout(() => loginEmail?.focus(), 30);
   }
 
   function closeLoginModal() {
+    const { loginModal, loginEstado } = getEls();
     if (!loginModal) return;
     state.loginOpen = false;
     loginModal.classList.remove("show");
@@ -76,132 +94,172 @@
   window.jcOpenLoginModal = openLoginModal;
   window.jcCloseLoginModal = closeLoginModal;
 
-  btnLogin?.addEventListener("click", openLoginModal);
-  loginClose?.addEventListener("click", closeLoginModal);
-  loginModal?.addEventListener("click", (e) => {
-    if (e.target === loginModal) closeLoginModal();
-  });
-
+  // ============================================================
+  // Magic Link sender
+  // ============================================================
   async function sendMagicLink(email) {
-    if (!sb?.auth?.signInWithOtp) throw new Error("Auth no disponible (signInWithOtp).");
+    if (!sb?.auth?.signInWithOtp) {
+      throw new Error("Auth no disponible (signInWithOtp).");
+    }
 
-    const origin = location.origin;
-    const path = location.pathname;
-
-    // Mantén tu #perfil y además agrega build para evitar cache raro si lo usas
-    const redirectTo = `${origin}${path}#perfil`;
+    // “next” le dice al callback dónde volver.
+    // Usamos query (no hash) para que sea sólido y fácil de parsear en auth.html.
+    const next = encodeURIComponent(`${APP_ORIGIN}${APP_BASE}?tab=perfil`);
+    const redirectTo = `${AUTH_CALLBACK_URL}?next=${next}&v=${encodeURIComponent(window.JC_BUILD || "")}`;
 
     const { error } = await sb.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: redirectTo }
+      options: {
+        emailRedirectTo: redirectTo
+      }
     });
 
     if (error) throw error;
+    return true;
   }
 
-  loginForm?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const email = (loginEmail?.value || "").trim().toLowerCase();
-    if (!email) {
-      if (loginEstado) loginEstado.textContent = "Escribe tu correo primero.";
-      return;
-    }
-
-    if (loginEstado) loginEstado.textContent = "Enviando enlace…";
-
-    try {
-      await sendMagicLink(email);
-      if (loginEstado) loginEstado.textContent = "✅ Listo. Revisa tu correo y abre el enlace.";
-      window.angieSetEstado?.("ok");
-    } catch (err) {
-      console.error("[JC] Login error:", err);
-      if (loginEstado) loginEstado.textContent = `Error: ${err?.message || "no se pudo enviar"}`;
-      window.angieSetEstado?.("confundida");
-    }
-  });
-
   // ============================================================
-  // Auth state global (UNA VEZ por página)
+  // Bind UI (UNA VEZ)
   // ============================================================
-  if (!window.__JC_AUTH_BOUND__ && typeof sb.auth.onAuthStateChange === "function") {
-    window.__JC_AUTH_BOUND__ = true;
+  function bindUIOnce() {
+    if (window.__JC_AUTH_UI_BOUND__) return;
+    window.__JC_AUTH_UI_BOUND__ = true;
 
-    window.currentUser = null;
+    const { btnLogin, loginClose, loginModal, loginForm, loginEmail } = getEls();
 
-    sb.auth.onAuthStateChange(async (_event, session) => {
+    btnLogin?.addEventListener("click", openLoginModal);
+    loginClose?.addEventListener("click", closeLoginModal);
+
+    loginModal?.addEventListener("click", (e) => {
+      if (e.target === loginModal) closeLoginModal();
+    });
+
+    loginForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const email = (loginEmail?.value || "").trim().toLowerCase();
+      if (!email) {
+        jcSetLoginMsg("Escribe tu correo primero.");
+        return;
+      }
+
+      jcSetLoginMsg("Enviando enlace…");
+
       try {
-        window.currentUser = session?.user ?? null;
-
-        // Si tienes “gates” por módulos, refrescarlos sin romper si no existen
-        try {
-          await window.cargarPerfil?.();
-        } catch {}
-
-        try {
-          await window.jcComunidad?.refreshAuthAndMiembro?.();
-        } catch {}
-
-        try {
-          await window.jcJudart?.refreshAuthAndMiembro?.();
-        } catch {}
-
-        try {
-          await window.jcEventos?.refreshAuth?.();
-        } catch {}
-
-        // Si estás en Comunidad, refresca feed (pero sin depender de normalizeTab)
-        try {
-          const tab = (location.hash || "#inicio").replace("#", "").trim();
-          if (tab === "comunidad") await window.jcComunidad?.cargarFeed?.({ force: true });
-        } catch {}
-      } catch (e) {
-        console.error("[JC] onAuthStateChange error:", e);
+        await sendMagicLink(email);
+        jcSetLoginMsg("✅ Listo. Revisa tu correo y abre el enlace.");
+        window.angieSetEstado?.("ok");
+      } catch (err) {
+        console.error("[JC][auth] Login error:", err);
+        jcSetLoginMsg(`Error: ${err?.message || "no se pudo enviar"}`);
+        window.angieSetEstado?.("confundida");
       }
     });
   }
 
   // ============================================================
-  // JC.auth public API (para que main.js pueda await JC.auth.init())
+  // Auth state global (UNA VEZ)
+  // ============================================================
+  async function refreshGates() {
+    // Refresca módulos sin romper si no existen
+    try { await window.cargarPerfil?.(); } catch {}
+    try { await window.jcComunidad?.refreshAuthAndMiembro?.(); } catch {}
+    try { await window.jcJudart?.refreshAuthAndMiembro?.(); } catch {}
+    try { await window.jcEventos?.refreshAuth?.(); } catch {}
+
+    // Si estás en comunidad, refresca feed
+    try {
+      const tab = new URL(location.href).searchParams.get("tab")
+        || (location.hash || "#inicio").replace("#", "").trim();
+      if (tab === "comunidad" || tab === "foro") {
+        await window.jcComunidad?.cargarFeed?.({ force: true });
+      }
+    } catch {}
+  }
+
+  function bindAuthStateOnce() {
+    if (window.__JC_AUTH_STATE_BOUND__) return;
+    window.__JC_AUTH_STATE_BOUND__ = true;
+
+    window.currentUser = window.currentUser || null;
+
+    if (typeof sb.auth.onAuthStateChange !== "function") {
+      console.warn("[JC][auth] onAuthStateChange no disponible.");
+      return;
+    }
+
+    sb.auth.onAuthStateChange(async (_event, session) => {
+      try {
+        window.currentUser = session?.user ?? null;
+
+        // Si ya hay sesión, cerramos modal para evitar que quede abierto
+        if (window.currentUser) closeLoginModal();
+
+        await refreshGates();
+      } catch (e) {
+        console.error("[JC][auth] onAuthStateChange error:", e);
+      }
+    });
+  }
+
+  // ============================================================
+  // Public API (NO pisar JC.auth luego)
   // ============================================================
   async function init() {
-    // Opcional: asegura sesión anónima si tu app lo requiere para RLS/lectura pública
-    // (si no lo necesitas, no hace daño porque retorna null)
-    await jcEnsureAnonSession();
+    // UI listeners
+    bindUIOnce();
+    bindAuthStateOnce();
 
-    // Si ya hay sesión, cierra el modal para evitar que quede abierto
+    // Carga estado inicial
     try {
       const { data } = await sb.auth.getSession();
-      if (data?.session?.user) closeLoginModal();
+      window.currentUser = data?.session?.user ?? null;
+      if (window.currentUser) closeLoginModal();
     } catch {}
+
+    // (Opcional) Anon session si lo necesitas en tu esquema
+    // Para tu regla actual (foro lectura pública), normalmente NO hace falta.
+    // Lo dejamos comentado por defecto para evitar usuarios “anon” ocupando cosas.
+    // try { await jcEnsureAnonSession(); } catch {}
+
+    // Refresca gates una primera vez
+    try { await refreshGates(); } catch {}
 
     return true;
   }
 
-  JC.auth = JC.auth || {};
-  JC.auth.init = init;
+  async function signOut() {
+    try {
+      await sb.auth.signOut();
+      window.currentUser = null;
+      await refreshGates();
+      return true;
+    } catch (e) {
+      console.error("[JC][auth] signOut error:", e);
+      return false;
+    }
+  }
 
-  // Helpers útiles (por si los usas en otros módulos)
-  JC.auth.getUser = async function () {
+  async function getUser() {
     try {
       const { data } = await sb.auth.getSession();
       return data?.session?.user ?? null;
     } catch {
       return null;
     }
-  };
+  }
 
-  JC.auth.isLoggedIn = function () {
+  function isLoggedIn() {
     return !!window.currentUser;
-  };
+  }
 
-
-  // ✅ Export para main.js
-  window.JC = window.JC || {};
-  window.JC.auth = {
-    init: async () => {
-      // intenta tener sesión anon si está disponible
-      try { await window.jcEnsureAnonSession?.(); } catch {}
-    }
+  JC.auth = {
+    init,
+    openLoginModal,
+    closeLoginModal,
+    sendMagicLink, // útil para tests
+    signOut,
+    getUser,
+    isLoggedIn
   };
 })();

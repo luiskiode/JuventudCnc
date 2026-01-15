@@ -7,16 +7,30 @@
   <meta name="description" content="Juventud CNC — Un espacio para crecer, servir y caminar juntos." />
   <title>Juventud CNC</title>
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0b1020" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-
   <!-- Build -->
   <script>
     window.JC_BUILD = "2026-01-08.01"; // cambia esto en cada release
   </script>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json?v=2026-01-08.01" />
+
+  <!-- Theme color (mejor soporte dark/light) -->
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1020" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0d2c7a" />
+
+  <!-- PWA capability -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Juventud CNC" />
+
+  <!-- iOS (PWA) -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Juventud CNC" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <!-- (Opcional, pero útil en Windows/Edge) -->
+  <meta name="msapplication-TileColor" content="#0d2c7a" />
 
   <!-- Styles (solo una vez, versionado) -->
   <link rel="stylesheet" href="styles.css?v=2026-01-08.01" />
@@ -40,7 +54,6 @@
   <script defer src="js/resources.js?v=2026-01-08.01"></script>
   <script defer src="js/main.js?v=2026-01-08.01"></script>
 </head>
-
 
 <body class="app-shell">
 
@@ -820,7 +833,7 @@
     <div class="jc-modal-body" style="padding:0">
       <iframe
         id="angiePaletteFrame"
-        <iframe id="angiePaletteFrame" src="angie-herramienta.html" ...></iframe>
+        src="./angie-herramienta.html"
         title="Angie · Herramienta de colores"
         style="width:100%; height:min(78vh, 720px); border:0; border-radius:0 0 22px 22px; background:#fff;">
       </iframe>

@@ -1,20 +1,37 @@
-// Juventud CNC - Service Worker (actualización automática / anti-versiones viejas)
-// Versión: 2025-12-20.02
+// Juventud CNC - Service Worker (auto-update / anti-versiones viejas)
 // Estrategia:
-// - Navegación + archivos core: Network First (si hay red, siempre trae lo nuevo)
-// - Resto de recursos locales: Stale While Revalidate (rápido + se actualiza en segundo plano)
+// - Navegación dentro del scope: Network First (trae lo nuevo si hay red)
+// - auth.html (callback magic link): Network ONLY (no cache / no fallback)
+// - Core assets: Network First
+// - Resto: Stale While Revalidate
 
-const CACHE_VERSION = "2025-12-20.02";
+const CACHE_VERSION = "2026-01-08.01";
 const STATIC_CACHE = `juventud-cnc-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `juventud-cnc-runtime-${CACHE_VERSION}`;
 
+// Ajusta si cambias la carpeta del proyecto
+const SCOPE_PATH = "/JuventudCnc/";
+
+// ✅ Core de tu app actual (módulos)
 const CORE_ASSETS = [
-  "./",
-  "./index.html",
-  "./styles.css",
-  "./app.js",
-  "./manifest.json",
-  "./assets/angie-widget-v2.png"
+  `${SCOPE_PATH}`,
+  `${SCOPE_PATH}index.html`,
+  `${SCOPE_PATH}auth.html`,            // ✅ callback magic link (se precachea solo como archivo; fetch será network-only)
+  `${SCOPE_PATH}styles.css`,
+  `${SCOPE_PATH}manifest.json`,
+  `${SCOPE_PATH}supabase-config.js`,
+  `${SCOPE_PATH}js/config.js`,
+  `${SCOPE_PATH}js/ui.js`,
+  `${SCOPE_PATH}js/auth.js`,
+  `${SCOPE_PATH}js/bots.js`,
+  `${SCOPE_PATH}js/events.js`,
+  `${SCOPE_PATH}js/profile.js`,
+  `${SCOPE_PATH}js/community.js`,
+  `${SCOPE_PATH}js/resources.js`,
+  `${SCOPE_PATH}js/main.js`,
+  `${SCOPE_PATH}assets/angie-widget-v2.png`,
+  `${SCOPE_PATH}icons/icon-192.png`,
+  `${SCOPE_PATH}icons/icon-512.png`
 ];
 
 // Instalar: precache + activar sin esperar
@@ -26,7 +43,7 @@ self.addEventListener("install", (event) => {
   })());
 });
 
-// Activar: limpiar caches viejos + tomar control de clientes
+// Activar: limpiar caches viejos + tomar control
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
@@ -39,13 +56,13 @@ self.addEventListener("activate", (event) => {
   })());
 });
 
-// Permite forzar update desde la app si lo deseas
+// Permite forzar update desde la app
 self.addEventListener("message", (event) => {
   if (event?.data?.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 // Helpers
-async function networkFirst(request) {
+async function networkFirst(request, { fallbackUrl } = {}) {
   try {
     const fresh = await fetch(request);
     const cache = await caches.open(RUNTIME_CACHE);
@@ -54,9 +71,10 @@ async function networkFirst(request) {
   } catch (err) {
     const cached = await caches.match(request);
     if (cached) return cached;
-    if (request.mode === "navigate") {
-      const offline = await caches.match("./index.html");
-      if (offline) return offline;
+
+    if (fallbackUrl) {
+      const fb = await caches.match(fallbackUrl);
+      if (fb) return fb;
     }
     throw err;
   }
@@ -81,25 +99,42 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(req.url);
 
-  // Solo cacheamos lo mismo-origen (evita cachear Supabase/CDNs por accidente)
-  if (url.origin !== self.location.origin) {
-    return;
-  }
+  // Solo cache same-origin
+  if (url.origin !== self.location.origin) return;
 
   const path = url.pathname;
 
-  // 1) Navegación: SIEMPRE network-first para evitar versiones viejas pegadas
-  if (req.mode === "navigate" || path === "/" || path.endsWith("/index.html")) {
+  // Solo manejar dentro del scope del proyecto
+  if (!path.startsWith(SCOPE_PATH)) return;
+
+  // ✅ 0) auth.html: Network ONLY (CRÍTICO para magic link)
+  // - No cache
+  // - No fallback a index.html
+  if (path === `${SCOPE_PATH}auth.html`) {
+    event.respondWith(fetch(req));
+    return;
+  }
+
+  // ✅ 1) Navegación: Network First con fallback a index.html
+  if (req.mode === "navigate") {
+    event.respondWith(
+      networkFirst(req, { fallbackUrl: `${SCOPE_PATH}index.html` })
+    );
+    return;
+  }
+
+  // ✅ 2) Core assets: Network First (para actualizar siempre)
+  const isCore =
+    path === `${SCOPE_PATH}styles.css` ||
+    path === `${SCOPE_PATH}manifest.json` ||
+    path === `${SCOPE_PATH}supabase-config.js` ||
+    path.startsWith(`${SCOPE_PATH}js/`);
+
+  if (isCore) {
     event.respondWith(networkFirst(req));
     return;
   }
 
-  // 2) Archivos core: network-first (styles/app/manifest) para que se actualicen
-  if (path.endsWith("/styles.css") || path.endsWith("/app.js") || path.endsWith("/manifest.json")) {
-    event.respondWith(networkFirst(req));
-    return;
-  }
-
-  // 3) Resto: stale-while-revalidate
+  // ✅ 3) Resto: Stale While Revalidate
   event.respondWith(staleWhileRevalidate(req));
 });

@@ -1,13 +1,69 @@
 {
   "name": "Juventud CNC",
   "short_name": "JuventudCNC",
-  "start_url": "/JuventudCnc/",
+  "id": "/JuventudCnc/",
+  "description": "Comunidad Juventud CNC: foro, retos, recursos y caja (Box) con estrellas.",
+  "lang": "es-PE",
+  "dir": "ltr",
+
+  "start_url": "/JuventudCnc/?source=pwa",
   "scope": "/JuventudCnc/",
+
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait",
+
   "background_color": "#f3f4f6",
   "theme_color": "#0d2c7a",
+
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "focus-existing"]
+  },
+
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+
+  "categories": ["social", "education", "productivity"],
+
+  "shortcuts": [
+    {
+      "name": "Box (Estrellas)",
+      "short_name": "Box",
+      "description": "Ver tus estrellas y accesos rápidos.",
+      "url": "/JuventudCnc/?tab=box",
+      "icons": [
+        { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }
+      ]
+    },
+    {
+      "name": "Foro",
+      "short_name": "Foro",
+      "description": "Entrar al foro (lectura pública, interacción con perfil).",
+      "url": "/JuventudCnc/?tab=foro",
+      "icons": [
+        { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }
+      ]
+    },
+    {
+      "name": "Perfil",
+      "short_name": "Perfil",
+      "description": "Ver/editar tu perfil y foto.",
+      "url": "/JuventudCnc/?tab=perfil",
+      "icons": [
+        { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }
+      ]
+    }
   ]
 }
