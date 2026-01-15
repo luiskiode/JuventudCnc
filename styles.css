@@ -1,15 +1,16 @@
 /* ==========================================================
-   JUVENTUD CNC — styles.css (LIMPIO / SIN DUPLICADOS)
+   JUVENTUD CNC — styles.css (CONSOLIDADO / SIN PELEAS)
    - Fondo global por capas (#jcAppBgLayer / #jcAppBgOverlay)
    - Default bg: assets/bg-floral.webp
-   - Modo OFF / Imagen / Dinámico (clases en <body>)
    - Chat: flotante + "encerrado" en Box
-   - Overlay animable
-   - Un solo bloque responsive (móvil)
+   - Widgets: Angie/Mia/Ciro
+   - Floater cards (jcFloatLayer)
+   - Calendario grid 7 columnas
+   - FIX: Topbar/título alineados con el contenido
    ========================================================== */
 
 /* ==========================================================
-   ROOT + VARIABLES
+   RESET + BOX-SIZING
    ========================================================== */
 :root{
   /* Neutrales */
@@ -20,12 +21,6 @@
   --neutral-400:#9ca3af;
   --neutral-200:#e5e7eb;
   --neutral-100:#f3f4f6;
-
-  /* Z-index */
-  --z-bots:200;
-  --z-angie:205;
-  --z-mia:210;
-  --z-ciro:215;
 
   /* Texto */
   --text-main:#e5e7eb;
@@ -76,41 +71,40 @@
   --veil-a:rgba(15,23,42,.80);
   --veil-b:rgba(15,23,42,.94);
 
-  /* ===== Fondos por tema (DEFAULT) ===== */
+  /* ===== Fondos por tema ===== */
   --jc-bg-default: url("assets/bg-floral.webp");
   --jc-bg-chicos:  url("assets/bg-blue.webp");
   --jc-bg-chicas:  url("assets/bg-pink.webp");
-
-  /* ===== Fondo actual usado por la app ===== */
-  --jc-app-bg: var(--jc-bg-default);
 
   /* Overlay sobre imagen */
   --jc-bg-overlay: rgba(2,6,23,.55);
 
   /* Layout */
   --topbar-h: 64px;
+
+  /* FIX de alineación */
+  --jc-safe-pad: 14px;
+  --jc-maxw: 960px;
 }
 
-/* ==========================================================
-   BASE
-   ========================================================== */
 *,
 *::before,
 *::after{ box-sizing:border-box; }
 
-html{
-  height:100%;
+html, body{
+  width:100%;
+  margin:0;
+  padding:0;
+  min-height:100%;
+  overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
-  overflow-x:hidden;
 }
+
 body{
-  margin:0;
-  min-height:100vh;
   font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   color:var(--text-main);
   background:#020617;
-  overflow-x:hidden;
   position:relative;
 }
 
@@ -119,49 +113,38 @@ body{
    ========================================================== */
 #jcAppBgLayer,
 #jcAppBgOverlay{
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
+  position:fixed;
+  inset:0;
+  pointer-events:none;
 }
 
-/* capa de imagen SIEMPRE detrás */
 #jcAppBgLayer{
-  z-index: -2;
-
-  /* usa personalizada si existe; si no, cae al default */
+  z-index:-2 !important;
   background-image: var(--jc-bg-image, var(--jc-bg-default, none));
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
 }
 
-/* overlay para legibilidad */
 #jcAppBgOverlay{
-  z-index: -1;
+  z-index:-1 !important;
   background: var(--jc-bg-overlay, rgba(0,0,0,.35));
-  opacity: 1;
+  opacity:1;
   transition: opacity .18s ease;
 }
 
-/* defaults por tema (asegúrate que estas vars existan) */
+/* Defaults por tema */
 body[data-theme="chicos"]{ --jc-bg-default: var(--jc-bg-chicos); }
 body[data-theme="chicas"]{ --jc-bg-default: var(--jc-bg-chicas); }
 body[data-theme="mix"]{ --jc-bg-default: url("assets/bg-floral.webp"); }
 
-/* Modo OFF (quitar fondo) */
+/* Modo OFF */
 body.jc-bg-off #jcAppBgLayer,
-body.jc-bg-off #jcAppBgOverlay{
-  opacity: 0;
-}
-
-/* ambiente cuando está OFF */
-body.jc-bg-off{
-  background: #020617;
-}
+body.jc-bg-off #jcAppBgOverlay{ opacity:0; }
+body.jc-bg-off{ background:#020617; }
 
 /* ==========================================================
    (Opcional) Fondo dinámico tipo “flow”
-   Actívalo solo si pones body.jc-bg-dynamic
    ========================================================== */
 body::before,
 body::after{ content:""; position:fixed; inset:0; pointer-events:none; opacity:0; }
@@ -188,11 +171,11 @@ body.jc-bg-dynamic::after{
   50%{ transform:translate3d(-20px,10px,0) scale(1.03); }
   100%{ transform:translate3d(25px,-10px,0) scale(1.04); }
 }
-/* Si estás usando imagen, apaga dinámico */
 body:not(.jc-bg-dynamic)::before,
-body:not(.jc-bg-dynamic)::after{
-  animation:none !important;
-}
+body:not(.jc-bg-dynamic)::after{ animation:none !important; }
+
+/* Si tienes video/fondo animado, que jamás tape */
+video, .bg-video, .video-bg, #bgVideo{ z-index:0 !important; }
 
 /* ==========================================================
    TIPOGRAFÍA
@@ -204,21 +187,50 @@ p{ margin:0; }
 .with-emoji[data-emoji]::before{ content: attr(data-emoji) " "; margin-right:6px; }
 
 /* ==========================================================
-   TOPBAR
+   FIX DE ALINEACIÓN (TOPBAR + CONTENIDO)
+   - Topbar usa el MISMO ancho/padding que el contenedor
    ========================================================== */
+.container{
+  width:100%;
+  max-width:var(--jc-maxw);
+  margin:0 auto;
+  padding:18px var(--jc-safe-pad) calc(70px + env(safe-area-inset-bottom));
+}
+
 .topbar{
   position:sticky;
   top:0;
   z-index:90;
+
+  /* mismo ancho visual que .container */
+  width:100%;
+  padding:10px var(--jc-safe-pad);
+
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  padding:10px 14px;
+
   background:var(--topbar-bg);
   backdrop-filter:blur(12px);
   border-bottom:1px solid rgba(148,163,184,.25);
 }
+
+/* Importante: NO usar 100vw en topbars/header */
+.topbar, header, #topbar, #appHeader{
+  max-width:none;
+}
+
+/* Si tienes una envoltura global, alíneala */
+.jc-wrap, .jc-container, #app, main{
+  width:100%;
+  max-width:var(--jc-maxw);
+  margin:0 auto;
+  padding-left:var(--jc-safe-pad);
+  padding-right:var(--jc-safe-pad);
+}
+
+/* Título */
 .topbar-title{
   margin:0;
   font-size:17px;
@@ -258,14 +270,8 @@ p{ margin:0; }
 .icon-btn:active{ transform:translateY(0); }
 
 /* ==========================================================
-   CONTENEDOR / VISTAS
+   VISTAS / ROUTER
    ========================================================== */
-.container{
-  width:100%;
-  max-width:960px;
-  margin:0 auto;
-  padding:18px 14px calc(70px + env(safe-area-inset-bottom));
-}
 .view{ display:none !important; width:100%; min-height:calc(100dvh - 110px); }
 .view.active{ display:block !important; }
 
@@ -306,7 +312,7 @@ p{ margin:0; }
 @keyframes heroGlow{ 0%{ filter:brightness(1);} 100%{ filter:brightness(1.2);} }
 
 /* ==========================================================
-   BOTONES, INPUTS
+   BOTONES / INPUTS
    ========================================================== */
 .btn{
   border:none;
@@ -526,6 +532,7 @@ input,select,textarea{
   border-color:rgba(148,163,184,.28);
   color:#fff;
 }
+
 .drawer-footer{
   padding:10px 14px 14px;
   font-size:12px;
@@ -540,7 +547,7 @@ input,select,textarea{
   inset:0;
   background:var(--overlay-bg);
   backdrop-filter:blur(2px);
-  z-index:100 !important;
+  z-index:100;
   opacity:0;
   visibility:hidden;
   pointer-events:none;
@@ -551,12 +558,12 @@ input,select,textarea{
   visibility:visible;
   pointer-events:auto;
 }
-.sidepanel{ z-index:120 !important; }
 
 /* ==========================================================
-   WIDGETS (Angie / Mia / Ciro)
+   WIDGETS (Angie / Mia / Ciro) — soporta CLASES e IDs
    ========================================================== */
-.angie-widget,.mia-widget,.ciro-widget{
+.angie-widget,.mia-widget,.ciro-widget,
+#angieWidget,#miaWidget,#ciroWidget{
   position:fixed;
   display:flex;
   align-items:flex-end;
@@ -566,14 +573,19 @@ input,select,textarea{
   pointer-events:none;
   transition:transform .4s ease, opacity .35s ease-out;
 }
-.angie-widget--visible,.mia-widget--visible,.ciro-widget--visible{
+
+.angie-widget--visible,.mia-widget--visible,.ciro-widget--visible,
+#angieWidget.angie-widget--visible,
+#miaWidget.mia-widget--visible,
+#ciroWidget.ciro-widget--visible{
   transform:translateY(0) scale(1);
   opacity:1;
   pointer-events:auto;
 }
-.angie-widget{ left:16px; bottom:86px; z-index:var(--z-angie); }
-.mia-widget{ right:16px; bottom:175px; z-index:var(--z-mia); }
-.ciro-widget{ right:16px; bottom:285px; z-index:var(--z-ciro); }
+
+.angie-widget, #angieWidget{ left:16px; bottom:86px; z-index:205; }
+.mia-widget,   #miaWidget  { right:16px; bottom:175px; z-index:210; }
+.ciro-widget,  #ciroWidget { right:16px; bottom:285px; z-index:215; }
 
 .bot-avatar{
   width:64px; height:64px;
@@ -625,6 +637,7 @@ input,select,textarea{
   border-left:1px solid rgba(96,165,250,.6);
   border-bottom:1px solid rgba(96,165,250,.6);
 }
+
 .bot-name{
   font-weight:700;
   font-size:11px;
@@ -648,18 +661,20 @@ input,select,textarea{
 }
 .bot-close:hover{ color:#e5e7eb; }
 
-/* Si el chat está abierto, ocultar widgets */
 body.chat-open .angie-widget,
 body.chat-open .mia-widget,
-body.chat-open .ciro-widget{
+body.chat-open .ciro-widget,
+body.chat-open #angieWidget,
+body.chat-open #miaWidget,
+body.chat-open #ciroWidget{
   opacity:0;
   pointer-events:none;
 }
 
 /* ==========================================================
-   CHAT (widget flotante)
+   CHAT (widget) — soporta .jc-chat y #jcChat
    ========================================================== */
-.jc-chat{
+.jc-chat, #jcChat{
   position:fixed;
   right:12px;
   bottom:86px;
@@ -732,7 +747,6 @@ body.chat-open .ciro-widget{
 .jc-chat-name{ font-weight:600; margin-bottom:1px; font-size:11px; }
 .jc-chat-text{ font-size:11px; }
 
-/* Colores por personaje */
 .from-mia .jc-chat-avatar{ background:var(--girl-soft); color:#fce7f3; }
 .from-mia .jc-chat-bubble{ border-color:var(--girl-main); }
 .from-ciro .jc-chat-avatar{ background:var(--guy-soft); color:#dbeafe; }
@@ -746,31 +760,22 @@ body.chat-open .ciro-widget{
 .jc-chat--collapsed .jc-chat-body{ display:none; }
 .jc-chat--collapsed .jc-chat-toggle{ transform:rotate(180deg); }
 
-/* ==========================================================
-   BOX: el chat vive aquí (ENCERRADO)
-   ========================================================== */
-.view[data-view="box"] .box-wrap{
-  padding:1rem;
-  max-width:980px;
-  margin:0 auto;
-}
-.view[data-view="box"] .jc-chat{
+/* BOX: chat encerrado */
+.view[data-view="box"] .box-wrap{ padding:1rem; max-width:var(--jc-maxw); margin:0 auto; }
+.view[data-view="box"] .jc-chat,
+.view[data-view="box"] #jcChat{
   position:relative !important;
-  inset:auto !important;
+  right:auto !important;
+  bottom:auto !important;
   width:100% !important;
-  max-width:980px !important;
+  max-width:var(--jc-maxw) !important;
   height:min(70vh, 680px) !important;
   max-height:none !important;
   margin:0 auto !important;
   border-radius:16px;
 }
-.view[data-view="box"] .jc-chat-body{
-  flex:1 1 auto;
-  min-height:0;
-  overflow:auto;
-}
+.view[data-view="box"] .jc-chat-body{ flex:1 1 auto; min-height:0; overflow:auto; }
 
-/* Herramientas UI de fondos en Box */
 .box-bg-tools{
   display:flex;
   gap:.5rem;
@@ -778,6 +783,97 @@ body.chat-open .ciro-widget{
   align-items:center;
   margin-bottom:.75rem;
 }
+
+/* ==========================================================
+   FLOATER LAYER + CARDS
+   ========================================================== */
+#jcFloatLayer{
+  position:fixed !important;
+  inset:0 !important;
+  z-index:99980 !important;
+  pointer-events:none;
+}
+
+/* Si activas modo floats: oculta widgets grandes */
+body.jc-floats-on #angieWidget,
+body.jc-floats-on #miaWidget,
+body.jc-floats-on #ciroWidget,
+body.jc-floats-on .angie-widget,
+body.jc-floats-on .mia-widget,
+body.jc-floats-on .ciro-widget{
+  display:none !important;
+}
+
+@keyframes jcFloatBob2 {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-3px); }
+  100% { transform: translateY(0); }
+}
+
+#jcFloatLayer .jc-float-wrap{
+  left:10px !important;
+  right:10px !important;
+  bottom:calc(78px + env(safe-area-inset-bottom)) !important;
+  max-width:none !important;
+  gap:12px !important;
+}
+
+#jcFloatLayer .jc-float-card{
+  width:100% !important;
+  max-width:520px !important;
+  margin:0 !important;
+
+  display:grid !important;
+  grid-template-columns:64px 1fr !important;
+  align-items:stretch !important;
+  gap:12px !important;
+
+  padding:10px 12px !important;
+  border-radius:18px !important;
+
+  background: rgba(10,16,32,.86) !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  box-shadow: 0 14px 32px rgba(0,0,0,.35) !important;
+
+  clip-path:none !important;
+  animation: jcFloatBob2 3.6s ease-in-out infinite !important;
+}
+#jcFloatLayer .jc-float-card::before,
+#jcFloatLayer .jc-float-card::after{
+  content:none !important;
+  display:none !important;
+}
+#jcFloatLayer .jc-float-ava{
+  width:64px !important;
+  height:64px !important;
+  border-radius:16px !important;
+  object-fit:cover !important;
+  align-self:stretch !important;
+  justify-self:stretch !important;
+  background:rgba(255,255,255,.08) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.10) !important;
+}
+#jcFloatLayer .jc-float-name{
+  font-size:12px !important;
+  letter-spacing:.06em !important;
+  text-transform:uppercase !important;
+  opacity:.9 !important;
+  margin:0 0 4px 0 !important;
+}
+#jcFloatLayer .jc-float-text{
+  font-size:14px !important;
+  line-height:1.25 !important;
+  margin:0 !important;
+  overflow:hidden !important;
+  display:-webkit-box !important;
+  -webkit-box-orient:vertical !important;
+  line-clamp:3 !important;
+  -webkit-line-clamp:3 !important;
+  overflow-wrap:anywhere !important;
+}
+
+/* Fuera de Inicio: opcional ocultar floats */
+body:not([data-view="inicio"]) #jcFloatLayer{ display:none !important; }
 
 /* ==========================================================
    LISTA MIEMBROS
@@ -842,10 +938,44 @@ body.chat-open .ciro-widget{
 .jc-modal-body{ padding:12px; overflow:auto; }
 
 /* ==========================================================
-   RESPONSIVE (ÚNICO BLOQUE)
+   CALENDARIO (GRID 7 columnas)
+   ========================================================== */
+.cal-weekdays{
+  display:grid;
+  grid-template-columns:repeat(7, 1fr);
+  gap:6px;
+  opacity:.9;
+}
+.cal-days{
+  display:grid;
+  grid-template-columns:repeat(7, 1fr);
+  gap:6px;
+  margin-top:8px;
+}
+.cal-day{
+  border-radius:10px;
+  padding:10px 0;
+  text-align:center;
+  cursor:pointer;
+  user-select:none;
+}
+.cal-day.is-empty{
+  opacity:0;
+  pointer-events:none;
+}
+
+/* ==========================================================
+   FIX UI: ocultar widgets/chat fuera de Box si lo deseas
+   (mantengo tu intención, pero sin duplicar selectores)
+   ========================================================== */
+body:not([data-view="box"]) #jcChat{ display:none !important; }
+body:not([data-view="box"]) .jc-chat{ display:none !important; }
+
+/* ==========================================================
+   RESPONSIVE
    ========================================================== */
 @media (max-width:560px){
-  :root{ --topbar-h: 56px; }
+  :root{ --topbar-h: 56px; --jc-safe-pad: 12px; }
 
   .topbar-title{
     font-size:15px;
@@ -858,21 +988,20 @@ body.chat-open .ciro-widget{
   .theme-picker{ max-width:150px; font-size:12px; }
 
   /* Chat flotante abajo (no box) */
-  .jc-chat{
+  .jc-chat, #jcChat{
     left:10px;
     right:10px;
     bottom:calc(12px + env(safe-area-inset-bottom));
     width:auto;
     max-height:42vh;
     border-radius:16px;
-    transform:none;
   }
   .jc-chat-body{ max-height:calc(42vh - 42px); overflow-y:auto; }
 
   /* Widgets escalonados */
-  .angie-widget{ left:10px; bottom:86px; }
-  .mia-widget{ right:10px; bottom:170px; }
-  .ciro-widget{ right:10px; bottom:260px; }
+  .angie-widget, #angieWidget{ left:10px; bottom:86px; right:auto; }
+  .mia-widget,   #miaWidget  { right:10px; bottom:170px; left:auto; }
+  .ciro-widget,  #ciroWidget { right:10px; bottom:260px; left:auto; }
 
   .fab{ bottom:92px; }
 
@@ -881,395 +1010,17 @@ body.chat-open .ciro-widget{
   .event-search-row{ flex-direction:column; align-items:stretch; }
 }
 
+@media (max-width:360px){
+  #jcFloatLayer .jc-float-card{ grid-template-columns:56px 1fr !important; }
+  #jcFloatLayer .jc-float-ava{
+    width:56px !important;
+    height:56px !important;
+    border-radius:14px !important;
+  }
+}
+
 /* Accesibilidad */
 @media (prefers-reduced-motion: reduce){
   body.jc-bg-dynamic::before{ animation:none !important; }
+  #jcFloatLayer .jc-float-card{ animation:none !important; transition:none !important; }
 }
-/* ============================================================
-   JC BOTS UI — Widgets + Chat + Tarjetitas
-   Pegar al final de styles.css
-   ============================================================ */
-
-
-
-/* Si tienes video/fondo animado con posición fija, que no tape */
-video, .bg-video, .video-bg, #bgVideo {
-  z-index: 0 !important;
-}
-
-
-
-/* 3) Layout PC: izquierda apilados */
-#angieWidget { left: 12px; bottom: 112px; }
-#miaWidget   { left: 12px; bottom: 248px; }
-#ciroWidget  { left: 12px; bottom: 384px; }
-
-/* 4) Chat flotante (derecha) */
-#jcChat {
-  position: fixed !important;
-  z-index: 99995 !important;
-  right: 12px;
-  bottom: 12px;
-  width: min(420px, calc(100vw - 24px));
-  max-height: min(520px, calc(100vh - 24px));
-  pointer-events: auto;
-}
-
-/* 5) Asegurar texto visible */
-#angieText, #miaText, #ciroText {
-  display: block;
-  font-size: 13px;
-  line-height: 1.25;
-  opacity: 1;
-  color: inherit;
-  margin: 0;
-  white-space: normal;
-}
-
-/* 6) Avatar nunca “0” */
-#angieAvatarImg, #miaAvatarImg, #ciroAvatarImg {
-  width: 44px;
-  height: 44px;
-  border-radius: 999px;
-  object-fit: cover;
-  flex: 0 0 auto;
-}
-
-/* 7) Tarjetitas flotantes overlay (si estás usando jcFloatLayer) */
-#jcFloatLayer {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 99980 !important;
-  pointer-events: none;
-}
-
-/* 8) Responsive móvil: 1 widget visible (para no invadir), chat full ancho */
-@media (max-width: 720px) {
-  /* Chat abajo a todo el ancho */
-  #jcChat {
-    left: 10px;
-    right: 10px;
-    width: auto;
-    bottom: 10px;
-    max-height: 46vh;
-  }
-
-  /* Widgets: solo 1 (Angie) por defecto */
-  #miaWidget, #ciroWidget {
-    display: none !important;
-  }
-
-  #angieWidget {
-    left: 10px;
-    right: 10px;
-    width: auto;
-    bottom: calc(46vh + 18px); /* por encima del chat */
-    max-width: calc(100vw - 20px);
-  }
-}
-
-/* 9) Si usas clases de animación “is-speaking”, que no rompa layout */
-#angieWidget.is-speaking, #miaWidget.is-speaking, #ciroWidget.is-speaking {
-  filter: drop-shadow(0 10px 20px rgba(0,0,0,.25));
-}
-
-/* 10) Seguridad: si alguna capa padre tiene transform, puede romper stacking.
-   Asegura que el body no limite la visibilidad */
-html, body {
-  overflow-x: hidden;
-}
-/* ============================================================
-   JC FLOATER MODE: usar tarjetitas, ocultar widgets grandes
-   ============================================================ */
-body.jc-floats-on #angieWidget,
-body.jc-floats-on #miaWidget,
-body.jc-floats-on #ciroWidget {
-  display: none !important;
-}
-
-/* Chat solo en box: por si algún estilo lo fuerza visible */
-body.jc-floats-on #jcChat {
-  z-index: 99995;
-}
-
-/* Tarjetitas: “movimiento” suave como antes */
-@keyframes jcFloatBob {
-  0%   { transform: translateY(0); }
-  50%  { transform: translateY(-4px); }
-  100% { transform: translateY(0); }
-}
-
-#jcFloatLayer .jc-float-card {
-  animation: jcFloatBob 3.2s ease-in-out infinite;
-}
-
-#jcFloatLayer .jc-float-card:nth-child(2) {
-  animation-delay: .35s;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  #jcFloatLayer .jc-float-card {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
-/* ============================================================
-   JC FLOAT CARDS — Mobile polish (avatar full height + orden)
-   Pegar al FINAL de styles.css
-   ============================================================ */
-
-#jcFloatLayer {
-  z-index: 99998 !important;
-}
-
-/* contenedor: margen seguro sobre nav/gestos */
-#jcFloatLayer .jc-float-wrap{
-  left: 10px !important;
-  right: 10px !important;
-  bottom: calc(78px + env(safe-area-inset-bottom)) !important;
-  max-width: none !important;
-  gap: 12px !important;
-}
-
-/* Card: más limpio, sin “colas” raras, alineación estable */
-#jcFloatLayer .jc-float-card{
-  width: 100% !important;
-  max-width: 520px !important;
-  margin: 0 !important;
-
-  display: grid !important;
-  grid-template-columns: 64px 1fr !important;
-  align-items: stretch !important;
-  gap: 12px !important;
-
-  padding: 10px 12px !important;
-  border-radius: 18px !important;
-
-  background: rgba(10,16,32,.86) !important;
-  border: 1px solid rgba(255,255,255,.10) !important;
-  box-shadow: 0 14px 32px rgba(0,0,0,.35) !important;
-
-  /* que no herede colas/triángulos de estilos viejos */
-  clip-path: none !important;
-}
-
-/* mata pseudo-elementos si algún estilo viejo les pone “cola” */
-#jcFloatLayer .jc-float-card::before,
-#jcFloatLayer .jc-float-card::after{
-  content: none !important;
-  display: none !important;
-}
-
-/* ✅ Avatar ocupa “todo el espacio” del lado izquierdo */
-#jcFloatLayer .jc-float-ava{
-  width: 64px !important;
-  height: 64px !important;
-  border-radius: 16px !important;    /* thumbnail, no bolita */
-  object-fit: cover !important;
-  align-self: stretch !important;
-  justify-self: stretch !important;
-  background: rgba(255,255,255,.08) !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.10) !important;
-}
-
-/* Tipografía: compacta y legible */
-#jcFloatLayer .jc-float-name{
-  font-size: 12px !important;
-  letter-spacing: .06em !important;
-  text-transform: uppercase !important;
-  opacity: .9 !important;
-  margin: 0 0 4px 0 !important;
-}
-#jcFloatLayer .jc-float-text{
-  font-size: 14px !important;
-  line-height: 1.25 !important;
-  margin: 0 !important;
-
-  overflow: hidden !important;
-  display: -webkit-box !important;
-  -webkit-box-orient: vertical !important;
-
-  /* estándar + webkit */
-  line-clamp: 3 !important;
-  -webkit-line-clamp: 3 !important;
-
-  /* ayuda en textos largos */
-  overflow-wrap: anywhere !important;
-}
-
-/* Animación suave “flotante” (sin marear) */
-@keyframes jcFloatBob2 {
-  0%   { transform: translateY(0); }
-  50%  { transform: translateY(-3px); }
-  100% { transform: translateY(0); }
-}
-
-#jcFloatLayer .jc-float-card{
-  animation: jcFloatBob2 3.6s ease-in-out infinite !important;
-}
-#jcFloatLayer .jc-float-card.hide-mobile{
-  animation-delay: .35s !important;
-}
-
-/* Respeta accesibilidad */
-@media (prefers-reduced-motion: reduce) {
-  #jcFloatLayer .jc-float-card{
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
-/* Extra: en pantallas muy pequeñas reduce un poco el avatar */
-@media (max-width: 360px){
-  #jcFloatLayer .jc-float-card{
-    grid-template-columns: 56px 1fr !important;
-  }
-  #jcFloatLayer .jc-float-ava{
-    width: 56px !important;
-    height: 56px !important;
-    border-radius: 14px !important;
-  }
-}
-/* Cabecera (LMXJVSD) */
-.cal-weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  opacity: .9;
-}
-
-/* Días del mes */
-.cal-days {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-top: 8px;
-}
-
-/* Cada celda día */
-.cal-day {
-  border-radius: 10px;
-  padding: 10px 0;
-  text-align: center;
-  cursor: pointer;
-  user-select: none;
-}
-
-.cal-day.is-empty {
-  opacity: 0;
-  pointer-events: none;
-}
-
-
-/* === FIX: Vistas por pestañas === */
-.view { display: none; }
-.view.active { display: block; }
-
-/* === FIX DEFINITIVO: fondo siempre detrás de TODO === */
-#jcAppBgLayer { z-index: -2 !important; }
-#jcAppBgOverlay { z-index: -1 !important; }
-
-/* tu app por encima */
-.app-shell, .topbar, .container, .tabs, .drawer, .overlay, .jc-modal,
-#main, main.container {
-  position: relative;
-  z-index: 1;
-}
-
-/* =========================================================
-   FIX UI: No invadir contenido fuera de Inicio/Box
-   ========================================================= */
-
-/* 1) En Recursos/Eventos/Comunidad/Judart/Cursos/Perfil/Miembros/Notificaciones
-      ocultar widgets grandes y floater-cards (si existen) */
-body[data-view="recursos"] #angieWidget,
-body[data-view="recursos"] #miaWidget,
-body[data-view="recursos"] #ciroWidget,
-body[data-view="eventos"] #angieWidget,
-body[data-view="eventos"] #miaWidget,
-body[data-view="eventos"] #ciroWidget,
-body[data-view="comunidad"] #angieWidget,
-body[data-view="comunidad"] #miaWidget,
-body[data-view="comunidad"] #ciroWidget,
-body[data-view="judart"] #angieWidget,
-body[data-view="judart"] #miaWidget,
-body[data-view="judart"] #ciroWidget,
-body[data-view="cursos"] #angieWidget,
-body[data-view="cursos"] #miaWidget,
-body[data-view="cursos"] #ciroWidget,
-body[data-view="perfil"] #angieWidget,
-body[data-view="perfil"] #miaWidget,
-body[data-view="perfil"] #ciroWidget,
-body[data-view="miembros-activos"] #angieWidget,
-body[data-view="miembros-activos"] #miaWidget,
-body[data-view="miembros-activos"] #ciroWidget,
-body[data-view="notificaciones"] #angieWidget,
-body[data-view="notificaciones"] #miaWidget,
-body[data-view="notificaciones"] #ciroWidget {
-  display: none !important;
-}
-
-/* Floater layer fuera de Inicio (si lo usas) */
-body:not([data-view="inicio"]) #jcFloatLayer {
-  display: none !important;
-}
-
-/* 2) Chat flotante fuera de Box: mantenerlo discreto (o apagarlo) */
-body:not([data-view="box"]) #jcChat {
-  display: none !important;
-}
-:root{
-  --jc-safe-pad: 14px;
-  --jc-maxw: 1100px;
-}
-
-/* Regla base: todo lo “main” se alinea igual */
-.jc-wrap,
-.jc-container,
-#app,
-main{
-  width: 100%;
-  max-width: var(--jc-maxw);
-  margin: 0 auto;
-  padding-left: var(--jc-safe-pad);
-  padding-right: var(--jc-safe-pad);
-  box-sizing: border-box;
-}
-
-/* Topbar / Header: que use exactamente el mismo ancho/padding */
-.jc-topbar,
-header,
-#topbar,
-#appHeader{
-  width: 100%;
-  box-sizing: border-box;
-  padding-left: var(--jc-safe-pad);
-  padding-right: var(--jc-safe-pad);
-}
-
-/* Si tu topbar es fixed, alinéalo al viewport sin “correrse” */
-.jc-topbar.is-fixed,
-#topbar.is-fixed,
-#topbar.fixed,
-.jc-topbar.fixed{
-  left: 0;
-  right: 0;
-}
-
-/* Evita el clásico descuadre por 100vw */
-.jc-topbar,
-header,
-#topbar,
-#appHeader{
-  max-width: none; /* que no pelee con max-width del contenedor */
-}
-html, body{
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  box-sizing: border-box;
-}
-*, *::before, *::after{ box-sizing: inherit; }
-
