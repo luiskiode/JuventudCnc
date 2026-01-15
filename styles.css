@@ -1066,3 +1066,53 @@ body:not([data-view="box"]) .jc-chat{ display:none !important; }
   :root{ --jc-safe-pad: 12px; }
   .topbar-inner{ padding: 10px var(--jc-safe-pad); }
 }
+
+/* ==========================================================
+   FIX PC: topbar-inner y main.container SIEMPRE igual
+   (fuerza misma caja en desktop)
+   ========================================================== */
+
+/* 1) una sola fuente de verdad */
+:root{
+  --jc-maxw: 960px;
+  --jc-safe-pad: 14px;
+}
+
+/* 2) main container fijo (PC) */
+main.container#main{
+  max-width: var(--jc-maxw) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: var(--jc-safe-pad) !important;
+  padding-right: var(--jc-safe-pad) !important;
+  box-sizing: border-box !important;
+}
+
+/* 3) topbar full width, pero inner igual que main */
+header.topbar{
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+header.topbar > .topbar-inner{
+  max-width: var(--jc-maxw) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: var(--jc-safe-pad) !important;
+  padding-right: var(--jc-safe-pad) !important;
+  box-sizing: border-box !important;
+
+  /* asegura layout */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+}
+
+/* 4) si en PC te “mueve” por scrollbar, evita 100vw */
+html { overflow-y: scroll; }
+
+/* 5) en desktop no reduzcas padding por media queries raras */
+@media (min-width: 561px){
+  :root{ --jc-safe-pad: 14px; }
+}
