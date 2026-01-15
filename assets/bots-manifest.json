@@ -1,0 +1,50 @@
+{
+  "angie": {
+    "feliz": ["assets/angie-feliz-saludo.png"],
+    "saludo": ["assets/angie-sonrisa-saludo.png"],
+    "rezando": ["assets/angie-rezando.png"],
+    "traviesa": ["assets/angie-traviesa.png"],
+    "confundida": ["assets/angie-confundida.png"],
+    "enojada": ["assets/angie-enojada.png"],
+    "sorprendida": ["assets/angie-sorprendida.png"],
+    "ok": ["assets/angie-ok.png"],
+    "vergonzosa": ["assets/angie-vergonzosa.png"],
+    "cansada": ["assets/angie-cansada.png"],
+    "llorando": ["assets/angie-llorando.png"],
+    "enamorada": ["assets/angie-enamorada.png"],
+    "widget": ["assets/angie-widget-v2.png"]
+  },
+  "mia": {
+    "casual": [
+      "assets/mia-casual.png",
+      "assets/mia-casual-wink.png",
+      "assets/mia-casual-surprised.png",
+      "assets/mia-casual-love.png",
+      "assets/mia-casual-shy.png",
+      "assets/mia-casual-embarrassed.png",
+      "assets/mia-casual-confused.png",
+      "assets/mia-casual-sad.png",
+      "assets/mia-casual-cry.png"
+    ],
+    "elegante": [
+      "assets/mia-elegante.png",
+      "assets/mia-elegant-relief.png",
+      "assets/mia-elegant-dreamy.png",
+      "assets/mia-elegant-heart.png",
+      "assets/mia-elegant-love.png",
+      "assets/mia-elegant-shy.png",
+      "assets/mia-elegant-kiss.png",
+      "assets/mia-elegant-confused.png",
+      "assets/mia-elegant-cry.png"
+    ]
+  },
+  "ciro": {
+    "feliz": ["assets/ciro-happy.png"],
+    "excited": ["assets/ciro-excited.png"],
+    "calm": ["assets/ciro-calm.png"],
+    "worried": ["assets/ciro-worried.png"],
+    "pray": ["assets/ciro-pray.png"],
+    "happy_pray": ["assets/ciro-happy-pray.png"],
+    "stop": ["assets/ciro-stop.png", "assets/ciro-angry.png"]
+  }
+}
