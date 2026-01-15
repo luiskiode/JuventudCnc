@@ -1024,3 +1024,45 @@ body:not([data-view="box"]) .jc-chat{ display:none !important; }
   body.jc-bg-dynamic::before{ animation:none !important; }
   #jcFloatLayer .jc-float-card{ animation:none !important; transition:none !important; }
 }
+
+/* ==========================================================
+   FIX DEFINITIVO: Topbar alineada con el main container
+   (la topbar sigue sticky full-width, pero su contenido
+    respeta el mismo ancho/padding que .container)
+   ========================================================== */
+
+:root{
+  --jc-safe-pad: 14px;
+  --jc-maxw: 960px;
+}
+
+/* Tu main ya usa container, lo alineamos con estas vars */
+.container{
+  max-width: var(--jc-maxw);
+  padding-left: var(--jc-safe-pad);
+  padding-right: var(--jc-safe-pad);
+}
+
+/* Topbar ocupa todo el ancho, pero su "inner" queda alineado */
+.topbar{
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.topbar-inner{
+  width: 100%;
+  max-width: var(--jc-maxw);
+  margin: 0 auto;
+  padding: 10px var(--jc-safe-pad);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+/* En móvil reduce un poco el padding */
+@media (max-width:560px){
+  :root{ --jc-safe-pad: 12px; }
+  .topbar-inner{ padding: 10px var(--jc-safe-pad); }
+}
