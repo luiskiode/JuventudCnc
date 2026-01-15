@@ -2,9 +2,11 @@
 (function () {
   "use strict";
 
-  // Namespace seguro
   const JC = (window.JC = window.JC || {});
   JC.state = JC.state || {};
+
+  // Cliente supabase (si luego conectas DB)
+  const sb = window.sb || window.supabaseClient || JC.sb || null;
 
   // Helpers mínimos
   const $ = JC.$ || ((sel, root = document) => root.querySelector(sel));
@@ -71,19 +73,22 @@
   }
 
   // =========================
-  // Gate (permiso crear/editar)
+  // Gate (solo para crear/editar)
+  // - Ver eventos: público (sin sesión)
   // =========================
   function setGate() {
     const { gate, wrapCreate } = refs();
 
+    // Siempre permitimos ver eventos (lectura pública)
+    // Solo controlamos si se puede crear/editar
     if (!isLogged()) {
-      if (gate) gate.textContent = "🔒 Inicia sesión para ver tu estado de miembro.";
+      if (gate) gate.textContent = "👀 Eventos visibles. 🔑 Inicia sesión para crear/editar.";
       if (wrapCreate) wrapCreate.style.display = "none";
       return;
     }
 
     if (!isMember()) {
-      if (gate) gate.textContent = "🔒 Registra tu perfil para gestionar eventos.";
+      if (gate) gate.textContent = "👀 Puedes ver eventos. 🔒 Completa tu perfil para crear/editar.";
       if (wrapCreate) wrapCreate.style.display = "none";
       return;
     }
@@ -93,7 +98,7 @@
   }
 
   // =========================
-  // Render placeholder (hasta conectar Supabase)
+  // Render helpers (placeholder)
   // =========================
   function renderEmpty(listEl, msg) {
     if (!listEl) return;
@@ -103,16 +108,10 @@
   function renderListPlaceholder() {
     const { list, listHome } = refs();
 
-    if (!isLogged()) {
-      renderEmpty(list, "🔒 Inicia sesión para ver eventos.");
-      renderEmpty(listHome, "🔒 Inicia sesión para ver eventos.");
-      return;
-    }
-
-    // Si aún no hay lógica real de DB, al menos no se ve “muerto”
-    const msg = isMember()
-      ? "📅 Eventos listos (pendiente conectar a Supabase + calendario real)."
-      : "🔒 Regístrate (perfil) para ver y gestionar eventos.";
+    // Lectura pública
+    const msg = st.selectedDayISO
+      ? `📅 Eventos (placeholder) — filtrado por día: ${st.selectedDayISO}`
+      : "📅 Eventos (placeholder) — pronto conectamos Supabase (public.eventos).";
 
     renderEmpty(list, msg);
     renderEmpty(listHome, msg);
@@ -130,7 +129,7 @@
   }
 
   function renderCalendarSkeleton() {
-    const { calendar, calLabel } = refs();
+    const { calendar, calLabel, dayHint, clearDay } = refs();
     if (!calendar) return;
 
     if (calLabel) {
@@ -138,7 +137,6 @@
       calLabel.textContent = s.charAt(0).toUpperCase() + s.slice(1);
     }
 
-    // grid simple del mes (sin data aún, pero clickeable)
     calendar.innerHTML = "";
 
     const y = st.calDate.getFullYear();
@@ -146,6 +144,12 @@
     const first = new Date(y, m, 1);
     const startDay = (first.getDay() + 6) % 7; // 0=L
     const daysInMonth = new Date(y, m + 1, 0).getDate();
+
+    // hint
+    if (dayHint) {
+      dayHint.textContent = st.selectedDayISO ? `Filtrado: ${st.selectedDayISO}` : "Toca un día para filtrar";
+    }
+    if (clearDay) clearDay.style.display = st.selectedDayISO ? "" : "none";
 
     // fillers anteriores
     for (let i = 0; i < startDay; i++) {
@@ -169,15 +173,7 @@
 
       cell.addEventListener("click", () => {
         st.selectedDayISO = st.selectedDayISO === iso ? null : iso;
-        // hint + botón “ver todos”
-        const { dayHint, clearDay } = refs();
-        if (dayHint) dayHint.textContent = st.selectedDayISO ? `Filtrado: ${st.selectedDayISO}` : "Toca un día para filtrar";
-        if (clearDay) clearDay.style.display = st.selectedDayISO ? "" : "none";
-
-        // re-render del calendario para marcar selección
         renderCalendarSkeleton();
-
-        // refresca lista (cuando conectemos DB, filtra)
         cargarEventos({ force: true });
       });
 
@@ -186,31 +182,32 @@
   }
 
   // =========================
-  // Carga eventos (placeholder, pero con hooks listos)
+  // Carga eventos
+  // (aún placeholder — listo para conectar public.eventos)
   // =========================
   async function cargarEventos({ force = false } = {}) {
-    // Aquí va la query real a Supabase (eventos por scope + filtros + día seleccionado)
-    // Por ahora dejamos placeholder para que no se sienta roto
+    // En el futuro:
+    // - leer public.eventos (lectura pública)
+    // - aplicar filtros: tipo, scope, search, sort, selectedDayISO
     renderListPlaceholder();
   }
 
   // =========================
-  // Crear evento (stub seguro)
+  // Crear evento (solo miembros)
   // =========================
   async function crearEventoFromForm() {
-    const { form, estado } = refs();
-    if (!form || !estado) return;
+    const { estado } = refs();
+    if (!estado) return;
 
     if (!isLogged()) {
-      estado.textContent = "🔒 Inicia sesión primero.";
+      estado.textContent = "🔑 Inicia sesión para crear eventos.";
       return;
     }
     if (!isMember()) {
-      estado.textContent = "🔒 Regístrate (perfil) para crear eventos.";
+      estado.textContent = "🔒 Completa tu perfil para crear eventos.";
       return;
     }
 
-    // inputs reales (ids del index)
     const titulo = $("#evTitulo")?.value?.trim();
     const fecha = $("#evFecha")?.value;
     const lugar = $("#evLugar")?.value?.trim();
@@ -221,14 +218,14 @@
       return;
     }
 
-    // Aquí va el insert real a Supabase
+    // Placeholder hasta conectar Supabase
     estado.textContent = "✅ Evento listo (pendiente conectar a Supabase).";
     try {
       window.logAviso?.({ title: "Eventos", body: `Evento preparado: ${titulo}` });
       window.miaSetEstado?.("apoyo");
     } catch {}
 
-    // Limpia (opcional)
+    // Limpia
     try {
       $("#evTitulo").value = "";
       $("#evFecha").value = "";
@@ -240,81 +237,19 @@
   }
 
   // =========================
-  // Bind UI (una vez)
+  // Modal editar (stub)
   // =========================
-  function bindUI() {
-    if (st.bound) return;
-    st.bound = true;
-
-    const r = refs();
-
-    // Refresh
-    r.btnRefresh?.addEventListener("click", () => cargarEventos({ force: true }));
-
-    // Filtros (cuando conectemos DB, aplican)
-    r.filtroTipo?.addEventListener("change", () => cargarEventos({ force: true }));
-    r.evScope?.addEventListener("change", () => cargarEventos({ force: true }));
-    r.evSearch?.addEventListener("input", () => {
-      // debounce simple
-      clearTimeout(bindUI.__t);
-      bindUI.__t = setTimeout(() => cargarEventos({ force: true }), 250);
-    });
-    r.evSort?.addEventListener("change", () => cargarEventos({ force: true }));
-
-    // Crear evento
-    r.form?.addEventListener("submit", (e) => {
-      e.preventDefault();
-      crearEventoFromForm();
-    });
-
-    // Calendario nav
-    r.calPrev?.addEventListener("click", () => {
-      st.calDate = new Date(st.calDate.getFullYear(), st.calDate.getMonth() - 1, 1);
-      renderCalendarSkeleton();
-    });
-    r.calNext?.addEventListener("click", () => {
-      st.calDate = new Date(st.calDate.getFullYear(), st.calDate.getMonth() + 1, 1);
-      renderCalendarSkeleton();
-    });
-
-    r.clearDay?.addEventListener("click", () => {
-      st.selectedDayISO = null;
-      const { dayHint, clearDay } = refs();
-      if (dayHint) dayHint.textContent = "Toca un día para filtrar";
-      if (clearDay) clearDay.style.display = "none";
-      renderCalendarSkeleton();
-      cargarEventos({ force: true });
-    });
-
-    // Modal editar (stub, no rompe)
-    r.modalClose?.addEventListener("click", closeEditModal);
-    r.modal?.addEventListener("click", (e) => {
-      if (e.target === r.modal) closeEditModal();
-    });
-    r.editForm?.addEventListener("submit", (e) => {
-      e.preventDefault();
-      if (r.editEstado) r.editEstado.textContent = "✅ Guardado (pendiente Supabase).";
-    });
-    r.editDelete?.addEventListener("click", () => {
-      if (r.editEstado) r.editEstado.textContent = "🗑️ Borrado (pendiente Supabase).";
-    });
-
-    // Exponer para auth.js (compat)
-    window.jcEventos = window.jcEventos || {};
-    window.jcEventos.refreshAuth = async () => {
-      setGate();
-      await cargarEventos({ force: true });
-    };
-  }
-
   function openEditModal() {
     const { modal } = refs();
     if (!modal) return;
     modal.style.display = "flex";
     modal.classList.add("show");
+
+    // Usa el overlay global correcto
     try {
-      // reusa overlay global para no crear otro estado
-      window.jcState && (window.jcState.loginOpen = true);
+      window.JC = window.JC || {};
+      window.JC.uiState = window.JC.uiState || {};
+      window.JC.uiState.loginOpen = true; // reusamos flag para overlay global
       window.jcSyncOverlay?.();
     } catch {}
   }
@@ -324,10 +259,78 @@
     if (!modal) return;
     modal.classList.remove("show");
     modal.style.display = "none";
+
     try {
-      window.jcState && (window.jcState.loginOpen = false);
+      window.JC = window.JC || {};
+      window.JC.uiState = window.JC.uiState || {};
+      window.JC.uiState.loginOpen = false;
       window.jcSyncOverlay?.();
     } catch {}
+  }
+
+  // =========================
+  // Bind UI (una vez)
+  // =========================
+  function bindUI() {
+    if (st.bound) return;
+    st.bound = true;
+
+    const r = refs();
+
+    r.btnRefresh?.addEventListener("click", () => cargarEventos({ force: true }));
+
+    r.filtroTipo?.addEventListener("change", () => cargarEventos({ force: true }));
+    r.evScope?.addEventListener("change", () => cargarEventos({ force: true }));
+
+    r.evSearch?.addEventListener("input", () => {
+      clearTimeout(bindUI.__t);
+      bindUI.__t = setTimeout(() => cargarEventos({ force: true }), 250);
+    });
+
+    r.evSort?.addEventListener("change", () => cargarEventos({ force: true }));
+
+    r.form?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      crearEventoFromForm();
+    });
+
+    r.calPrev?.addEventListener("click", () => {
+      st.calDate = new Date(st.calDate.getFullYear(), st.calDate.getMonth() - 1, 1);
+      renderCalendarSkeleton();
+    });
+
+    r.calNext?.addEventListener("click", () => {
+      st.calDate = new Date(st.calDate.getFullYear(), st.calDate.getMonth() + 1, 1);
+      renderCalendarSkeleton();
+    });
+
+    r.clearDay?.addEventListener("click", () => {
+      st.selectedDayISO = null;
+      renderCalendarSkeleton();
+      cargarEventos({ force: true });
+    });
+
+    // Modal editar (stub)
+    r.modalClose?.addEventListener("click", closeEditModal);
+    r.modal?.addEventListener("click", (e) => {
+      if (e.target === r.modal) closeEditModal();
+    });
+
+    r.editForm?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (r.editEstado) r.editEstado.textContent = "✅ Guardado (pendiente Supabase).";
+    });
+
+    r.editDelete?.addEventListener("click", () => {
+      if (r.editEstado) r.editEstado.textContent = "🗑️ Borrado (pendiente Supabase).";
+    });
+
+    // Exponer compat
+    window.jcEventos = window.jcEventos || {};
+    window.jcEventos.refreshAuth = async () => {
+      setGate();
+      await cargarEventos({ force: true });
+    };
   }
 
   // =========================
@@ -336,6 +339,7 @@
   async function init() {
     bindUI();
 
+    // Recalcular gates cuando cambia perfil
     JC.on("profile:changed", () => {
       setGate();
       cargarEventos({ force: true });

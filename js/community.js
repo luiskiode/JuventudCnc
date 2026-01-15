@@ -2,14 +2,15 @@
 (function () {
   "use strict";
 
-  // Namespace seguro
   const JC = (window.JC = window.JC || {});
   JC.state = JC.state || {};
 
-  // Helpers mínimos
+  // Usa cliente estándar si existe
+  const sb = window.sb || window.supabaseClient || JC.sb || null;
+
   const $ = JC.$ || ((sel, root = document) => root.querySelector(sel));
 
-  // Event bus simple (por si no existe)
+  // Event bus simple
   if (typeof JC.on !== "function") {
     JC.on = function (evt, cb) {
       document.addEventListener(`JC:${evt}`, (e) => cb(e.detail), false);
@@ -21,7 +22,6 @@
     };
   }
 
-  // UI refs (IDs reales del index)
   function refs() {
     return {
       gate: $("#comuGate"),
@@ -51,7 +51,6 @@
     };
   }
 
-  // Estado interno de comunidad
   const st = {
     cat: "chicos",
     openPostId: null,
@@ -66,22 +65,23 @@
     return !!JC.state.isMember;
   }
 
+  // ✅ Nuevo gate: lectura pública; interacción solo miembros
   function setGate() {
     const { gate, composer, badge } = refs();
 
-    // No logueado
+    // Lectura pública
     if (!isLogged()) {
-      if (gate) gate.textContent = "🔒 Inicia sesión para ver contenido de comunidad.";
+      if (gate) gate.textContent = "👀 Puedes leer la comunidad. 🔑 Inicia sesión para interactuar (publicar, comentar y reaccionar ❤️).";
       if (composer) composer.style.display = "none";
-      if (badge) badge.textContent = "🔒 Solo miembros";
+      if (badge) badge.textContent = "👀 Lectura pública";
       return;
     }
 
     // Logueado pero no miembro
     if (!isMember()) {
-      if (gate) gate.textContent = "🔒 Regístrate (perfil) para publicar, comentar y reaccionar ❤️";
+      if (gate) gate.textContent = "👀 Puedes leer. 🔒 Completa tu perfil para publicar, comentar y reaccionar ❤️.";
       if (composer) composer.style.display = "none";
-      if (badge) badge.textContent = "🔒 Solo miembros";
+      if (badge) badge.textContent = "🔒 Interacción solo miembros";
       return;
     }
 
@@ -102,49 +102,38 @@
   }
 
   // =========================
-  // FEED (placeholder seguro)
+  // FEED (lectura pública)
   // =========================
   async function cargarFeed({ force = false } = {}) {
     const { list } = refs();
     if (!list) return;
 
-    // Si aún no hay lógica real de Supabase aquí, no rompemos UI
-    // Luego reemplazamos por: select posts by cat, order, join profiles, etc.
-    if (!isLogged()) {
-      list.innerHTML = `<div class="muted small">🔒 Inicia sesión para ver publicaciones.</div>`;
-      return;
-    }
-
-    if (!isMember()) {
-      list.innerHTML = `<div class="muted small">🔒 Regístrate (perfil) para ver el feed completo.</div>`;
-      return;
-    }
-
-    // Placeholder de arranque (hasta que pegues la tabla real)
+    // ✅ Mientras conectamos Supabase, mostramos placeholder público (sin obligar login)
     list.innerHTML = `
       <div class="jc-card-mini">
-        <strong>🧩 Comunidad lista</strong>
+        <strong>🧩 Comunidad</strong>
         <div class="muted small" style="margin-top:6px">
           Categoría actual: <b>${st.cat}</b><br/>
-          (Feed real pendiente: posts/comentarios/likes con Supabase + RLS)
+          Lectura pública ✅ — interacción (publicar/comentar/reaccionar) solo miembros 🔒<br/>
+          (Feed real pendiente: posts_comunidad / comentarios_comunidad / reacciones_comunidad)
         </div>
       </div>
     `;
   }
 
   // =========================
-  // PUBLICAR (stub seguro)
+  // PUBLICAR (solo miembros)
   // =========================
   async function publicar() {
     const { titulo, contenido, estado } = refs();
     if (!estado) return;
 
     if (!isLogged()) {
-      estado.textContent = "🔒 Inicia sesión primero.";
+      estado.textContent = "🔑 Inicia sesión para publicar.";
       return;
     }
     if (!isMember()) {
-      estado.textContent = "🔒 Regístrate (perfil) para publicar.";
+      estado.textContent = "🔒 Completa tu perfil para publicar.";
       return;
     }
 
@@ -156,15 +145,13 @@
       return;
     }
 
-    // Aquí es donde irá el insert real en Supabase.
-    // Por ahora solo confirmamos para que no parezca roto.
+    // Placeholder hasta conectar Supabase
     estado.textContent = "✅ Publicación lista (pendiente de conectar a Supabase).";
     try {
       window.logAviso?.({ title: "Comunidad", body: "Publicación preparada ✅" });
       window.miaSetEstado?.("apoyo");
     } catch {}
 
-    // Limpia
     if (titulo) titulo.value = "";
     if (contenido) contenido.value = "";
 
@@ -172,7 +159,7 @@
   }
 
   // =========================
-  // MODAL COMENTARIOS (stub)
+  // MODAL COMENTARIOS (lectura pública, comentar solo miembros)
   // =========================
   function openModal(postId, title = "Comentarios", meta = "—") {
     const { modal, modalTitle, modalMeta, commentsList, commentComposer, commentGate } = refs();
@@ -184,7 +171,7 @@
     if (modalMeta) modalMeta.textContent = meta;
 
     if (commentsList) {
-      commentsList.innerHTML = `<div class="muted small">Comentarios (pendiente de conectar a Supabase).</div>`;
+      commentsList.innerHTML = `<div class="muted small">Comentarios (lectura pública) — pendiente de conectar a Supabase.</div>`;
     }
 
     // Gate comentar
@@ -196,16 +183,16 @@
       if (commentGate) {
         commentGate.style.display = "block";
         commentGate.textContent = !isLogged()
-          ? "🔒 Inicia sesión para comentar."
-          : "🔒 Regístrate para comentar.";
+          ? "🔑 Inicia sesión para comentar."
+          : "🔒 Completa tu perfil para comentar.";
       }
     }
 
     modal.style.display = "flex";
     modal.classList.add("show");
-    // overlay global (si lo tienes)
+
     try {
-      window.jcState && (window.jcState.loginOpen = true); // reusa overlay, sin crear uno nuevo
+      window.jcState && (window.jcState.loginOpen = true);
       window.jcSyncOverlay?.();
     } catch {}
   }
@@ -228,13 +215,14 @@
     if (!commentEstado) return;
 
     if (!isLogged()) {
-      commentEstado.textContent = "🔒 Inicia sesión primero.";
+      commentEstado.textContent = "🔑 Inicia sesión primero.";
       return;
     }
     if (!isMember()) {
-      commentEstado.textContent = "🔒 Regístrate para comentar.";
+      commentEstado.textContent = "🔒 Completa tu perfil para comentar.";
       return;
     }
+
     const txt = String(commentText?.value || "").trim();
     if (!txt) {
       commentEstado.textContent = "Escribe un comentario.";
@@ -246,7 +234,7 @@
   }
 
   // =========================
-  // Bind UI (una vez)
+  // Bind UI
   // =========================
   function bindUI() {
     if (st.bound) return;
@@ -254,7 +242,6 @@
 
     const r = refs();
 
-    // Tabs categorías
     r.tabs.forEach((b) => {
       b.addEventListener("click", async () => {
         setActiveCat(b.dataset.comuCat);
@@ -262,7 +249,6 @@
       });
     });
 
-    // Publicar
     r.formPost?.addEventListener("submit", async (e) => {
       e.preventDefault();
       await publicar();
@@ -276,7 +262,6 @@
 
     r.btnRefresh?.addEventListener("click", () => cargarFeed({ force: true }));
 
-    // Modal comentarios
     r.modalClose?.addEventListener("click", closeModal);
     r.modal?.addEventListener("click", (e) => {
       if (e.target === r.modal) closeModal();
@@ -292,7 +277,7 @@
       if (r.commentEstado) r.commentEstado.textContent = "";
     });
 
-    // Exponer para auth.js / otros módulos (compat)
+    // Exponer compat
     window.jcComunidad = window.jcComunidad || {};
     window.jcComunidad.cargarFeed = cargarFeed;
     window.jcComunidad.refreshAuthAndMiembro = async () => {
@@ -306,13 +291,12 @@
   async function init() {
     bindUI();
 
-    // gate se recalcula cuando cambia perfil
+    // Recalcular gates cuando cambia perfil
     JC.on("profile:changed", () => {
       setGate();
       cargarFeed({ force: true });
     });
 
-    // Estado inicial
     setActiveCat(st.cat);
     setGate();
     await cargarFeed({ force: true });

@@ -1,134 +1,223 @@
 // js/resources.js
 (function () {
-  // Namespace seguro
+  "use strict";
+
   const JC = (window.JC = window.JC || {});
   JC.resources = JC.resources || {};
+  JC.state = JC.state || {};
 
-  // Helpers mínimos (no dependas de que ui.js ya los haya definido)
   const $ = (sel, root = document) => root.querySelector(sel);
 
-  // URLs (defaults) — se pueden sobreescribir desde config.js si quieres
+  const sb = window.sb || window.supabaseClient || JC.sb || null;
+
+  // Links configurables
   const VATICANO_URL =
     (JC.config && JC.config.links && JC.config.links.vaticano) ||
     "https://www.vatican.va/content/vatican/es.html";
 
   const BIBLIA_URL =
     (JC.config && JC.config.links && JC.config.links.biblia) ||
-    "https://es.jesus.net/biblia/salmo-23?gad_source=1&gad_campaignid=22037241986&gbraid=0AAAAAo9sgALt2dICRTY7UBIEnOuLX4rgD&gclid=CjwKCAiA3rPKBhBZEiwAhPNFQFVqLZ8BJr1VNGmQ4zNdEwYwTxM_EQFkFLu8jj0iI9UctfSBU8Kk6BoCtvcQAvD_BwE";
+    "https://es.jesus.net/biblia/salmo-23";
 
-  /**
-   * ✅ Parche crítico:
-   * Mucho código (main/activate) probablemente llama a listarRecursos().
-   * Si no existe, rompe toda la navegación.
-   *
-   * Este stub NO reemplaza tu lógica final: evita el crash y deja trazas claras.
-   * Luego, cuando pegues el “listado real”, se reemplaza aquí.
-   */
-  async function listarRecursos(scope = "catefa") {
-    try {
-      // Gate/estado (si existen)
-      const gate = $("#catefaGate");
-      const estado = $("#catefaEstado");
+  // Roles permitidos para Catefa
+  const CATEFA_ROLES_OK = new Set(["animador", "catequista", "admin", "coordinador"]);
 
-      if (gate) gate.textContent = "Cargando recursos…";
-      if (estado) estado.textContent = "";
+  function getRoleKey() {
+    // Preferimos el perfil cargado (miembros)
+    const rk =
+      JC.state?.profile?.rol_key ||
+      JC.state?.profile?.rol ||
+      JC.state?.profile?.role ||
+      null;
+    return (rk || "").toString().trim().toLowerCase();
+  }
 
-      // Si todavía no tienes backend listo, mostramos placeholder seguro
-      // (Así Catefa “no se muere” aunque la lógica aún esté en progreso)
-      const listNinos = $("#catefaNinos");
-      const listSesiones = $("#catefaSesiones");
-
-      if (listNinos && listNinos.children.length === 0) {
-        listNinos.innerHTML =
-          '<div class="muted small">Aún no hay datos. Inicia sesión y selecciona un grupo.</div>';
-      }
-      if (listSesiones && listSesiones.children.length === 0) {
-        listSesiones.innerHTML =
-          '<div class="muted small">Aún no hay sesiones. Crea una sesión para empezar.</div>';
-      }
-
-      if (gate) gate.textContent = "Catefa listo ✅";
-      if (estado) estado.textContent = `OK · ${String(scope)}`;
-
-      return { ok: true, scope };
-    } catch (e) {
-      console.error("[JC] listarRecursos error", e);
-      const gate = $("#catefaGate");
-      if (gate) gate.textContent = "Error cargando Catefa ❌";
-      return { ok: false, error: e };
-    }
+  function hasCatefaAccess() {
+    const rk = getRoleKey();
+    return CATEFA_ROLES_OK.has(rk);
   }
 
   function openExternal(url, fallbackId) {
     try {
-      // Intento 1: abrir con window.open
       const w = window.open(url, "_blank", "noopener,noreferrer");
       if (w) return;
-
-      // Intento 2: fallback anchor en DOM (si popup blocked)
       const a = fallbackId ? document.getElementById(fallbackId) : null;
       if (a && a.href) a.click();
       else location.href = url;
     } catch (e) {
       console.error("[JC] openExternal error", e);
-      // último recurso
       location.href = url;
     }
   }
 
   function bindCatefaLinks() {
-    const btnV = document.getElementById("btnVaticano");
-    const btnB = document.getElementById("btnBiblia");
+    document.getElementById("btnVaticano")?.addEventListener("click", () =>
+      openExternal(VATICANO_URL, "linkVaticano")
+    );
+    document.getElementById("btnBiblia")?.addEventListener("click", () =>
+      openExternal(BIBLIA_URL, "linkBiblia")
+    );
+  }
 
-    if (btnV) {
-      btnV.addEventListener("click", () => openExternal(VATICANO_URL, "linkVaticano"));
+  function setCatefaGate(msg) {
+    const gate = document.getElementById("catefaGate");
+    if (gate) gate.textContent = msg || "";
+  }
+
+  function setCatefaEstado(msg) {
+    const estado = document.getElementById("catefaEstado");
+    if (estado) estado.textContent = msg || "";
+  }
+
+  function renderEmptyIfNeeded() {
+    const listNinos = document.getElementById("catefaNinos");
+    const listSesiones = document.getElementById("catefaSesiones");
+
+    if (listNinos && listNinos.children.length === 0) {
+      listNinos.innerHTML =
+        '<div class="muted small">Selecciona un grupo para ver niños.</div>';
     }
-    if (btnB) {
-      btnB.addEventListener("click", () => openExternal(BIBLIA_URL, "linkBiblia"));
+    if (listSesiones && listSesiones.children.length === 0) {
+      listSesiones.innerHTML =
+        '<div class="muted small">Selecciona un grupo para ver sesiones.</div>';
+    }
+  }
+
+  // ============================================================
+  // CATEFA: cargar grupos asignados (primer paso real)
+  // ============================================================
+  async function cargarGruposAsignados() {
+    const sel = document.getElementById("catefaGrupoSelect");
+    if (!sel) return;
+
+    sel.innerHTML = `<option value="">(Cargando…)</option>`;
+
+    if (!sb) {
+      sel.innerHTML = `<option value="">(Sin Supabase)</option>`;
+      return;
     }
 
-    // Opcional: si por alguna razón quieres mostrar los fallbacks
-    // cuando JS detecta bloqueo de popups, esto se puede activar luego.
+    try {
+      // Si tienes RLS, esta tabla debe dejar ver solo lo asignado
+      // Tablas existentes: catefa_asignaciones, catefa_grupos
+      // Estrategia simple:
+      // - traer asignaciones del usuario y luego traer grupos por id
+      const userId = (JC.state.user?.id || window.currentUser?.id || "").toString();
+      if (!userId) {
+        sel.innerHTML = `<option value="">(Inicia sesión)</option>`;
+        return;
+      }
+
+      // 1) asignaciones
+      const a = await sb
+        .from("catefa_asignaciones")
+        .select("grupo_id")
+        .eq("user_id", userId);
+
+      if (a.error) throw a.error;
+
+      const ids = (a.data || []).map((x) => x.grupo_id).filter(Boolean);
+
+      if (!ids.length) {
+        sel.innerHTML = `<option value="">(Sin grupos asignados)</option>`;
+        return;
+      }
+
+      // 2) grupos
+      const g = await sb
+        .from("catefa_grupos")
+        .select("id,nombre")
+        .in("id", ids)
+        .order("nombre", { ascending: true });
+
+      if (g.error) throw g.error;
+
+      sel.innerHTML = `<option value="">(Elige un grupo…)</option>`;
+      for (const row of g.data || []) {
+        const opt = document.createElement("option");
+        opt.value = row.id;
+        opt.textContent = row.nombre || row.id;
+        sel.appendChild(opt);
+      }
+    } catch (e) {
+      console.warn("[Catefa] cargarGruposAsignados error:", e);
+      sel.innerHTML = `<option value="">(Error cargando grupos)</option>`;
+    }
+  }
+
+  // ============================================================
+  // API compat: listarRecursos (evita crash)
+  // ============================================================
+  async function listarRecursos(scope = "catefa") {
+    try {
+      renderEmptyIfNeeded();
+
+      // Catefa requiere sesión + rol
+      const logged = !!(JC.state.user || window.currentUser);
+      if (!logged) {
+        setCatefaGate("🔑 Inicia sesión para usar Catefa.");
+        setCatefaEstado("");
+        return { ok: false, reason: "no_session" };
+      }
+
+      if (!hasCatefaAccess()) {
+        const rk = getRoleKey() || "miembro";
+        setCatefaGate(`🔒 Catefa requiere rol (animador/catequista). Tu rol: ${rk}`);
+        setCatefaEstado("");
+        return { ok: false, reason: "no_role", role: rk };
+      }
+
+      setCatefaGate("Cargando Catefa…");
+      setCatefaEstado("");
+
+      // Primer paso real: grupos asignados
+      await cargarGruposAsignados();
+
+      setCatefaGate("Catefa listo ✅");
+      setCatefaEstado(`OK · ${String(scope)}`);
+      return { ok: true, scope };
+    } catch (e) {
+      console.error("[JC] listarRecursos error", e);
+      setCatefaGate("Error cargando Catefa ❌");
+      setCatefaEstado("");
+      return { ok: false, error: e };
+    }
   }
 
   function bindCatefaRefresh() {
-    const btn = document.getElementById("btnCatefaRefresh");
-    if (btn) btn.addEventListener("click", () => listarRecursos("catefa"));
+    document.getElementById("btnCatefaRefresh")?.addEventListener("click", () => listarRecursos("catefa"));
   }
 
   function bindFabUploadHook() {
-    // En tu index actual NO existe #fab ni #fileRec.
-    // Entonces lo hacemos compatible sin romper nada.
     const fab = document.getElementById("fab");
     const fileRec = document.getElementById("fileRec");
-
     if (!fab || !fileRec) return;
 
     fab.addEventListener("click", () => {
-      // Tu app usa data-view / data-tab, no necesariamente location.hash.
-      // De todas formas dejamos un fallback.
       const current =
         (JC.ui && JC.ui.getActiveView && JC.ui.getActiveView()) ||
         (location.hash || "#inicio").replace("#", "");
-
       if (current === "recursos") fileRec.click();
     });
   }
 
+  // ============================================================
+  // Public API (para main.js)
+  // ============================================================
   function init() {
-    // 1) Exporta función global para evitar "listarRecursos is not defined"
+    // compat global
     window.listarRecursos = listarRecursos;
-    JC.resources.listarRecursos = listarRecursos;
 
-    // 2) Hooks de UI
+    JC.resources.listarRecursos = listarRecursos;
+    JC.resources.initCatefa = () => listarRecursos("catefa");
+    JC.resources.refresh = () => listarRecursos("catefa");
+
     bindFabUploadHook();
     bindCatefaLinks();
     bindCatefaRefresh();
 
-    // 3) Primera carga segura (solo si estamos en recursos o si existe el gate)
-    // No forzamos navegación; solo pre-carga si el DOM tiene Catefa.
+    // Precarga suave si existe DOM
     if (document.getElementById("catefaGate")) {
-      // No await para no bloquear init global
       listarRecursos("catefa");
     }
   }

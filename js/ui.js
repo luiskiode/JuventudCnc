@@ -1,7 +1,7 @@
 /* ============================================================
    ui.js — drawer/overlay + tema + fondo global + pausa + cursos + notis
-   (robusto: no revienta si faltan helpers / IDs / módulos)
-   Compatible con tu index (IDs reales) + AngieHerramientas (postMessage)
+   Robusto: no revienta si faltan helpers / IDs / módulos
+   Compatible con tu index + AngieHerramientas (postMessage)
    ============================================================ */
 
 (function () {
@@ -11,25 +11,19 @@
   // Namespace + Helpers
   // ============================================================
   const JC = (window.JC = window.JC || {});
-// Selectores seguros: no depender de una versión anterior de JC.$ / JC.$$
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-// Expón los helpers correctos para todo el proyecto
-JC.$ = $;
-JC.$$ = $$;
+  // Selectores seguros
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-
+  // Expón helpers para todo el proyecto
+  JC.$ = $;
+  JC.$$ = $$;
 
   function safeParse(s) {
-    try {
-      return JSON.parse(s);
-    } catch {
-      return null;
-    }
+    try { return JSON.parse(s); } catch { return null; }
   }
 
-  // Escape seguro si por alguna razón usan innerHTML
   JC.safeText =
     JC.safeText ||
     function (v) {
@@ -41,7 +35,7 @@ JC.$$ = $$;
         .replaceAll("'", "&#039;");
     };
 
-  // LocalStorage seguro (Safari / privado / quota)
+  // LocalStorage seguro
   function lsGet(key, fallback = "") {
     try {
       const v = localStorage.getItem(key);
@@ -60,22 +54,17 @@ JC.$$ = $$;
     }
   }
   function lsRemove(key) {
-    try {
-      localStorage.removeItem(key);
-      return true;
-    } catch {
-      return false;
-    }
+    try { localStorage.removeItem(key); return true; } catch { return false; }
   }
 
   // ============================================================
-  // State UI global
+  // UI State global
   // ============================================================
   const state = (JC.uiState = JC.uiState || {
     drawerOpen: false,
     angieOpen: false,
     loginOpen: false,
-    pauseOpen: false,
+    pauseOpen: false
   });
 
   // ============================================================
@@ -100,6 +89,7 @@ JC.$$ = $$;
     drawer.classList.add("open");
     syncOverlay();
   }
+
   function closeDrawer() {
     const drawer = $("#drawer");
     if (!drawer) return;
@@ -107,10 +97,15 @@ JC.$$ = $$;
     drawer.classList.remove("open");
     syncOverlay();
   }
+
   window.jcOpenDrawer = openDrawer;
   window.jcCloseDrawer = closeDrawer;
 
+  let __drawerBound = false;
   function initDrawer() {
+    if (__drawerBound) return;
+    __drawerBound = true;
+
     $("#openDrawer")?.addEventListener("click", openDrawer);
     $("#closeDrawer")?.addEventListener("click", closeDrawer);
 
@@ -119,36 +114,36 @@ JC.$$ = $$;
       closeDrawer();
       window.jcCloseAngieModal?.();
       window.jcCloseLoginModal?.();
-      // pausa no se cierra aquí a propósito (se cierra con click fuera del modal)
+      // pausa no se cierra aquí (se cierra con click fuera del modal)
     });
 
-    // ESC cierra drawer + login + angie
+    // ESC cierra drawer + login + paleta
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       closeDrawer();
-      window.jcCloseAngieModal?.();
       window.jcCloseLoginModal?.();
+      // paleta
+      try {
+        const modal = document.getElementById("angiePaletteModal");
+        if (modal?.classList?.contains("show")) {
+          modal.classList.remove("show");
+          modal.style.display = "none";
+          state.angieOpen = false;
+          syncOverlay();
+        }
+      } catch {}
     });
 
-    // Click en links del drawer (data-tab) — activa vista si existe activate()
+    // Click en links del drawer (data-tab)
     $$("#drawer [data-tab]").forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         const tab = btn.getAttribute("data-tab");
         closeDrawer();
         window.activate?.(tab);
       });
     });
-
-    $$("#drawer [data-tab]").forEach((btn) => {
-  btn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const tab = btn.getAttribute("data-tab");
-    closeDrawer();
-    window.activate?.(tab);
-  });
-});
-
   }
 
   // ============================================================
@@ -184,7 +179,7 @@ JC.$$ = $$;
       "bg-base-1": "--bg-base-1",
       "bg-base-2": "--bg-base-2",
       "veil-a": "--veil-a",
-      "veil-b": "--veil-b",
+      "veil-b": "--veil-b"
     };
 
     for (const [k, v] of Object.entries(tokens)) {
@@ -199,7 +194,7 @@ JC.$$ = $$;
       chicos: { brand: "#38bdf8", "brand-2": "#0ea5e9", accent: "#60a5fa" },
       chicas: { brand: "#f472b6", "brand-2": "#ec4899", accent: "#fb7185" },
       mix: { brand: "#2563eb", "brand-2": "#1d4ed8", accent: "#ec4899" },
-      auto: null,
+      auto: null
     };
 
     const p = presets[mode] ?? null;
@@ -227,17 +222,52 @@ JC.$$ = $$;
   }
 
   // ============================================================
-  // AngieHerramientas (postMessage) — aplica tokens y estados
+  // Angie Palette Modal + postMessage (UN SOLO SISTEMA)
   // ============================================================
-  let __jcAngieMsgBound = false;
+  let __angieBound = false;
 
-  function initAngieToolMessaging() {
-    if (__jcAngieMsgBound) return;
-    __jcAngieMsgBound = true;
+  function openAngiePalette() {
+    const modal = document.getElementById("angiePaletteModal");
+    if (!modal) return;
+    modal.style.display = "flex";
+    modal.classList.add("show");
+    state.angieOpen = true;
+    syncOverlay();
+  }
 
+  function closeAngiePalette() {
+    const modal = document.getElementById("angiePaletteModal");
+    if (!modal) return;
+    modal.classList.remove("show");
+    modal.style.display = "none";
+    state.angieOpen = false;
+    syncOverlay();
+  }
+
+  function initAngiePalette() {
+    if (__angieBound) return;
+    __angieBound = true;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const btn = document.getElementById("btnAngie");
+      const modal = document.getElementById("angiePaletteModal");
+      const close = document.getElementById("angiePaletteClose");
+
+      btn?.addEventListener("click", openAngiePalette);
+      close?.addEventListener("click", closeAngiePalette);
+
+      modal?.addEventListener("click", (e) => {
+        if (e.target === modal) closeAngiePalette();
+      });
+    });
+
+    // Mensajes desde iframe (angie-herramienta.html)
     window.addEventListener("message", (event) => {
       const data = event?.data || {};
       if (!data || typeof data !== "object") return;
+
+      // Aceptar mismo origen (GitHub Pages)
+      if (event.origin && event.origin !== location.origin) return;
 
       // 1) Tokens
       if (data.type === "applyTokens" && data.tokens) {
@@ -249,6 +279,7 @@ JC.$$ = $$;
         } catch (e) {
           console.warn("[JC] applyTokens message error", e);
         }
+        return;
       }
 
       // 2) Estado Angie
@@ -266,241 +297,223 @@ JC.$$ = $$;
     });
   }
 
- // ============================================================
-// Fondo global (Box) — robusto (Android/galería) + default OK
-// ============================================================
-const JC_BG_KEY = "jc_bg_main_dataurl";
-let __jcBgBound = false;
-let __jcBgBusy = false;
+  // ============================================================
+  // Fondo global (Box) — robusto (Android/galería)
+  // ============================================================
+  const JC_BG_KEY = "jc_bg_main_dataurl";
+  let __jcBgBound = false;
+  let __jcBgBusy = false;
 
-async function jcReadImageAsCompressedDataURL(file, opts = {}) {
-  const maxW = opts.maxW ?? 1600;
-  const maxH = opts.maxH ?? 900;
-  const quality = opts.quality ?? 0.82;
-  const mime = opts.mime ?? "image/jpeg";
+  async function jcReadImageAsCompressedDataURL(file, opts = {}) {
+    const maxW = opts.maxW ?? 1600;
+    const maxH = opts.maxH ?? 900;
+    const quality = opts.quality ?? 0.82;
+    const mime = opts.mime ?? "image/jpeg";
 
-  if (!file) throw new Error("Archivo inválido");
+    if (!file) throw new Error("Archivo inválido");
 
-  const t = (file.type || "").toLowerCase();
-  if (!t.startsWith("image/")) throw new Error("El archivo seleccionado no es una imagen.");
+    const t = (file.type || "").toLowerCase();
+    if (!t.startsWith("image/")) throw new Error("El archivo seleccionado no es una imagen.");
 
-  // HEIC/HEIF suele fallar en web (sin librerías)
-  if (t.includes("heic") || t.includes("heif")) {
-    throw new Error("Tu foto está en formato HEIC/HEIF. Conviértela a JPG/PNG e inténtalo otra vez.");
-  }
-
-  // Límite para evitar fallas en móviles / lecturas cortadas
-  const maxMB = opts.maxMB ?? 12;
-  const sizeMB = file.size / (1024 * 1024);
-  if (sizeMB > maxMB) {
-    throw new Error(`La imagen pesa ${sizeMB.toFixed(1)} MB. Usa una más liviana (máx ${maxMB} MB).`);
-  }
-
-  // Fuente para dibujar
-  let src = null; // ImageBitmap o HTMLImageElement
-  let srcW = 0;
-  let srcH = 0;
-
-  // 1) Preferir createImageBitmap (más estable en varios Android)
-  if (window.createImageBitmap) {
-    try {
-      const bmp = await createImageBitmap(file);
-      src = bmp;
-      srcW = bmp.width;
-      srcH = bmp.height;
-    } catch {
-      // fallback abajo
+    if (t.includes("heic") || t.includes("heif")) {
+      throw new Error("Tu foto está en formato HEIC/HEIF. Conviértela a JPG/PNG e inténtalo otra vez.");
     }
-  }
 
-  // 2) Fallback robusto: arrayBuffer -> Blob -> dataURL -> Image
-  if (!src) {
-    const dataUrlOriginal = await (async () => {
-      // Intento A: arrayBuffer (a veces funciona cuando FileReader da NotReadableError)
+    const maxMB = opts.maxMB ?? 12;
+    const sizeMB = file.size / (1024 * 1024);
+    if (sizeMB > maxMB) {
+      throw new Error(`La imagen pesa ${sizeMB.toFixed(1)} MB. Usa una más liviana (máx ${maxMB} MB).`);
+    }
+
+    let src = null;
+    let srcW = 0;
+    let srcH = 0;
+
+    if (window.createImageBitmap) {
       try {
-        const buf = await file.arrayBuffer();
-        const blob = new Blob([buf], { type: file.type || "image/*" });
-
-        return await new Promise((resolve, reject) => {
-          const r = new FileReader();
-          r.onerror = () => reject(r.error || new Error("FileReaderError"));
-          r.onabort = () => reject(new Error("Lectura cancelada."));
-          r.onload = () => resolve(String(r.result || ""));
-          r.readAsDataURL(blob);
-        });
-      } catch (e) {
-        // Intento B: FileReader directo (último recurso)
-        return await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-
-          reader.onerror = () => {
-            const code = reader.error?.name || "NotReadableError";
-            reject(
-              new Error(
-                `No se pudo leer el archivo (${code}). ` +
-                  `En Android, prueba elegirlo desde “Archivos/Descargas” o descarga la foto antes.`
-              )
-            );
-          };
-
-          reader.onabort = () => reject(new Error("Lectura cancelada. Intenta elegir la imagen otra vez."));
-          reader.onload = () => resolve(String(reader.result || ""));
-          reader.readAsDataURL(file);
-        });
-      }
-    })();
-
-    const img = new Image();
-    const loaded = new Promise((resolve, reject) => {
-      img.onload = () => resolve(true);
-      img.onerror = () => reject(new Error("No se pudo cargar la imagen seleccionada."));
-    });
-
-    img.src = dataUrlOriginal;
-    if (img.decode) await img.decode().catch(() => {});
-    await loaded;
-
-    src = img;
-    srcW = img.width;
-    srcH = img.height;
-  }
-
-  // Escalado proporcional (no deforma)
-  const ratio = Math.min(maxW / srcW, maxH / srcH, 1);
-  const w = Math.max(1, Math.round(srcW * ratio));
-  const h = Math.max(1, Math.round(srcH * ratio));
-
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-
-  const ctx = canvas.getContext("2d", { alpha: false });
-  ctx.drawImage(src, 0, 0, w, h);
-
-  // Libera bitmap si aplica
-  if (src && typeof src.close === "function") {
-    try { src.close(); } catch {}
-  }
-
-  // Export
-  let out = canvas.toDataURL(mime, quality);
-
-  // Si quedó demasiado grande, baja calidad un poco (protege localStorage)
-  const approxBytes = Math.floor((out.length * 3) / 4);
-  const maxOutMB = opts.maxOutMB ?? 2.0; // ~2MB
-  if (approxBytes > maxOutMB * 1024 * 1024) {
-    out = canvas.toDataURL(mime, Math.max(0.65, quality - 0.12));
-  }
-
-  return out;
-}
-
-function jcApplyGlobalBackground(dataUrl) {
-  try {
-    if (dataUrl) {
-      document.documentElement.style.setProperty("--jc-bg-image", `url("${dataUrl}")`);
-      document.body.classList.add("jc-has-bg");
-      document.body.classList.remove("jc-bg-default");
-    } else {
-      // Sin personalizado: usa fallback CSS (--jc-bg-default)
-      document.documentElement.style.removeProperty("--jc-bg-image");
-      document.body.classList.remove("jc-has-bg");
-      document.body.classList.add("jc-bg-default");
-    }
-  } catch (e) {
-    console.warn("[JC] jcApplyGlobalBackground failed", e);
-  }
-}
-
-function jcLoadGlobalBackground() {
-  const dataUrl = lsGet(JC_BG_KEY, "");
-  jcApplyGlobalBackground(dataUrl || "");
-}
-
-function jcSaveGlobalBackground(dataUrl) {
-  if (dataUrl) {
-    const ok = lsSet(JC_BG_KEY, dataUrl);
-    if (!ok) {
-      lsRemove(JC_BG_KEY);
-      jcApplyGlobalBackground("");
-      throw new Error("No se pudo guardar el fondo (memoria llena). Usa una imagen más liviana.");
-    }
-  } else {
-    lsRemove(JC_BG_KEY);
-  }
-  jcApplyGlobalBackground(dataUrl || "");
-}
-
-function jcBindGlobalBackgroundUI() {
-  if (__jcBgBound) return true;
-
-  // IDs reales en tu index (están dentro de la vista "box")
-  const input = document.getElementById("bgPickerInput");
-  const btnPick = document.getElementById("btnBgPick");
-  const btnClear = document.getElementById("btnBgClear");
-  const estado = document.getElementById("bgPickEstado");
-
-  if (!input || !btnPick) return false;
-
-  __jcBgBound = true;
-
-  btnPick.addEventListener("click", () => {
-    try { input.value = ""; } catch {}
-    input.click();
-  });
-
-  input.addEventListener("change", async () => {
-    if (__jcBgBusy) return;
-    __jcBgBusy = true;
-
-    const file = input.files?.[0];
-    if (!file) {
-      __jcBgBusy = false;
-      return;
+        const bmp = await createImageBitmap(file);
+        src = bmp;
+        srcW = bmp.width;
+        srcH = bmp.height;
+      } catch {}
     }
 
-    if (estado) estado.textContent = "Cargando fondo…";
+    if (!src) {
+      const dataUrlOriginal = await (async () => {
+        try {
+          const buf = await file.arrayBuffer();
+          const blob = new Blob([buf], { type: file.type || "image/*" });
+          return await new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.onerror = () => reject(r.error || new Error("FileReaderError"));
+            r.onabort = () => reject(new Error("Lectura cancelada."));
+            r.onload = () => resolve(String(r.result || ""));
+            r.readAsDataURL(blob);
+          });
+        } catch {
+          return await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => {
+              const code = reader.error?.name || "NotReadableError";
+              reject(
+                new Error(
+                  `No se pudo leer el archivo (${code}). ` +
+                    `En Android, prueba elegirlo desde “Archivos/Descargas” o descarga la foto antes.`
+                )
+              );
+            };
+            reader.onabort = () => reject(new Error("Lectura cancelada. Intenta elegir la imagen otra vez."));
+            reader.onload = () => resolve(String(reader.result || ""));
+            reader.readAsDataURL(file);
+          });
+        }
+      })();
 
-    try {
-      const dataUrl = await jcReadImageAsCompressedDataURL(file, {
-        maxW: 1600,
-        maxH: 900,
-        quality: 0.82,
-        maxMB: 12,
-        maxOutMB: 2.0,
+      const img = new Image();
+      const loaded = new Promise((resolve, reject) => {
+        img.onload = () => resolve(true);
+        img.onerror = () => reject(new Error("No se pudo cargar la imagen seleccionada."));
       });
 
-      jcSaveGlobalBackground(dataUrl);
+      img.src = dataUrlOriginal;
+      if (img.decode) await img.decode().catch(() => {});
+      await loaded;
 
-      if (estado) estado.textContent = "✅ Fondo aplicado";
-      window.logAviso?.({ title: "Fondo", body: "Fondo global actualizado 🖼️" });
-    } catch (e) {
-      console.error("[JC] Fondo global:", e);
-      if (estado) estado.textContent = e?.message || "No se pudo aplicar el fondo.";
-    } finally {
-      __jcBgBusy = false;
-      try { input.value = ""; } catch {}
+      src = img;
+      srcW = img.width;
+      srcH = img.height;
     }
-  });
 
-  btnClear?.addEventListener("click", () => {
+    const ratio = Math.min(maxW / srcW, maxH / srcH, 1);
+    const w = Math.max(1, Math.round(srcW * ratio));
+    const h = Math.max(1, Math.round(srcH * ratio));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+
+    const ctx = canvas.getContext("2d", { alpha: false });
+    ctx.drawImage(src, 0, 0, w, h);
+
+    if (src && typeof src.close === "function") {
+      try { src.close(); } catch {}
+    }
+
+    let out = canvas.toDataURL(mime, quality);
+
+    const approxBytes = Math.floor((out.length * 3) / 4);
+    const maxOutMB = opts.maxOutMB ?? 2.0;
+    if (approxBytes > maxOutMB * 1024 * 1024) {
+      out = canvas.toDataURL(mime, Math.max(0.65, quality - 0.12));
+    }
+
+    return out;
+  }
+
+  function jcApplyGlobalBackground(dataUrl) {
     try {
-      jcSaveGlobalBackground("");
-      if (estado) estado.textContent = "Fondo restaurado (default).";
-      window.logAviso?.({ title: "Fondo", body: "Fondo restaurado ✅" });
+      if (dataUrl) {
+        document.documentElement.style.setProperty("--jc-bg-image", `url("${dataUrl}")`);
+        document.body.classList.add("jc-has-bg");
+        document.body.classList.remove("jc-bg-default");
+      } else {
+        document.documentElement.style.removeProperty("--jc-bg-image");
+        document.body.classList.remove("jc-has-bg");
+        document.body.classList.add("jc-bg-default");
+      }
     } catch (e) {
-      console.error("[JC] clear bg error", e);
-      if (estado) estado.textContent = "No se pudo restaurar el fondo.";
+      console.warn("[JC] jcApplyGlobalBackground failed", e);
     }
-  });
+  }
 
-  return true;
-}
+  function jcLoadGlobalBackground() {
+    const dataUrl = lsGet(JC_BG_KEY, "");
+    jcApplyGlobalBackground(dataUrl || "");
+  }
 
-// Exports de fondo
-window.jcBindGlobalBackgroundUI = jcBindGlobalBackgroundUI;
-window.jcLoadGlobalBackground = jcLoadGlobalBackground;
-window.jcSaveGlobalBackground = jcSaveGlobalBackground;
+  function jcSaveGlobalBackground(dataUrl) {
+    if (dataUrl) {
+      const ok = lsSet(JC_BG_KEY, dataUrl);
+      if (!ok) {
+        lsRemove(JC_BG_KEY);
+        jcApplyGlobalBackground("");
+        throw new Error("No se pudo guardar el fondo (memoria llena). Usa una imagen más liviana.");
+      }
+    } else {
+      lsRemove(JC_BG_KEY);
+    }
+    jcApplyGlobalBackground(dataUrl || "");
+  }
+
+  function jcBindGlobalBackgroundUI() {
+    if (__jcBgBound) return true;
+
+    const input = document.getElementById("bgPickerInput");
+    const btnPick = document.getElementById("btnBgPick");
+    const btnClear = document.getElementById("btnBgClear");
+    const estado = document.getElementById("bgPickEstado");
+
+    if (!input || !btnPick) return false;
+
+    __jcBgBound = true;
+
+    btnPick.addEventListener("click", () => {
+      try { input.value = ""; } catch {}
+      input.click();
+    });
+
+    input.addEventListener("change", async () => {
+      if (__jcBgBusy) return;
+      __jcBgBusy = true;
+
+      const file = input.files?.[0];
+      if (!file) {
+        __jcBgBusy = false;
+        return;
+      }
+
+      if (estado) estado.textContent = "Cargando fondo…";
+
+      try {
+        const dataUrl = await jcReadImageAsCompressedDataURL(file, {
+          maxW: 1600,
+          maxH: 900,
+          quality: 0.82,
+          maxMB: 12,
+          maxOutMB: 2.0
+        });
+
+        jcSaveGlobalBackground(dataUrl);
+
+        if (estado) estado.textContent = "✅ Fondo aplicado";
+        window.logAviso?.({ title: "Fondo", body: "Fondo global actualizado 🖼️" });
+      } catch (e) {
+        console.error("[JC] Fondo global:", e);
+        if (estado) estado.textContent = e?.message || "No se pudo aplicar el fondo.";
+      } finally {
+        __jcBgBusy = false;
+        try { input.value = ""; } catch {}
+      }
+    });
+
+    btnClear?.addEventListener("click", () => {
+      try {
+        jcSaveGlobalBackground("");
+        if (estado) estado.textContent = "Fondo restaurado (default).";
+        window.logAviso?.({ title: "Fondo", body: "Fondo restaurado ✅" });
+      } catch (e) {
+        console.error("[JC] clear bg error", e);
+        if (estado) estado.textContent = "No se pudo restaurar el fondo.";
+      }
+    });
+
+    return true;
+  }
+
+  window.jcBindGlobalBackgroundUI = jcBindGlobalBackgroundUI;
+  window.jcLoadGlobalBackground = jcLoadGlobalBackground;
+  window.jcSaveGlobalBackground = jcSaveGlobalBackground;
+
   // ============================================================
   // Pausa 30s
   // ============================================================
@@ -523,16 +536,15 @@ window.jcSaveGlobalBackground = jcSaveGlobalBackground;
       if (pauseTimer) pauseTimer.textContent = String(pauseLeft);
       if (pauseText) pauseText.textContent = "Inhala… exhala…";
 
-      closeDrawer();
+      // Cierra drawer si existe
+      window.jcCloseDrawer?.();
 
       state.pauseOpen = true;
       pauseModal.style.display = "flex";
       pauseModal.classList.add("show");
       syncOverlay();
 
-      try {
-        window.miaSetEstado?.("apoyo");
-      } catch {}
+      try { window.miaSetEstado?.("apoyo"); } catch {}
     }
 
     function closePauseModal() {
@@ -596,15 +608,15 @@ window.jcSaveGlobalBackground = jcSaveGlobalBackground;
       titulo: "HeForShe (Jóvenes)",
       desc: "Taller de respeto, dignidad, liderazgo y servicio.",
       duracion: "4 sesiones",
-      link: "https://example.com/heforshe",
+      link: "https://example.com/heforshe"
     },
     {
       key: "save-for-home",
       titulo: "Save For Home",
       desc: "Taller para decisiones sanas, familia, futuro y fe.",
       duracion: "6 sesiones",
-      link: "https://example.com/saveforhome",
-    },
+      link: "https://example.com/saveforhome"
+    }
   ];
   window.jcCursos = CURSOS;
 
@@ -616,7 +628,7 @@ window.jcSaveGlobalBackground = jcSaveGlobalBackground;
     const hasSession =
       typeof JC.auth?.isLoggedIn === "function"
         ? !!JC.auth.isLoggedIn()
-        : !!JC.session || !!JC.user;
+        : !!window.currentUser;
 
     if (gate) {
       gate.textContent = hasSession
@@ -705,13 +717,105 @@ window.jcSaveGlobalBackground = jcSaveGlobalBackground;
   }
   window.initNotificacionesView = initNotificacionesView;
 
+// ============================================================
+// Mensaje semanal (público) — tabla: public.mensaje_semanal
+// Columnas: semana_start, titulo, contenido, autor, publicado_at
+// ============================================================
+async function loadMensajeSemanal() {
+  const titleEl = document.getElementById("msgTitle");
+  const bodyEl = document.getElementById("msgBody");
+  const metaEl = document.getElementById("msgMeta");
+  if (!titleEl || !bodyEl) return;
+
+  const setFallback = (t, b, m) => {
+    titleEl.textContent = t || "Mensaje semanal";
+    bodyEl.textContent = b || "Pronto tendremos un mensaje aquí 💙";
+    if (metaEl) metaEl.textContent = m || "";
+  };
+
+  const sb = window.sb || window.supabaseClient;
+  if (!sb) {
+    setFallback("Mensaje semanal", "Sin conexión a Supabase.", "");
+    return;
+  }
+
+  try {
+    const q = await sb
+      .from("mensaje_semanal")
+      .select("semana_start,titulo,contenido,autor,publicado_at")
+      .order("publicado_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (q.error) throw q.error;
+
+    const row = q.data;
+    if (!row) {
+      setFallback("Mensaje semanal", "Aún no hay mensajes publicados.", "");
+      return;
+    }
+
+    titleEl.textContent = row.titulo || "Mensaje semanal";
+    bodyEl.textContent = row.contenido || "—";
+
+    // Meta bonita
+    let meta = "";
+    try {
+      const pub = row.publicado_at ? new Date(row.publicado_at) : null;
+      const week = row.semana_start ? new Date(row.semana_start) : null;
+
+      const pubTxt = pub
+        ? pub.toLocaleString("es-PE", { year: "numeric", month: "short", day: "2-digit" })
+        : "";
+
+      const weekTxt = week
+        ? week.toLocaleDateString("es-PE", { year: "numeric", month: "short", day: "2-digit" })
+        : "";
+
+      const autor = (row.autor || "").trim();
+
+      // Ej: "Semana: 08 ene 2026 · Autor: Luis · Publicado: 12 ene 2026"
+      const parts = [];
+      if (weekTxt) parts.push(`Semana: ${weekTxt}`);
+      if (autor) parts.push(`Autor: ${autor}`);
+      if (pubTxt) parts.push(`Publicado: ${pubTxt}`);
+
+      meta = parts.join(" · ");
+    } catch {}
+
+    if (metaEl) metaEl.textContent = meta ? `🕊️ ${meta}` : "";
+  } catch (e) {
+    console.warn("[JC] mensaje_semanal error:", e);
+    setFallback(
+      "Mensaje semanal",
+      "No se pudo cargar el mensaje (posible RLS / permisos).",
+      ""
+    );
+  }
+}
+
+function initMensajeSemanal() {
+  // carga inicial
+  loadMensajeSemanal();
+
+  // recarga al volver a inicio
+  window.addEventListener("hashchange", () => {
+    const tab = (location.hash || "#inicio").replace("#", "").trim();
+    if (tab === "inicio") loadMensajeSemanal();
+  });
+
+  // opcional: recarga cuando recupera conexión
+  window.addEventListener("online", () => loadMensajeSemanal());
+}
+
+
   // ============================================================
   // INIT UI
   // ============================================================
   function initUI() {
     initDrawer();
     restoreTokensOnLoad();
-    initAngieToolMessaging();
+    initAngiePalette();
     jcLoadGlobalBackground();
     initPause30();
 
@@ -724,103 +828,11 @@ window.jcSaveGlobalBackground = jcSaveGlobalBackground;
     })();
   }
 
+  initMensajeSemanal();
+
+
   // Exports para main.js
   window.jcUI = { state, syncOverlay, initUI };
   window.JC = window.JC || {};
   window.JC.ui = { init: initUI, state, syncOverlay };
-})();
-
-// ======================================================
-// ANGIE PALETTE: postMessage listener + apply tokens
-// ======================================================
-(function () {
-  const TOKENS_KEY = "jc_tokens_ui_v1";
-
-  function applyTokens(tokens) {
-    if (!tokens || typeof tokens !== "object") return;
-    const root = document.documentElement;
-    for (const [k, v] of Object.entries(tokens)) {
-      if (!v) continue;
-      root.style.setProperty(`--${k}`, v);
-    }
-  }
-
-  function saveTokens(tokens) {
-    try { localStorage.setItem(TOKENS_KEY, JSON.stringify(tokens)); } catch {}
-  }
-
-  function loadTokens() {
-    try {
-      const raw = localStorage.getItem(TOKENS_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  // 1) aplica tokens guardados al cargar
-  const saved = loadTokens();
-  if (saved) applyTokens(saved);
-
-  // 2) escucha mensajes desde el iframe
-  window.addEventListener("message", (event) => {
-    // Seguridad: solo aceptar mismo origen (tu GitHub Pages)
-    // Si estás probando en file:// puede fallar; en ese caso comenta este if temporalmente.
-    const okOrigin =
-  event.origin === location.origin ||
-  event.origin === "null" ||               // a veces en previews/iframes
-  event.origin === "file://";             // si pruebas local (raro)
-
-if (!okOrigin) return;
-
-    const data = event.data || {};
-    if (data.type === "applyTokens") {
-      applyTokens(data.tokens);
-      saveTokens(data.tokens);
-      console.log("[JC] Angie tokens aplicados");
-      return;
-    }
-
-    if (data.type === "angieEstado") {
-      const estado = data.estado || data.value;
-      // Llama tu función existente si está
-      if (typeof window.angieSetEstado === "function" && estado) {
-        window.angieSetEstado(estado);
-        console.log("[JC] Angie estado:", estado);
-      } else {
-        console.warn("[JC] angieSetEstado no disponible o estado vacío", estado);
-      }
-    }
-  });
-
-  // 3) abrir/cerrar modal con el botón 🎨
-  document.addEventListener("DOMContentLoaded", () => {
-    const modal = document.getElementById("angiePaletteModal");
-    const btn = document.getElementById("btnAngie");
-    const close = document.getElementById("angiePaletteClose");
-
-    if (!modal || !btn) return;
-
-    const open = () => {
-      modal.style.display = "";
-      modal.classList.add("show");
-    };
-    const shut = () => {
-      modal.classList.remove("show");
-      modal.style.display = "none";
-    };
-
-    btn.addEventListener("click", open);
-    close && close.addEventListener("click", shut);
-
-    // click fuera para cerrar
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) shut();
-    });
-
-    // ESC para cerrar
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && modal.classList.contains("show")) shut();
-    });
-  });
 })();
