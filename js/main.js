@@ -6,8 +6,13 @@
   const JC = (window.JC = window.JC || {});
   JC.state = JC.state || {};
 
-  const $ = JC.$ || ((sel, root = document) => root.querySelector(sel));
-  const $$ = JC.$$ || ((sel, root = document) => Array.from(root.querySelectorAll(sel)));
+// Selectores seguros (NO depender de JC.$ / JC.$$ porque a veces los redefine ui.js)
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+// Si quieres, vuelve a exponerlos bien para que otros módulos no rompan:
+JC.$ = $;
+JC.$$ = $$;
 
   function normalizeTab(t) {
     t = (t || "").trim();

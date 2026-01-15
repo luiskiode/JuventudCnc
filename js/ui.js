@@ -11,8 +11,15 @@
   // Namespace + Helpers
   // ============================================================
   const JC = (window.JC = window.JC || {});
-  const $ = JC.$ || ((sel, root = document) => root.querySelector(sel));
-  const $$ = JC.$$ || ((sel, root = document) => Array.from(root.querySelectorAll(sel)));
+// Selectores seguros: no depender de una versión anterior de JC.$ / JC.$$
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+// Expón los helpers correctos para todo el proyecto
+JC.$ = $;
+JC.$$ = $$;
+
+
 
   function safeParse(s) {
     try {
@@ -131,6 +138,17 @@
         window.activate?.(tab);
       });
     });
+
+    $$("#drawer [data-tab]").forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const tab = btn.getAttribute("data-tab");
+    closeDrawer();
+    window.activate?.(tab);
+  });
+});
+
   }
 
   // ============================================================

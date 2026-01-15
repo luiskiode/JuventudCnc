@@ -890,10 +890,7 @@ body.chat-open .ciro-widget{
    Pegar al final de styles.css
    ============================================================ */
 
-/* 1) Z-INDEX sane: fondo/overlay abajo, UI arriba */
-#jcAppBgLayer, #jcAppBgOverlay {
-  z-index: 0 !important;
-}
+
 
 /* Si tienes video/fondo animado con posición fija, que no tape */
 video, .bg-video, .video-bg, #bgVideo {
@@ -1142,4 +1139,49 @@ body.jc-floats-on #jcChat {
     height: 56px !important;
     border-radius: 14px !important;
   }
+}
+/* Cabecera (LMXJVSD) */
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  opacity: .9;
+}
+
+/* Días del mes */
+.cal-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Cada celda día */
+.cal-day {
+  border-radius: 10px;
+  padding: 10px 0;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.cal-day.is-empty {
+  opacity: 0;
+  pointer-events: none;
+}
+
+
+/* === FIX: Vistas por pestañas === */
+.view { display: none; }
+.view.active { display: block; }
+
+/* === FIX DEFINITIVO: fondo siempre detrás de TODO === */
+#jcAppBgLayer { z-index: -2 !important; }
+#jcAppBgOverlay { z-index: -1 !important; }
+
+/* tu app por encima */
+.app-shell, .topbar, .container, .tabs, .drawer, .overlay, .jc-modal,
+#main, main.container {
+  position: relative;
+  z-index: 1;
 }
