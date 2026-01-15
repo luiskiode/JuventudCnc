@@ -806,6 +806,26 @@
       </div>
     </div>
   </div>
+<!-- Angie Palette Modal (iframe) -->
+<div id="angiePaletteModal" class="jc-modal" style="display:none">
+  <div class="jc-modal-card" role="dialog" aria-modal="true" aria-label="Paleta de Angie">
+    <header class="jc-modal-header">
+      <div>
+        <h3>🎨 Paleta de Angie</h3>
+        <p class="muted small">Cambia colores y se aplican en vivo.</p>
+      </div>
+      <button id="angiePaletteClose" class="icon-btn" type="button">✕</button>
+    </header>
 
+    <div class="jc-modal-body" style="padding:0">
+      <iframe
+        id="angiePaletteFrame"
+        src="angie-colors.html"
+        title="Angie · Herramienta de colores"
+        style="width:100%; height:min(78vh, 720px); border:0; border-radius:0 0 22px 22px; background:#fff;">
+      </iframe>
+    </div>
+  </div>
+</div>
 </body>
 </html>

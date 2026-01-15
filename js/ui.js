@@ -729,3 +729,93 @@ window.jcSaveGlobalBackground = jcSaveGlobalBackground;
   window.JC = window.JC || {};
   window.JC.ui = { init: initUI, state, syncOverlay };
 })();
+
+// ======================================================
+// ANGIE PALETTE: postMessage listener + apply tokens
+// ======================================================
+(function () {
+  const TOKENS_KEY = "jc_tokens_ui_v1";
+
+  function applyTokens(tokens) {
+    if (!tokens || typeof tokens !== "object") return;
+    const root = document.documentElement;
+    for (const [k, v] of Object.entries(tokens)) {
+      if (!v) continue;
+      root.style.setProperty(`--${k}`, v);
+    }
+  }
+
+  function saveTokens(tokens) {
+    try { localStorage.setItem(TOKENS_KEY, JSON.stringify(tokens)); } catch {}
+  }
+
+  function loadTokens() {
+    try {
+      const raw = localStorage.getItem(TOKENS_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // 1) aplica tokens guardados al cargar
+  const saved = loadTokens();
+  if (saved) applyTokens(saved);
+
+  // 2) escucha mensajes desde el iframe
+  window.addEventListener("message", (event) => {
+    // Seguridad: solo aceptar mismo origen (tu GitHub Pages)
+    // Si estás probando en file:// puede fallar; en ese caso comenta este if temporalmente.
+    if (event.origin !== location.origin) return;
+
+    const data = event.data || {};
+    if (data.type === "applyTokens") {
+      applyTokens(data.tokens);
+      saveTokens(data.tokens);
+      console.log("[JC] Angie tokens aplicados");
+      return;
+    }
+
+    if (data.type === "angieEstado") {
+      const estado = data.estado || data.value;
+      // Llama tu función existente si está
+      if (typeof window.angieSetEstado === "function" && estado) {
+        window.angieSetEstado(estado);
+        console.log("[JC] Angie estado:", estado);
+      } else {
+        console.warn("[JC] angieSetEstado no disponible o estado vacío", estado);
+      }
+    }
+  });
+
+  // 3) abrir/cerrar modal con el botón 🎨
+  document.addEventListener("DOMContentLoaded", () => {
+    const modal = document.getElementById("angiePaletteModal");
+    const btn = document.getElementById("btnAngie");
+    const close = document.getElementById("angiePaletteClose");
+
+    if (!modal || !btn) return;
+
+    const open = () => {
+      modal.style.display = "";
+      modal.classList.add("show");
+    };
+    const shut = () => {
+      modal.classList.remove("show");
+      modal.style.display = "none";
+    };
+
+    btn.addEventListener("click", open);
+    close && close.addEventListener("click", shut);
+
+    // click fuera para cerrar
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) shut();
+    });
+
+    // ESC para cerrar
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal.classList.contains("show")) shut();
+    });
+  });
+})();

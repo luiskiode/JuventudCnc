@@ -1116,3 +1116,11 @@ html { overflow-y: scroll; }
 @media (min-width: 561px){
   :root{ --jc-safe-pad: 14px; }
 }
+
+/* Angie Palette iframe modal */
+#angiePaletteModal .jc-modal-card{
+  width: min(980px, 100%);
+}
+#angiePaletteModal iframe{
+  display:block;
+}
