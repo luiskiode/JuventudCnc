@@ -1256,3 +1256,34 @@ try {
 
   domReady(init);
 })();
+
+// =====================================
+// ANGIE: aplicar estado desde fuera (UI)
+// =====================================
+window.angieSetEstado = window.angieSetEstado || function(estado){
+  try{
+    const map = window.ANGIE_ESTADOS || {};
+    const st = map[estado];
+    if(!st){
+      console.warn("[JC] Estado Angie desconocido:", estado);
+      return;
+    }
+
+    const img = document.getElementById("angieAvatarImg");
+    const txt = document.getElementById("angieText");
+
+    if (img && st.img) img.src = st.img;
+
+    if (txt){
+      const frases = st.frases || [];
+      const pick = frases.length ? frases[Math.floor(Math.random()*frases.length)] : "";
+      txt.textContent = pick || txt.textContent;
+    }
+
+    // asegurar visible si bots están ON
+    const w = document.getElementById("angieWidget");
+    if (w) w.classList.add("angie-widget--visible");
+  }catch(e){
+    console.error("[JC] angieSetEstado error", e);
+  }
+};

@@ -766,7 +766,12 @@ window.jcSaveGlobalBackground = jcSaveGlobalBackground;
   window.addEventListener("message", (event) => {
     // Seguridad: solo aceptar mismo origen (tu GitHub Pages)
     // Si estás probando en file:// puede fallar; en ese caso comenta este if temporalmente.
-    if (event.origin !== location.origin) return;
+    const okOrigin =
+  event.origin === location.origin ||
+  event.origin === "null" ||               // a veces en previews/iframes
+  event.origin === "file://";             // si pruebas local (raro)
+
+if (!okOrigin) return;
 
     const data = event.data || {};
     if (data.type === "applyTokens") {

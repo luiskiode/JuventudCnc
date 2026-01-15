@@ -1124,3 +1124,31 @@ html { overflow-y: scroll; }
 #angiePaletteModal iframe{
   display:block;
 }
+/* =========================================
+   FIX OVERLAY: uniforme (sin mancha al centro)
+   ========================================= */
+.overlay{
+  background: rgba(0,0,0,.45) !important;
+  backdrop-filter: none !important; /* el blur suele crear ese efecto raro */
+}
+
+.overlay.show{
+  opacity: 1 !important;
+}
+
+/* Asegura stacking correcto: overlay debajo del drawer */
+.drawer{ z-index: 110 !important; }
+.overlay{ z-index: 100 !important; }
+
+/* Evita que el fondo fijo “mezcle” con el overlay */
+#jcAppBgOverlay{
+  background: rgba(2,6,23,.55) !important; /* overlay base constante */
+}
+#angiePaletteModal .jc-modal-body{
+  background: rgba(2,6,23,.55);
+}
+#angiePaletteFrame{
+  border-radius: 0 0 22px 22px;
+  overflow: hidden;
+  background: #fff;
+}
