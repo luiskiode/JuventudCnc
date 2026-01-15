@@ -1219,4 +1219,57 @@ body:not([data-view="inicio"]) #jcFloatLayer {
 body:not([data-view="box"]) #jcChat {
   display: none !important;
 }
+:root{
+  --jc-safe-pad: 14px;
+  --jc-maxw: 1100px;
+}
+
+/* Regla base: todo lo “main” se alinea igual */
+.jc-wrap,
+.jc-container,
+#app,
+main{
+  width: 100%;
+  max-width: var(--jc-maxw);
+  margin: 0 auto;
+  padding-left: var(--jc-safe-pad);
+  padding-right: var(--jc-safe-pad);
+  box-sizing: border-box;
+}
+
+/* Topbar / Header: que use exactamente el mismo ancho/padding */
+.jc-topbar,
+header,
+#topbar,
+#appHeader{
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: var(--jc-safe-pad);
+  padding-right: var(--jc-safe-pad);
+}
+
+/* Si tu topbar es fixed, alinéalo al viewport sin “correrse” */
+.jc-topbar.is-fixed,
+#topbar.is-fixed,
+#topbar.fixed,
+.jc-topbar.fixed{
+  left: 0;
+  right: 0;
+}
+
+/* Evita el clásico descuadre por 100vw */
+.jc-topbar,
+header,
+#topbar,
+#appHeader{
+  max-width: none; /* que no pelee con max-width del contenedor */
+}
+html, body{
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+*, *::before, *::after{ box-sizing: inherit; }
 
