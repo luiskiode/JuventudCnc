@@ -717,98 +717,6 @@
   }
   window.initNotificacionesView = initNotificacionesView;
 
-// ============================================================
-// Mensaje semanal (público) — tabla: public.mensaje_semanal
-// Columnas: semana_start, titulo, contenido, autor, publicado_at
-// ============================================================
-async function loadMensajeSemanal() {
-  const titleEl = document.getElementById("msgTitle");
-  const bodyEl = document.getElementById("msgBody");
-  const metaEl = document.getElementById("msgMeta");
-  if (!titleEl || !bodyEl) return;
-
-  const setFallback = (t, b, m) => {
-    titleEl.textContent = t || "Mensaje semanal";
-    bodyEl.textContent = b || "Pronto tendremos un mensaje aquí 💙";
-    if (metaEl) metaEl.textContent = m || "";
-  };
-
-  const sb = window.sb || window.supabaseClient;
-  if (!sb) {
-    setFallback("Mensaje semanal", "Sin conexión a Supabase.", "");
-    return;
-  }
-
-  try {
-    const q = await sb
-      .from("mensaje_semanal")
-      .select("semana_start,titulo,contenido,autor,publicado_at")
-      .order("publicado_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (q.error) throw q.error;
-
-    const row = q.data;
-    if (!row) {
-      setFallback("Mensaje semanal", "Aún no hay mensajes publicados.", "");
-      return;
-    }
-
-    titleEl.textContent = row.titulo || "Mensaje semanal";
-    bodyEl.textContent = row.contenido || "—";
-
-    // Meta bonita
-    let meta = "";
-    try {
-      const pub = row.publicado_at ? new Date(row.publicado_at) : null;
-      const week = row.semana_start ? new Date(row.semana_start) : null;
-
-      const pubTxt = pub
-        ? pub.toLocaleString("es-PE", { year: "numeric", month: "short", day: "2-digit" })
-        : "";
-
-      const weekTxt = week
-        ? week.toLocaleDateString("es-PE", { year: "numeric", month: "short", day: "2-digit" })
-        : "";
-
-      const autor = (row.autor || "").trim();
-
-      // Ej: "Semana: 08 ene 2026 · Autor: Luis · Publicado: 12 ene 2026"
-      const parts = [];
-      if (weekTxt) parts.push(`Semana: ${weekTxt}`);
-      if (autor) parts.push(`Autor: ${autor}`);
-      if (pubTxt) parts.push(`Publicado: ${pubTxt}`);
-
-      meta = parts.join(" · ");
-    } catch {}
-
-    if (metaEl) metaEl.textContent = meta ? `🕊️ ${meta}` : "";
-  } catch (e) {
-    console.warn("[JC] mensaje_semanal error:", e);
-    setFallback(
-      "Mensaje semanal",
-      "No se pudo cargar el mensaje (posible RLS / permisos).",
-      ""
-    );
-  }
-}
-
-function initMensajeSemanal() {
-  // carga inicial
-  loadMensajeSemanal();
-
-  // recarga al volver a inicio
-  window.addEventListener("hashchange", () => {
-    const tab = (location.hash || "#inicio").replace("#", "").trim();
-    if (tab === "inicio") loadMensajeSemanal();
-  });
-
-  // opcional: recarga cuando recupera conexión
-  window.addEventListener("online", () => loadMensajeSemanal());
-}
-
-
   // ============================================================
   // INIT UI
   // ============================================================
@@ -827,9 +735,6 @@ function initMensajeSemanal() {
       setTimeout(() => jcBindGlobalBackgroundUI(), 1500);
     })();
   }
-
-  initMensajeSemanal();
-
 
   // Exports para main.js
   window.jcUI = { state, syncOverlay, initUI };

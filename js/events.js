@@ -5,13 +5,17 @@
   const JC = (window.JC = window.JC || {});
   JC.state = JC.state || {};
 
-  // Cliente supabase (si luego conectas DB)
+  // UI state (overlay)
+  JC.uiState = JC.uiState || {};
+  if (typeof JC.uiState.eventsOpen !== "boolean") JC.uiState.eventsOpen = false;
+
+  // Cliente supabase (listo para conectar DB luego)
   const sb = window.sb || window.supabaseClient || JC.sb || null;
 
   // Helpers mínimos
   const $ = JC.$ || ((sel, root = document) => root.querySelector(sel));
 
-  // Event bus simple (por si no existe)
+  // Event bus simple
   if (typeof JC.on !== "function") {
     JC.on = function (evt, cb) {
       document.addEventListener(`JC:${evt}`, (e) => cb(e.detail), false);
@@ -23,7 +27,6 @@
     };
   }
 
-  // UI refs (IDs reales del index)
   function refs() {
     return {
       gate: $("#evGate"),
@@ -48,7 +51,7 @@
       dayHint: $("#evDayHint"),
       clearDay: $("#evClearDay"),
 
-      // modal editar (stub)
+      // modal editar
       modal: $("#evModal"),
       modalClose: $("#evModalClose"),
       editForm: $("#evEditForm"),
@@ -57,7 +60,6 @@
     };
   }
 
-  // Estado interno
   const st = {
     bound: false,
     selectedDayISO: null,
@@ -67,20 +69,16 @@
   function isLogged() {
     return !!JC.state.user || !!window.currentUser;
   }
-
   function isMember() {
     return !!JC.state.isMember;
   }
 
   // =========================
-  // Gate (solo para crear/editar)
-  // - Ver eventos: público (sin sesión)
+  // Gate: ver eventos es público; crear/editar solo miembros
   // =========================
   function setGate() {
     const { gate, wrapCreate } = refs();
 
-    // Siempre permitimos ver eventos (lectura pública)
-    // Solo controlamos si se puede crear/editar
     if (!isLogged()) {
       if (gate) gate.textContent = "👀 Eventos visibles. 🔑 Inicia sesión para crear/editar.";
       if (wrapCreate) wrapCreate.style.display = "none";
@@ -108,7 +106,6 @@
   function renderListPlaceholder() {
     const { list, listHome } = refs();
 
-    // Lectura pública
     const msg = st.selectedDayISO
       ? `📅 Eventos (placeholder) — filtrado por día: ${st.selectedDayISO}`
       : "📅 Eventos (placeholder) — pronto conectamos Supabase (public.eventos).";
@@ -118,7 +115,7 @@
   }
 
   // =========================
-  // Calendario (skeleton seguro)
+  // Calendario (skeleton)
   // =========================
   function monthLabel(d) {
     try {
@@ -145,13 +142,9 @@
     const startDay = (first.getDay() + 6) % 7; // 0=L
     const daysInMonth = new Date(y, m + 1, 0).getDate();
 
-    // hint
-    if (dayHint) {
-      dayHint.textContent = st.selectedDayISO ? `Filtrado: ${st.selectedDayISO}` : "Toca un día para filtrar";
-    }
+    if (dayHint) dayHint.textContent = st.selectedDayISO ? `Filtrado: ${st.selectedDayISO}` : "Toca un día para filtrar";
     if (clearDay) clearDay.style.display = st.selectedDayISO ? "" : "none";
 
-    // fillers anteriores
     for (let i = 0; i < startDay; i++) {
       const cell = document.createElement("button");
       cell.type = "button";
@@ -182,13 +175,12 @@
   }
 
   // =========================
-  // Carga eventos
-  // (aún placeholder — listo para conectar public.eventos)
+  // Carga eventos (placeholder por ahora)
   // =========================
   async function cargarEventos({ force = false } = {}) {
-    // En el futuro:
-    // - leer public.eventos (lectura pública)
-    // - aplicar filtros: tipo, scope, search, sort, selectedDayISO
+    // Cuando conectemos:
+    // - select public.eventos (lectura pública)
+    // - filtros: tipo, scope, search, sort, selectedDayISO
     renderListPlaceholder();
   }
 
@@ -218,14 +210,12 @@
       return;
     }
 
-    // Placeholder hasta conectar Supabase
     estado.textContent = "✅ Evento listo (pendiente conectar a Supabase).";
     try {
       window.logAviso?.({ title: "Eventos", body: `Evento preparado: ${titulo}` });
       window.miaSetEstado?.("apoyo");
     } catch {}
 
-    // Limpia
     try {
       $("#evTitulo").value = "";
       $("#evFecha").value = "";
@@ -237,7 +227,7 @@
   }
 
   // =========================
-  // Modal editar (stub)
+  // Modal editar (overlay correcto)
   // =========================
   function openEditModal() {
     const { modal } = refs();
@@ -245,13 +235,8 @@
     modal.style.display = "flex";
     modal.classList.add("show");
 
-    // Usa el overlay global correcto
-    try {
-      window.JC = window.JC || {};
-      window.JC.uiState = window.JC.uiState || {};
-      window.JC.uiState.loginOpen = true; // reusamos flag para overlay global
-      window.jcSyncOverlay?.();
-    } catch {}
+    JC.uiState.eventsOpen = true;
+    window.jcSyncOverlay?.();
   }
 
   function closeEditModal() {
@@ -260,12 +245,8 @@
     modal.classList.remove("show");
     modal.style.display = "none";
 
-    try {
-      window.JC = window.JC || {};
-      window.JC.uiState = window.JC.uiState || {};
-      window.JC.uiState.loginOpen = false;
-      window.jcSyncOverlay?.();
-    } catch {}
+    JC.uiState.eventsOpen = false;
+    window.jcSyncOverlay?.();
   }
 
   // =========================
@@ -278,7 +259,6 @@
     const r = refs();
 
     r.btnRefresh?.addEventListener("click", () => cargarEventos({ force: true }));
-
     r.filtroTipo?.addEventListener("change", () => cargarEventos({ force: true }));
     r.evScope?.addEventListener("change", () => cargarEventos({ force: true }));
 
@@ -310,7 +290,7 @@
       cargarEventos({ force: true });
     });
 
-    // Modal editar (stub)
+    // Modal editar
     r.modalClose?.addEventListener("click", closeEditModal);
     r.modal?.addEventListener("click", (e) => {
       if (e.target === r.modal) closeEditModal();
@@ -333,13 +313,9 @@
     };
   }
 
-  // =========================
-  // Init
-  // =========================
   async function init() {
     bindUI();
 
-    // Recalcular gates cuando cambia perfil
     JC.on("profile:changed", () => {
       setGate();
       cargarEventos({ force: true });

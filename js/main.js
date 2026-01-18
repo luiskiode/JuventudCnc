@@ -19,24 +19,20 @@
   async function registerSW() {
     if (!("serviceWorker" in navigator)) return;
 
-    // Ajusta el nombre si tu SW se llama distinto
     const swUrl = "./service-worker.js";
 
     try {
       const reg = await navigator.serviceWorker.register(swUrl, { scope: "./" });
 
-      // Si hay una nueva versión esperando, la activamos (opcional)
       if (reg.waiting) {
         reg.waiting.postMessage({ type: "SKIP_WAITING" });
       }
 
-      // Cuando se instala un nuevo SW, forzamos activación (opcional)
       reg.addEventListener("updatefound", () => {
         const sw = reg.installing;
         if (!sw) return;
         sw.addEventListener("statechange", () => {
           if (sw.state === "installed" && navigator.serviceWorker.controller) {
-            // Hay update listo
             try {
               reg.waiting?.postMessage({ type: "SKIP_WAITING" });
             } catch {}
@@ -44,18 +40,102 @@
         });
       });
 
-      // Recarga suave cuando el SW toma control (para aplicar assets nuevos)
       let refreshing = false;
       navigator.serviceWorker.addEventListener("controllerchange", () => {
         if (refreshing) return;
         refreshing = true;
-        // Evita loops: una sola recarga
         setTimeout(() => {
           try { location.reload(); } catch {}
         }, 150);
       });
     } catch (e) {
       console.warn("[JC] SW register error", e);
+    }
+  }
+
+  // ============================================================
+  // B) Mensaje semanal (Inicio) — lectura pública
+  // ============================================================
+  async function loadMensajeSemanal() {
+    const titleEl = document.getElementById("msgTitle");
+    const bodyEl = document.getElementById("msgBody");
+    const metaEl = document.getElementById("msgMeta");
+
+    // Si no existe UI, salimos
+    if (!titleEl && !bodyEl && !metaEl) return;
+
+    // Estado inicial
+    if (titleEl) titleEl.textContent = "Cargando mensaje...";
+    if (bodyEl) bodyEl.textContent = "Un momento…";
+    if (metaEl) metaEl.textContent = "";
+
+    const sb = window.sb || window.supabaseClient;
+    if (!sb) {
+      if (titleEl) titleEl.textContent = "Mensaje semanal";
+      if (bodyEl) bodyEl.textContent = "⚠️ No se encontró conexión a Supabase (cliente no cargado).";
+      return;
+    }
+
+    try {
+      // Intento robusto: traer el más reciente
+      const q = await sb
+        .from("mensaje_semanal")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (q.error) {
+        // Si created_at no existe, probamos con otro orden común
+        const q2 = await sb
+          .from("mensaje_semanal")
+          .select("*")
+          .order("creado_en", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (q2.error) throw q2.error;
+
+        renderMsg(q2.data);
+        return;
+      }
+
+      renderMsg(q.data);
+    } catch (e) {
+      console.warn("[JC] mensaje_semanal error:", e);
+      if (titleEl) titleEl.textContent = "Mensaje semanal";
+      if (bodyEl) bodyEl.textContent = "⚠️ No se pudo cargar el mensaje. (Revisa RLS o estructura de tabla).";
+      if (metaEl) metaEl.textContent = "";
+    }
+
+    function renderMsg(row) {
+      if (!row) {
+        if (titleEl) titleEl.textContent = "Mensaje semanal";
+        if (bodyEl) bodyEl.textContent = "Aún no hay mensaje publicado.";
+        if (metaEl) metaEl.textContent = "";
+        return;
+      }
+
+      // Campos flexibles (por si varían)
+      const titulo =
+        row.titulo ?? row.title ?? row.encabezado ?? "Mensaje semanal";
+      const cuerpo =
+        row.cuerpo ?? row.body ?? row.mensaje ?? row.contenido ?? "—";
+
+      const fechaRaw =
+        row.created_at ?? row.creado_en ?? row.fecha ?? row.updated_at ?? null;
+
+      let meta = "";
+      if (fechaRaw) {
+        try {
+          const d = new Date(fechaRaw);
+          meta = isNaN(d.getTime()) ? "" : `Publicado: ${d.toLocaleString("es-PE")}`;
+        } catch {}
+      }
+
+      if (titleEl) titleEl.textContent = String(titulo);
+      if (bodyEl) bodyEl.textContent = String(cuerpo);
+      if (metaEl) metaEl.textContent = meta;
     }
   }
 
@@ -76,12 +156,8 @@
   function getTabFromURL() {
     try {
       const u = new URL(location.href);
-
-      // 1) Prioridad: query ?tab=...
       const q = (u.searchParams.get("tab") || "").trim();
       if (q) return normalizeTab(q);
-
-      // 2) Fallback: hash #...
       return normalizeTab(location.hash || "#inicio");
     } catch {
       return normalizeTab(location.hash || "#inicio");
@@ -91,35 +167,34 @@
   function setActiveUI(tab) {
     tab = ensureValidTab(tab);
 
-    // Views
     $$(".view").forEach((v) => {
       const k = v.dataset.view;
       v.classList.toggle("active", k === tab);
     });
 
-    // Bottom tabs
     $$(".tabs .tab").forEach((b) => {
       b.classList.toggle("active", b.dataset.tab === tab);
       b.setAttribute("aria-current", b.dataset.tab === tab ? "page" : "false");
     });
 
-    // Drawer links
     $$("#drawer [data-tab]").forEach((b) => {
       b.classList.toggle("active", b.dataset.tab === tab);
     });
 
-    // Accesibilidad: foco al top del contenido
     const main = $("#main");
     if (main) {
       main.setAttribute("tabindex", "-1");
-      try {
-        main.focus({ preventScroll: true });
-      } catch {}
+      try { main.focus({ preventScroll: true }); } catch {}
     }
   }
 
   async function runViewHooks(tab) {
     try {
+      // ✅ Inicio: carga mensaje semanal
+      if (tab === "inicio") {
+        loadMensajeSemanal();
+      }
+
       if (tab === "cursos") window.initCursosView?.();
       if (tab === "notificaciones") window.initNotificacionesView?.();
       if (tab === "miembros-activos") window.initMiembrosView?.();
@@ -152,26 +227,19 @@
   async function activate(tab, { silentUrl = false } = {}) {
     tab = ensureValidTab(normalizeTab(tab));
 
-    // Cierra drawer si está abierto
-    try {
-      window.jcCloseDrawer?.();
-    } catch {}
+    try { window.jcCloseDrawer?.(); } catch {}
 
     setActiveUI(tab);
 
-    // Data-view para estilos
-    try {
-      document.body.setAttribute("data-view", tab);
-    } catch {}
+    try { document.body.setAttribute("data-view", tab); } catch {}
 
-    // URL: mantenemos hash como “estado” principal (compat)
     if (!silentUrl) {
       const newHash = `#${tab}`;
       if (location.hash !== newHash) {
         history.replaceState(null, "", newHash);
       }
 
-      // Si venimos desde ?tab=..., lo limpiamos para no repetir
+      // Limpia ?tab=... si venimos desde auth.html
       try {
         const u = new URL(location.href);
         if (u.searchParams.has("tab")) {
@@ -183,14 +251,12 @@
 
     await runViewHooks(tab);
 
-    // Bots por vista
     try {
       JC.bots?.segunVista?.(tab);
       window.botsSegunVista?.(tab);
     } catch {}
   }
 
-  // Exponer para UI / otros módulos
   window.activate = activate;
   JC.activate = activate;
 
@@ -210,10 +276,8 @@
   }
 
   async function init() {
-    // 0) PWA SW
     registerSW().catch(() => {});
 
-    // 1) UI init
     try {
       if (JC.ui?.init) JC.ui.init();
       else window.jcUI?.initUI?.();
@@ -221,21 +285,12 @@
       console.warn("[JC] ui init error", e);
     }
 
-    // 2) Auth init
-    try {
-      await JC.auth?.init?.();
-    } catch (e) {
-      console.warn("[JC] auth init error", e);
-    }
+    // ✅ Cargar mensaje semanal apenas inicia (aunque no estés en inicio)
+    loadMensajeSemanal();
 
-    // 3) Profile init
-    try {
-      await JC.profile?.init?.();
-    } catch (e) {
-      console.warn("[JC] profile init error", e);
-    }
+    try { await JC.auth?.init?.(); } catch (e) { console.warn("[JC] auth init error", e); }
+    try { await JC.profile?.init?.(); } catch (e) { console.warn("[JC] profile init error", e); }
 
-    // 4) Init módulos
     try { JC.bots?.init?.(); } catch (e) { console.warn("[JC] bots init error", e); }
     try { JC.events?.init?.(); } catch (e) { console.warn("[JC] events init error", e); }
     try { JC.resources?.init?.(); } catch (e) { console.warn("[JC] resources init error", e); }
@@ -244,11 +299,9 @@
 
     bindNav();
 
-    // 5) Arranque desde URL (?tab o #hash)
     const start = ensureValidTab(getTabFromURL());
     await activate(start, { silentUrl: false });
 
-    // 6) Hashchange
     window.addEventListener("hashchange", () => {
       activate(ensureValidTab(normalizeTab(location.hash)), { silentUrl: true });
     });
@@ -256,7 +309,6 @@
     console.log("[JC] Init OK", window.JC_BUILD || "");
   }
 
-  // Arranque seguro
   if (document.readyState === "loading") {
     document.addEventListener(
       "DOMContentLoaded",

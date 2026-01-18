@@ -8,7 +8,10 @@
 
   const $ = (sel, root = document) => root.querySelector(sel);
 
-  const sb = window.sb || window.supabaseClient || JC.sb || null;
+  // ✅ Siempre toma el cliente correcto (alias estándar)
+  function getSB() {
+    return window.sb || window.supabaseClient || JC.sb || null;
+  }
 
   // Links configurables
   const VATICANO_URL =
@@ -22,8 +25,19 @@
   // Roles permitidos para Catefa
   const CATEFA_ROLES_OK = new Set(["animador", "catequista", "admin", "coordinador"]);
 
+  // Event bus simple (por si no existe)
+  if (typeof JC.on !== "function") {
+    JC.on = function (evt, cb) {
+      document.addEventListener(`JC:${evt}`, (e) => cb(e.detail), false);
+    };
+  }
+  if (typeof JC.emit !== "function") {
+    JC.emit = function (evt, detail) {
+      document.dispatchEvent(new CustomEvent(`JC:${evt}`, { detail }));
+    };
+  }
+
   function getRoleKey() {
-    // Preferimos el perfil cargado (miembros)
     const rk =
       JC.state?.profile?.rol_key ||
       JC.state?.profile?.rol ||
@@ -50,7 +64,10 @@
     }
   }
 
-  function bindCatefaLinks() {
+  function bindCatefaLinksOnce() {
+    if (bindCatefaLinksOnce.__bound) return;
+    bindCatefaLinksOnce.__bound = true;
+
     document.getElementById("btnVaticano")?.addEventListener("click", () =>
       openExternal(VATICANO_URL, "linkVaticano")
     );
@@ -74,17 +91,15 @@
     const listSesiones = document.getElementById("catefaSesiones");
 
     if (listNinos && listNinos.children.length === 0) {
-      listNinos.innerHTML =
-        '<div class="muted small">Selecciona un grupo para ver niños.</div>';
+      listNinos.innerHTML = '<div class="muted small">Selecciona un grupo para ver niños.</div>';
     }
     if (listSesiones && listSesiones.children.length === 0) {
-      listSesiones.innerHTML =
-        '<div class="muted small">Selecciona un grupo para ver sesiones.</div>';
+      listSesiones.innerHTML = '<div class="muted small">Selecciona un grupo para ver sesiones.</div>';
     }
   }
 
   // ============================================================
-  // CATEFA: cargar grupos asignados (primer paso real)
+  // CATEFA: cargar grupos asignados
   // ============================================================
   async function cargarGruposAsignados() {
     const sel = document.getElementById("catefaGrupoSelect");
@@ -92,23 +107,20 @@
 
     sel.innerHTML = `<option value="">(Cargando…)</option>`;
 
+    const sb = getSB();
     if (!sb) {
       sel.innerHTML = `<option value="">(Sin Supabase)</option>`;
       return;
     }
 
     try {
-      // Si tienes RLS, esta tabla debe dejar ver solo lo asignado
-      // Tablas existentes: catefa_asignaciones, catefa_grupos
-      // Estrategia simple:
-      // - traer asignaciones del usuario y luego traer grupos por id
       const userId = (JC.state.user?.id || window.currentUser?.id || "").toString();
       if (!userId) {
         sel.innerHTML = `<option value="">(Inicia sesión)</option>`;
         return;
       }
 
-      // 1) asignaciones
+      // 1) asignaciones (RLS debe filtrar por user_id)
       const a = await sb
         .from("catefa_asignaciones")
         .select("grupo_id")
@@ -152,7 +164,6 @@
     try {
       renderEmptyIfNeeded();
 
-      // Catefa requiere sesión + rol
       const logged = !!(JC.state.user || window.currentUser);
       if (!logged) {
         setCatefaGate("🔑 Inicia sesión para usar Catefa.");
@@ -170,7 +181,6 @@
       setCatefaGate("Cargando Catefa…");
       setCatefaEstado("");
 
-      // Primer paso real: grupos asignados
       await cargarGruposAsignados();
 
       setCatefaGate("Catefa listo ✅");
@@ -184,19 +194,25 @@
     }
   }
 
-  function bindCatefaRefresh() {
-    document.getElementById("btnCatefaRefresh")?.addEventListener("click", () => listarRecursos("catefa"));
+  function bindCatefaRefreshOnce() {
+    if (bindCatefaRefreshOnce.__bound) return;
+    bindCatefaRefreshOnce.__bound = true;
+
+    document
+      .getElementById("btnCatefaRefresh")
+      ?.addEventListener("click", () => listarRecursos("catefa"));
   }
 
-  function bindFabUploadHook() {
+  function bindFabUploadHookOnce() {
+    if (bindFabUploadHookOnce.__bound) return;
+    bindFabUploadHookOnce.__bound = true;
+
     const fab = document.getElementById("fab");
     const fileRec = document.getElementById("fileRec");
     if (!fab || !fileRec) return;
 
     fab.addEventListener("click", () => {
-      const current =
-        (JC.ui && JC.ui.getActiveView && JC.ui.getActiveView()) ||
-        (location.hash || "#inicio").replace("#", "");
+      const current = (location.hash || "#inicio").replace("#", "");
       if (current === "recursos") fileRec.click();
     });
   }
@@ -204,7 +220,11 @@
   // ============================================================
   // Public API (para main.js)
   // ============================================================
+  let __inited = false;
   function init() {
+    if (__inited) return;
+    __inited = true;
+
     // compat global
     window.listarRecursos = listarRecursos;
 
@@ -212,14 +232,20 @@
     JC.resources.initCatefa = () => listarRecursos("catefa");
     JC.resources.refresh = () => listarRecursos("catefa");
 
-    bindFabUploadHook();
-    bindCatefaLinks();
-    bindCatefaRefresh();
+    bindFabUploadHookOnce();
+    bindCatefaLinksOnce();
+    bindCatefaRefreshOnce();
 
-    // Precarga suave si existe DOM
-    if (document.getElementById("catefaGate")) {
-      listarRecursos("catefa");
-    }
+    // ✅ Reacciona cuando el perfil cambia (login / logout / rol)
+    JC.on("profile:changed", () => {
+      // Solo si está visible la vista recursos
+      const current = (location.hash || "#inicio").replace("#", "");
+      if (current === "recursos") listarRecursos("catefa");
+    });
+
+    // ✅ Precarga SOLO si estás en recursos (evita ruido al arrancar)
+    const start = (location.hash || "#inicio").replace("#", "");
+    if (start === "recursos") listarRecursos("catefa");
   }
 
   JC.resources.init = init;
