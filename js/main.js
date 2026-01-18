@@ -72,56 +72,72 @@
   }
 
   try {
-    // ✅ SIN order (evita 400 por columnas inexistentes)
-    // Traemos algunos y elegimos el “mejor” en JS
-    const q = await sb.from("mensaje_semanal").select("*").limit(20);
+    // ✅ Orden real según tu tabla
+    let q = await sb
+      .from("mensaje_semanal")
+      .select("id, semana_start, titulo, contenido, autor, publicado_at")
+      .order("publicado_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
+    // Si publicado_at está null en filas antiguas, fallback por id
     if (q.error) throw q.error;
 
-    const rows = q.data || [];
-    if (!rows.length) {
+    if (!q.data) {
+      // fallback por id (por si publicado_at viene todo null)
+      const q2 = await sb
+        .from("mensaje_semanal")
+        .select("id, semana_start, titulo, contenido, autor, publicado_at")
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (q2.error) throw q2.error;
+      render(q2.data);
+      return;
+    }
+
+    render(q.data);
+  } catch (e) {
+    console.warn("[JC] mensaje_semanal error:", e);
+    if (titleEl) titleEl.textContent = "Mensaje semanal";
+    if (bodyEl) bodyEl.textContent = "⚠️ No se pudo cargar el mensaje. (Revisa RLS o permisos).";
+    if (metaEl) metaEl.textContent = "";
+  }
+
+  function render(row) {
+    if (!row) {
       if (titleEl) titleEl.textContent = "Mensaje semanal";
       if (bodyEl) bodyEl.textContent = "Aún no hay mensaje publicado.";
       if (metaEl) metaEl.textContent = "";
       return;
     }
 
-    // Encuentra una columna de fecha probable
-    const pickDate = (r) => {
-      const v =
-        r.created_at ?? r.creado_en ?? r.fecha ?? r.updated_at ?? r.publicado_en ?? r.dia ?? null;
-      const d = v ? new Date(v) : null;
-      return d && !isNaN(d.getTime()) ? d.getTime() : 0;
-    };
-
-    // Elegimos el “más reciente” por fecha (si existe). Si no, usamos el primero.
-    let best = rows[0];
-    let bestT = pickDate(best);
-
-    for (const r of rows) {
-      const t = pickDate(r);
-      if (t > bestT) {
-        bestT = t;
-        best = r;
-      }
-    }
-
-    const titulo = best.titulo ?? best.title ?? best.encabezado ?? "Mensaje semanal";
-    const cuerpo = best.cuerpo ?? best.body ?? best.mensaje ?? best.contenido ?? "—";
+    const titulo = row.titulo || "Mensaje semanal";
+    const cuerpo = row.contenido || "—";
 
     let meta = "";
-    if (bestT > 0) meta = `Publicado: ${new Date(bestT).toLocaleString("es-PE")}`;
+    const parts = [];
+
+    if (row.autor) parts.push(`Autor: ${row.autor}`);
+
+    if (row.publicado_at) {
+      try {
+        const d = new Date(row.publicado_at);
+        if (!isNaN(d.getTime())) parts.push(`Publicado: ${d.toLocaleString("es-PE")}`);
+      } catch {}
+    } else if (row.semana_start) {
+      parts.push(`Semana: ${row.semana_start}`);
+    }
+
+    meta = parts.join(" · ");
 
     if (titleEl) titleEl.textContent = String(titulo);
     if (bodyEl) bodyEl.textContent = String(cuerpo);
     if (metaEl) metaEl.textContent = meta;
-  } catch (e) {
-    console.warn("[JC] mensaje_semanal error:", e);
-    if (titleEl) titleEl.textContent = "Mensaje semanal";
-    if (bodyEl) bodyEl.textContent = "⚠️ No se pudo cargar el mensaje. (Revisa RLS/tabla).";
-    if (metaEl) metaEl.textContent = "";
   }
 }
+
 
   // ============================================================
   // Tabs helpers
