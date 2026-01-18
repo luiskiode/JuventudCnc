@@ -53,91 +53,75 @@
     }
   }
 
-  // ============================================================
-  // B) Mensaje semanal (Inicio) — lectura pública
-  // ============================================================
-  async function loadMensajeSemanal() {
-    const titleEl = document.getElementById("msgTitle");
-    const bodyEl = document.getElementById("msgBody");
-    const metaEl = document.getElementById("msgMeta");
+ async function loadMensajeSemanal() {
+  const titleEl = document.getElementById("msgTitle");
+  const bodyEl = document.getElementById("msgBody");
+  const metaEl = document.getElementById("msgMeta");
 
-    // Si no existe UI, salimos
-    if (!titleEl && !bodyEl && !metaEl) return;
+  if (!titleEl && !bodyEl && !metaEl) return;
 
-    // Estado inicial
-    if (titleEl) titleEl.textContent = "Cargando mensaje...";
-    if (bodyEl) bodyEl.textContent = "Un momento…";
-    if (metaEl) metaEl.textContent = "";
+  if (titleEl) titleEl.textContent = "Cargando mensaje...";
+  if (bodyEl) bodyEl.textContent = "Un momento…";
+  if (metaEl) metaEl.textContent = "";
 
-    const sb = window.sb || window.supabaseClient;
-    if (!sb) {
+  const sb = window.sb || window.supabaseClient;
+  if (!sb) {
+    if (titleEl) titleEl.textContent = "Mensaje semanal";
+    if (bodyEl) bodyEl.textContent = "⚠️ No hay conexión a Supabase (cliente no cargado).";
+    return;
+  }
+
+  try {
+    // ✅ SIN order (evita 400 por columnas inexistentes)
+    // Traemos algunos y elegimos el “mejor” en JS
+    const q = await sb.from("mensaje_semanal").select("*").limit(20);
+
+    if (q.error) throw q.error;
+
+    const rows = q.data || [];
+    if (!rows.length) {
       if (titleEl) titleEl.textContent = "Mensaje semanal";
-      if (bodyEl) bodyEl.textContent = "⚠️ No se encontró conexión a Supabase (cliente no cargado).";
+      if (bodyEl) bodyEl.textContent = "Aún no hay mensaje publicado.";
+      if (metaEl) metaEl.textContent = "";
       return;
     }
 
-    try {
-      // Intento robusto: traer el más reciente
-      const q = await sb
-        .from("mensaje_semanal")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    // Encuentra una columna de fecha probable
+    const pickDate = (r) => {
+      const v =
+        r.created_at ?? r.creado_en ?? r.fecha ?? r.updated_at ?? r.publicado_en ?? r.dia ?? null;
+      const d = v ? new Date(v) : null;
+      return d && !isNaN(d.getTime()) ? d.getTime() : 0;
+    };
 
-      if (q.error) {
-        // Si created_at no existe, probamos con otro orden común
-        const q2 = await sb
-          .from("mensaje_semanal")
-          .select("*")
-          .order("creado_en", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+    // Elegimos el “más reciente” por fecha (si existe). Si no, usamos el primero.
+    let best = rows[0];
+    let bestT = pickDate(best);
 
-        if (q2.error) throw q2.error;
-
-        renderMsg(q2.data);
-        return;
+    for (const r of rows) {
+      const t = pickDate(r);
+      if (t > bestT) {
+        bestT = t;
+        best = r;
       }
-
-      renderMsg(q.data);
-    } catch (e) {
-      console.warn("[JC] mensaje_semanal error:", e);
-      if (titleEl) titleEl.textContent = "Mensaje semanal";
-      if (bodyEl) bodyEl.textContent = "⚠️ No se pudo cargar el mensaje. (Revisa RLS o estructura de tabla).";
-      if (metaEl) metaEl.textContent = "";
     }
 
-    function renderMsg(row) {
-      if (!row) {
-        if (titleEl) titleEl.textContent = "Mensaje semanal";
-        if (bodyEl) bodyEl.textContent = "Aún no hay mensaje publicado.";
-        if (metaEl) metaEl.textContent = "";
-        return;
-      }
+    const titulo = best.titulo ?? best.title ?? best.encabezado ?? "Mensaje semanal";
+    const cuerpo = best.cuerpo ?? best.body ?? best.mensaje ?? best.contenido ?? "—";
 
-      // Campos flexibles (por si varían)
-      const titulo =
-        row.titulo ?? row.title ?? row.encabezado ?? "Mensaje semanal";
-      const cuerpo =
-        row.cuerpo ?? row.body ?? row.mensaje ?? row.contenido ?? "—";
+    let meta = "";
+    if (bestT > 0) meta = `Publicado: ${new Date(bestT).toLocaleString("es-PE")}`;
 
-      const fechaRaw =
-        row.created_at ?? row.creado_en ?? row.fecha ?? row.updated_at ?? null;
-
-      let meta = "";
-      if (fechaRaw) {
-        try {
-          const d = new Date(fechaRaw);
-          meta = isNaN(d.getTime()) ? "" : `Publicado: ${d.toLocaleString("es-PE")}`;
-        } catch {}
-      }
-
-      if (titleEl) titleEl.textContent = String(titulo);
-      if (bodyEl) bodyEl.textContent = String(cuerpo);
-      if (metaEl) metaEl.textContent = meta;
-    }
+    if (titleEl) titleEl.textContent = String(titulo);
+    if (bodyEl) bodyEl.textContent = String(cuerpo);
+    if (metaEl) metaEl.textContent = meta;
+  } catch (e) {
+    console.warn("[JC] mensaje_semanal error:", e);
+    if (titleEl) titleEl.textContent = "Mensaje semanal";
+    if (bodyEl) bodyEl.textContent = "⚠️ No se pudo cargar el mensaje. (Revisa RLS/tabla).";
+    if (metaEl) metaEl.textContent = "";
   }
+}
 
   // ============================================================
   // Tabs helpers
