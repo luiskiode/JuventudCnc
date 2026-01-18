@@ -655,69 +655,96 @@
       </section>
     </section>
 
-    <!-- MIEMBROS -->
-    <section class="view" data-view="miembros-activos" aria-label="Miembros">
-      <section class="card">
-        <header class="card-header">
+<!-- MIEMBROS -->
+<section class="view" data-view="miembros-activos" aria-label="Miembros">
+  <section class="card">
+    <header class="card-header">
+      <div>
+        <h2 class="with-emoji" data-emoji="⭐">Miembros</h2>
+        <p class="muted small" style="margin:4px 0 0">
+          Lista de miembros registrados (según RLS). Si no ves nada, revisa sesión o permisos.
+        </p>
+      </div>
+      <button id="btnMiembrosRefresh" class="btn small ghost" type="button">Actualizar</button>
+    </header>
+
+    <div id="miembrosGate" class="muted small">Cargando…</div>
+    <div id="miembrosList" class="grid" style="margin-top:12px"></div>
+  </section>
+</section>
+
+<!-- PERFIL -->
+<section class="view" data-view="perfil" aria-label="Mi perfil">
+  <section class="card">
+    <header class="card-header">
+      <div>
+        <h2 class="with-emoji" data-emoji="👤">Mi perfil</h2>
+        <p class="muted small" style="margin:4px 0 0">
+          Tu información personal y estado de sesión.
+        </p>
+      </div>
+      <button id="btnPerfilRefresh" class="btn small ghost" type="button">Actualizar</button>
+    </header>
+
+    <div id="perfilGate" class="muted small">Cargando…</div>
+
+    <!-- Caja de perfil (solo visible al estar logueado; profile.js la muestra/oculta) -->
+    <div id="perfilBox" class="jc-card-mini" style="margin-top:12px; display:none">
+
+      <!-- Header perfil: avatar + datos + logout -->
+      <div class="jc-row" style="justify-content:space-between; flex-wrap:wrap; gap:10px">
+        <div style="display:flex; gap:12px; align-items:center; min-width:240px">
+          <div style="width:56px;height:56px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);flex:0 0 auto;">
+            <img id="perfilAvatar" src="" alt="Avatar" style="width:100%;height:100%;object-fit:cover;display:block" />
+          </div>
+
           <div>
-            <h2 class="with-emoji" data-emoji="⭐">Miembros</h2>
-            <p class="muted small" style="margin:4px 0 0">
-              Lista de miembros registrados (según RLS). Si no ves nada, revisa sesión o permisos.
-            </p>
+            <strong id="perfilNombre">—</strong><br />
+            <small id="perfilEmail" class="muted">—</small><br />
+            <small id="perfilFraseView" class="muted" style="display:block; margin-top:4px">—</small>
           </div>
-          <button id="btnMiembrosRefresh" class="btn small ghost" type="button">Actualizar</button>
-        </header>
-
-        <div id="miembrosGate" class="muted small">Cargando…</div>
-        <div id="miembrosList" class="grid" style="margin-top:12px"></div>
-      </section>
-    </section>
-
-    <!-- PERFIL -->
-    <section class="view" data-view="perfil" aria-label="Mi perfil">
-      <section class="card">
-        <header class="card-header">
-          <div>
-            <h2 class="with-emoji" data-emoji="👤">Mi perfil</h2>
-            <p class="muted small" style="margin:4px 0 0">
-              Tu información personal y estado de sesión.
-            </p>
-          </div>
-          <button id="btnPerfilRefresh" class="btn small ghost" type="button">Actualizar</button>
-        </header>
-
-        <div id="perfilGate" class="muted small">Cargando…</div>
-
-        <div id="perfilBox" class="jc-card-mini" style="margin-top:12px; display:none">
-          <div class="jc-row" style="justify-content:space-between; flex-wrap:wrap; gap:10px">
-            <div>
-              <strong id="perfilNombre">—</strong><br />
-              <small id="perfilEmail" class="muted">—</small>
-            </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap">
-              <button id="btnLogout" class="btn small ghost" type="button">Cerrar sesión</button>
-            </div>
-          </div>
-
-          <hr style="margin:12px 0; opacity:.2" />
-
-          <form id="perfilForm" class="grid perfil-form" aria-label="Editar perfil">
-            <input id="perfilNombreInput" placeholder="Tu nombre" />
-            <input id="perfilRolInput" placeholder="Rol (ej: miembro, animador)" />
-            <button class="btn small" type="submit">Guardar</button>
-            <p id="perfilEstado" class="small muted" style="margin:0" aria-live="polite"></p>
-          </form>
         </div>
 
-        <div id="perfilHint" class="jc-card-mini" style="margin-top:12px">
-          <p class="muted small" style="margin:0">
-            🔑 Si no estás logueado, usa el botón de arriba “Iniciar sesión”.
-          </p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button id="btnLogout" class="btn small ghost" type="button">Cerrar sesión</button>
         </div>
-      </section>
-    </section>
+      </div>
 
-  </main>
+      <hr style="margin:12px 0; opacity:.2" />
+
+      <!-- ✅ Caja “Registro” (solo si NO es miembro) -->
+      <div id="perfilRegisterBox" class="jc-card-mini" style="margin-top:10px; display:none">
+        <strong>📝 Completa tu perfil</strong>
+        <p class="muted small" style="margin:6px 0 0">
+          Esto activa tu acceso para publicar, comentar y reaccionar ❤️ y te muestra en “Miembros”.
+        </p>
+      </div>
+
+      <!-- Formulario (registro/edición) -->
+      <form id="perfilForm" class="grid perfil-form" aria-label="Editar perfil" style="margin-top:10px">
+        <label class="muted small">Foto de perfil</label>
+        <input id="perfilAvatarInput" type="file" accept="image/*" />
+
+        <input id="perfilNombreInput" placeholder="Tu nombre" required />
+        <input id="perfilAliasInput" placeholder="Alias (opcional)" />
+        <textarea id="perfilFraseInput" rows="2" maxlength="140" placeholder="Tu frase (opcional)"></textarea>
+
+        <input id="perfilRolInput" placeholder="Rol (ej: miembro, animador)" />
+
+        <button class="btn small" type="submit">Guardar</button>
+        <p id="perfilEstado" class="small muted" style="margin:0" aria-live="polite"></p>
+      </form>
+    </div>
+
+    <!-- Hint cuando NO estás logueado -->
+    <div id="perfilHint" class="jc-card-mini" style="margin-top:12px">
+      <p class="muted small" style="margin:0">
+        🔑 Si no estás logueado, usa el botón de arriba “Iniciar sesión”.
+      </p>
+    </div>
+
+  </section>
+</section>
 
   <!-- NAV INFERIOR -->
   <nav class="tabs" aria-label="Navegación inferior">
