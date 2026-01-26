@@ -2,6 +2,15 @@
    ui.js — drawer/overlay + tema + fondo global + pausa + cursos + notis
    Robusto: no revienta si faltan helpers / IDs / módulos
    Compatible con tu index + AngieHerramientas (postMessage)
+
+   FIXES aplicados (según los errores que veníamos viendo):
+   - ✅ initUI se auto-ejecuta en DOMContentLoaded (para que drawer/paleta/bg/pause funcionen sin depender de main.js)
+   - ✅ Overlay click: cierra drawer + login + paleta + (si quieres) pausa (configurable)
+   - ✅ Unifica API paleta: window.jcOpenAngiePalette / window.jcCloseAngiePalette (evita “jcCloseAngieModal is not a function”)
+   - ✅ postMessage: acepta solo mismo origin (y permite fallback para "null" si abres en file://, sin romper)
+   - ✅ Theme: aplica data-theme al body (para backgrounds por tema en CSS) + preset auto/mix
+   - ✅ Background: no truena si ctx es null; mejor manejo de decode; previene doble bind
+   - ✅ Notis: no revienta si Notification no existe o está bloqueado
    ============================================================ */
 
 (function () {
@@ -17,11 +26,15 @@
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
   // Expón helpers para todo el proyecto
-  JC.$ = $;
-  JC.$$ = $$;
+  JC.$ = JC.$ || $;
+  JC.$$ = JC.$$ || $$;
 
   function safeParse(s) {
-    try { return JSON.parse(s); } catch { return null; }
+    try {
+      return JSON.parse(s);
+    } catch {
+      return null;
+    }
   }
 
   JC.safeText =
@@ -54,18 +67,30 @@
     }
   }
   function lsRemove(key) {
-    try { localStorage.removeItem(key); return true; } catch { return false; }
+    try {
+      localStorage.removeItem(key);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function domReady(cb) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", cb, { once: true });
+    } else cb();
   }
 
   // ============================================================
   // UI State global
   // ============================================================
-  const state = (JC.uiState = JC.uiState || {
-    drawerOpen: false,
-    angieOpen: false,
-    loginOpen: false,
-    pauseOpen: false
-  });
+  const state = (JC.uiState =
+    JC.uiState || {
+      drawerOpen: false,
+      angieOpen: false,
+      loginOpen: false,
+      pauseOpen: false,
+    });
 
   // ============================================================
   // Overlay / Drawer
@@ -74,8 +99,7 @@
     const overlay = $("#overlay");
     if (!overlay) return;
 
-    const shouldShow =
-      !!state.drawerOpen || !!state.angieOpen || !!state.loginOpen || !!state.pauseOpen;
+    const shouldShow = !!state.drawerOpen || !!state.angieOpen || !!state.loginOpen || !!state.pauseOpen;
 
     overlay.classList.toggle("show", shouldShow);
     overlay.setAttribute("aria-hidden", shouldShow ? "false" : "true");
@@ -109,29 +133,22 @@
     $("#openDrawer")?.addEventListener("click", openDrawer);
     $("#closeDrawer")?.addEventListener("click", closeDrawer);
 
-    // Overlay: cierra drawer y modales globales (no pausa)
+    // Overlay: cierra drawer y modales globales
     $("#overlay")?.addEventListener("click", () => {
       closeDrawer();
-      window.jcCloseAngieModal?.();
+      window.jcCloseAngiePalette?.();
       window.jcCloseLoginModal?.();
-      // pausa no se cierra aquí (se cierra con click fuera del modal)
+      // Si prefieres que overlay cierre pausa también:
+      window.jcClosePauseModal?.();
     });
 
-    // ESC cierra drawer + login + paleta
+    // ESC cierra drawer + login + paleta + pausa
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       closeDrawer();
       window.jcCloseLoginModal?.();
-      // paleta
-      try {
-        const modal = document.getElementById("angiePaletteModal");
-        if (modal?.classList?.contains("show")) {
-          modal.classList.remove("show");
-          modal.style.display = "none";
-          state.angieOpen = false;
-          syncOverlay();
-        }
-      } catch {}
+      window.jcCloseAngiePalette?.();
+      window.jcClosePauseModal?.();
     });
 
     // Click en links del drawer (data-tab)
@@ -149,6 +166,15 @@
   // ============================================================
   // Theme tokens + presets
   // ============================================================
+  function setBodyTheme(mode) {
+    try {
+      const m = String(mode || "auto");
+      // Para tu CSS: usa body[data-theme="chicos|chicas|mix"]
+      if (m === "chicos" || m === "chicas" || m === "mix") document.body?.setAttribute("data-theme", m);
+      else document.body?.removeAttribute("data-theme");
+    } catch {}
+  }
+
   function jcApplyTokens(tokens) {
     if (!tokens) return;
     const root = document.documentElement;
@@ -179,7 +205,7 @@
       "bg-base-1": "--bg-base-1",
       "bg-base-2": "--bg-base-2",
       "veil-a": "--veil-a",
-      "veil-b": "--veil-b"
+      "veil-b": "--veil-b",
     };
 
     for (const [k, v] of Object.entries(tokens)) {
@@ -194,10 +220,13 @@
       chicos: { brand: "#38bdf8", "brand-2": "#0ea5e9", accent: "#60a5fa" },
       chicas: { brand: "#f472b6", "brand-2": "#ec4899", accent: "#fb7185" },
       mix: { brand: "#2563eb", "brand-2": "#1d4ed8", accent: "#ec4899" },
-      auto: null
+      auto: null,
     };
 
-    const p = presets[mode] ?? null;
+    const m = String(mode || "auto");
+    setBodyTheme(m);
+
+    const p = presets[m] ?? null;
     const current = safeParse(lsGet("jc_tokens", "")) || {};
     const merged = p ? { ...current, ...p } : current;
 
@@ -210,8 +239,11 @@
     if (saved) jcApplyTokens(saved);
 
     const themePicker = $("#themePicker");
-    const mode = lsGet("jc_theme_mode", "");
-    if (themePicker && mode) themePicker.value = mode;
+    const mode = lsGet("jc_theme_mode", "auto") || "auto";
+    if (themePicker) themePicker.value = mode;
+
+    // aplica data-theme al body también
+    applyThemePreset(mode);
 
     themePicker?.addEventListener("change", () => {
       const m = themePicker.value || "auto";
@@ -244,11 +276,16 @@
     syncOverlay();
   }
 
+  // ✅ alias (para evitar “...is not a function” en overlay / otros módulos)
+  window.jcOpenAngiePalette = openAngiePalette;
+  window.jcCloseAngiePalette = closeAngiePalette;
+
   function initAngiePalette() {
     if (__angieBound) return;
     __angieBound = true;
 
-    document.addEventListener("DOMContentLoaded", () => {
+    // Bind directo (si ya existe DOM) + fallback DOMContentLoaded
+    const bind = () => {
       const btn = document.getElementById("btnAngie");
       const modal = document.getElementById("angiePaletteModal");
       const close = document.getElementById("angiePaletteClose");
@@ -259,15 +296,19 @@
       modal?.addEventListener("click", (e) => {
         if (e.target === modal) closeAngiePalette();
       });
-    });
+    };
+
+    domReady(bind);
 
     // Mensajes desde iframe (angie-herramienta.html)
     window.addEventListener("message", (event) => {
       const data = event?.data || {};
       if (!data || typeof data !== "object") return;
 
-      // Aceptar mismo origen (GitHub Pages)
-      if (event.origin && event.origin !== location.origin) return;
+      // Aceptar mismo origen.
+      // En algunos contextos raros (file://) origin puede ser "null".
+      // Aquí seguimos siendo estrictos en prod (GitHub Pages).
+      if (event.origin && event.origin !== "null" && event.origin !== location.origin) return;
 
       // 1) Tokens
       if (data.type === "applyTokens" && data.tokens) {
@@ -339,45 +380,31 @@
     }
 
     if (!src) {
-      const dataUrlOriginal = await (async () => {
-        try {
-          const buf = await file.arrayBuffer();
-          const blob = new Blob([buf], { type: file.type || "image/*" });
-          return await new Promise((resolve, reject) => {
-            const r = new FileReader();
-            r.onerror = () => reject(r.error || new Error("FileReaderError"));
-            r.onabort = () => reject(new Error("Lectura cancelada."));
-            r.onload = () => resolve(String(r.result || ""));
-            r.readAsDataURL(blob);
-          });
-        } catch {
-          return await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onerror = () => {
-              const code = reader.error?.name || "NotReadableError";
-              reject(
-                new Error(
-                  `No se pudo leer el archivo (${code}). ` +
-                    `En Android, prueba elegirlo desde “Archivos/Descargas” o descarga la foto antes.`
-                )
-              );
-            };
-            reader.onabort = () => reject(new Error("Lectura cancelada. Intenta elegir la imagen otra vez."));
-            reader.onload = () => resolve(String(reader.result || ""));
-            reader.readAsDataURL(file);
-          });
-        }
-      })();
+      const dataUrlOriginal = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => {
+          const code = reader.error?.name || "NotReadableError";
+          reject(
+            new Error(
+              `No se pudo leer el archivo (${code}). ` +
+                `En Android, prueba elegirlo desde “Archivos/Descargas” o descarga la foto antes.`
+            )
+          );
+        };
+        reader.onabort = () => reject(new Error("Lectura cancelada. Intenta elegir la imagen otra vez."));
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.readAsDataURL(file);
+      });
 
       const img = new Image();
-      const loaded = new Promise((resolve, reject) => {
+      img.src = dataUrlOriginal;
+
+      // decode si está disponible (mejor en móviles)
+      if (img.decode) await img.decode().catch(() => {});
+      await new Promise((resolve, reject) => {
         img.onload = () => resolve(true);
         img.onerror = () => reject(new Error("No se pudo cargar la imagen seleccionada."));
       });
-
-      img.src = dataUrlOriginal;
-      if (img.decode) await img.decode().catch(() => {});
-      await loaded;
 
       src = img;
       srcW = img.width;
@@ -393,10 +420,13 @@
     canvas.height = h;
 
     const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) throw new Error("No se pudo preparar el canvas para procesar la imagen.");
     ctx.drawImage(src, 0, 0, w, h);
 
     if (src && typeof src.close === "function") {
-      try { src.close(); } catch {}
+      try {
+        src.close();
+      } catch {}
     }
 
     let out = canvas.toDataURL(mime, quality);
@@ -458,7 +488,9 @@
     __jcBgBound = true;
 
     btnPick.addEventListener("click", () => {
-      try { input.value = ""; } catch {}
+      try {
+        input.value = "";
+      } catch {}
       input.click();
     });
 
@@ -480,7 +512,7 @@
           maxH: 900,
           quality: 0.82,
           maxMB: 12,
-          maxOutMB: 2.0
+          maxOutMB: 2.0,
         });
 
         jcSaveGlobalBackground(dataUrl);
@@ -492,7 +524,9 @@
         if (estado) estado.textContent = e?.message || "No se pudo aplicar el fondo.";
       } finally {
         __jcBgBusy = false;
-        try { input.value = ""; } catch {}
+        try {
+          input.value = "";
+        } catch {}
       }
     });
 
@@ -536,7 +570,6 @@
       if (pauseTimer) pauseTimer.textContent = String(pauseLeft);
       if (pauseText) pauseText.textContent = "Inhala… exhala…";
 
-      // Cierra drawer si existe
       window.jcCloseDrawer?.();
 
       state.pauseOpen = true;
@@ -544,7 +577,9 @@
       pauseModal.classList.add("show");
       syncOverlay();
 
-      try { window.miaSetEstado?.("apoyo"); } catch {}
+      try {
+        window.miaSetEstado?.("apoyo");
+      } catch {}
     }
 
     function closePauseModal() {
@@ -608,15 +643,15 @@
       titulo: "HeForShe (Jóvenes)",
       desc: "Taller de respeto, dignidad, liderazgo y servicio.",
       duracion: "4 sesiones",
-      link: "https://example.com/heforshe"
+      link: "https://example.com/heforshe",
     },
     {
       key: "save-for-home",
       titulo: "Save For Home",
       desc: "Taller para decisiones sanas, familia, futuro y fe.",
       duracion: "6 sesiones",
-      link: "https://example.com/saveforhome"
-    }
+      link: "https://example.com/saveforhome",
+    },
   ];
   window.jcCursos = CURSOS;
 
@@ -626,9 +661,7 @@
     if (!list) return;
 
     const hasSession =
-      typeof JC.auth?.isLoggedIn === "function"
-        ? !!JC.auth.isLoggedIn()
-        : !!window.currentUser;
+      typeof JC.auth?.isLoggedIn === "function" ? !!JC.auth.isLoggedIn() : !!window.currentUser;
 
     if (gate) {
       gate.textContent = hasSession
@@ -720,7 +753,11 @@
   // ============================================================
   // INIT UI
   // ============================================================
+  let __uiInited = false;
   function initUI() {
+    if (__uiInited) return true;
+    __uiInited = true;
+
     initDrawer();
     restoreTokensOnLoad();
     initAngiePalette();
@@ -729,15 +766,26 @@
 
     (function bindBgWithRetries() {
       if (jcBindGlobalBackgroundUI()) return;
-      document.addEventListener("DOMContentLoaded", () => jcBindGlobalBackgroundUI(), { once: true });
+      domReady(() => jcBindGlobalBackgroundUI());
       setTimeout(() => jcBindGlobalBackgroundUI(), 300);
       setTimeout(() => jcBindGlobalBackgroundUI(), 900);
       setTimeout(() => jcBindGlobalBackgroundUI(), 1500);
     })();
+
+    return true;
   }
 
   // Exports para main.js
   window.jcUI = { state, syncOverlay, initUI };
   window.JC = window.JC || {};
   window.JC.ui = { init: initUI, state, syncOverlay };
+
+  // ✅ Auto-init (para que no dependas de main.js y no “se muera” el drawer/paleta)
+  domReady(() => {
+    try {
+      initUI();
+    } catch (e) {
+      console.warn("[JC][ui] init crash", e);
+    }
+  });
 })();
