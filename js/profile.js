@@ -8,11 +8,14 @@
   JC.state.isMember = JC.state.isMember ?? false;
   JC.state.user = JC.state.user ?? null;
 
-  // ✅ Cliente correcto (alias estándar)
-  JC.sb = JC.sb || window.sb || window.supabaseClient;
+  // ✅ Siempre toma el cliente correcto (no lo “congeles” al cargar)
+  function getSB() {
+    return window.sb || window.supabaseClient || JC.sb || null;
+  }
 
   const $ = JC.$ || ((sel, root = document) => root.querySelector(sel));
 
+  // Event bus simple (por si no existe)
   if (typeof JC.on !== "function") {
     JC.on = function (evt, cb) {
       document.addEventListener(`JC:${evt}`, (e) => cb(e.detail), false);
@@ -24,6 +27,9 @@
     };
   }
 
+  // ============================================================
+  // Refs UI (IDs del index actual)
+  // ============================================================
   function uiRefs() {
     return {
       gate: $("#perfilGate"),
@@ -55,6 +61,8 @@
     if (gate) gate.textContent = msg || "";
   }
 
+  // ✅ Cuando NO hay sesión: mostrar hint y esconder box.
+  // ✅ Cuando hay sesión: mostrar box y esconder hint.
   function showBox(show) {
     const { box, hint } = uiRefs();
     if (box) box.style.display = show ? "" : "none";
@@ -71,10 +79,15 @@
     if (form) form.style.display = show ? "" : "none";
   }
 
+  // ============================================================
+  // Auth helpers
+  // ============================================================
   async function getUser() {
     if (window.currentUser) return window.currentUser;
-    const sb = JC.sb;
+
+    const sb = getSB();
     if (!sb?.auth?.getSession) return null;
+
     try {
       const { data } = await sb.auth.getSession();
       return data?.session?.user ?? null;
@@ -83,26 +96,32 @@
     }
   }
 
+  // ============================================================
+  // Load profile (tabla: miembros)
+  // ============================================================
   async function loadProfile() {
     JC.state.profile = null;
     JC.state.isMember = false;
 
-    const sb = JC.sb;
+    const sb = getSB();
     if (!sb) {
       console.warn("[profile] Supabase no disponible");
-      JC.emit("profile:changed", { profile: null, isMember: false });
-      return;
+      JC.emit("profile:changed", { profile: null, isMember: false, user: null });
+      return { profile: null, isMember: false, user: null };
     }
 
     const user = await getUser();
     JC.state.user = user;
 
     if (!user) {
-      JC.emit("profile:changed", { profile: null, isMember: false });
-      return;
+      JC.emit("profile:changed", { profile: null, isMember: false, user: null });
+      return { profile: null, isMember: false, user: null };
     }
 
     try {
+      // ✅ IMPORTANTE:
+      // - en tu tabla miembros, user_id es nullable, pero para “tu perfil” usamos eq(user_id, auth.uid)
+      // - maybeSingle evita crash si no hay fila
       const { data, error } = await sb
         .from("miembros")
         .select("*")
@@ -120,20 +139,30 @@
 
       JC.emit("profile:changed", {
         profile: JC.state.profile,
-        isMember: JC.state.isMember
+        isMember: JC.state.isMember,
+        user
       });
+
+      return { profile: JC.state.profile, isMember: JC.state.isMember, user };
     } catch (e) {
       console.error("[profile] load exception", e);
       JC.state.profile = null;
       JC.state.isMember = false;
-      JC.emit("profile:changed", { profile: null, isMember: false });
+      JC.emit("profile:changed", { profile: null, isMember: false, user });
+      return { profile: null, isMember: false, user };
     }
   }
 
+  // ============================================================
+  // Paint profile (UI)
+  // ============================================================
   function paintProfile() {
     const r = uiRefs();
     const user = JC.state.user;
     const p = JC.state.profile;
+
+    // Si la vista ni existe, no hagas nada
+    if (!r.gate && !r.box && !r.hint) return;
 
     if (!user) {
       setGate("🔑 No has iniciado sesión.");
@@ -144,18 +173,18 @@
       if (r.fraseView) r.fraseView.textContent = "—";
       if (r.avatar) r.avatar.src = "";
       if (r.estado) r.estado.textContent = "";
+      showRegisterBox(false);
+      showForm(false);
       return;
     }
 
     showBox(true);
 
-    // Gate
+    // Gate + “registro”
     if (JC.state.isMember) {
       setGate("✅ Perfil activo.");
       showRegisterBox(false);
-      // Puedes ocultar el form si quieres “modo tarjeta”
-      // Yo lo dejo visible como edición, pero si quieres ocultarlo:
-      // showForm(false);
+      // ✅ Para que SIEMPRE se vea tu formulario (edición) como antes
       showForm(true);
     } else {
       setGate("📝 Completa tu perfil para registrarte como miembro.");
@@ -163,20 +192,17 @@
       showForm(true);
     }
 
-    // Vista
+    // Vista “tarjeta”
     if (r.nombre) r.nombre.textContent = p?.nombre || user.email || "Usuario";
     if (r.email) r.email.textContent = user.email || "—";
     if (r.fraseView) r.fraseView.textContent = p?.frase ? `“${p.frase}”` : "—";
 
-    // Avatar
-    if (r.avatar) {
-      r.avatar.src = p?.avatar_url || "";
-    }
+    // Avatar (si no hay avatar_url, deja vacío)
+    if (r.avatar) r.avatar.src = p?.avatar_url || "";
 
-    // Prefill inputs sin machacar
+    // Prefill inputs sin machacar lo que el usuario está escribiendo
     try {
       const active = document.activeElement;
-
       if (r.nombreInput && active !== r.nombreInput) r.nombreInput.value = p?.nombre || "";
       if (r.aliasInput && active !== r.aliasInput) r.aliasInput.value = p?.alias || "";
       if (r.fraseInput && active !== r.fraseInput) r.fraseInput.value = p?.frase || "";
@@ -190,34 +216,42 @@
     }
   }
 
+  // ============================================================
+  // Avatar upload (Storage)
+  // ============================================================
   async function uploadAvatarIfAny(userId) {
-    const sb = JC.sb;
+    const sb = getSB();
     const { avatarInput } = uiRefs();
     const file = avatarInput?.files?.[0];
     if (!file || !sb?.storage) return null;
 
-    // Bucket que tú ya usabas:
+    // Bucket actual (según tu implementación previa)
     const bucket = "miembros";
 
-    // Ruta estable por usuario
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    // Ext segura
+    const rawExt = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const ext = ["png", "jpg", "jpeg", "webp"].includes(rawExt) ? rawExt : "jpg";
+
+    // Ruta estable por usuario (mismo path -> upsert true)
     const path = `${userId}/avatar.${ext}`;
 
-    // Sube con upsert
     const up = await sb.storage.from(bucket).upload(path, file, {
       upsert: true,
-      cacheControl: "3600"
+      cacheControl: "3600",
+      contentType: file.type || undefined
     });
 
     if (up.error) throw up.error;
 
-    // Obtén URL pública
     const pub = sb.storage.from(bucket).getPublicUrl(path);
     return pub?.data?.publicUrl || null;
   }
 
+  // ============================================================
+  // Save profile
+  // ============================================================
   async function saveProfileFromUI() {
-    const sb = JC.sb;
+    const sb = getSB();
     if (!sb) return;
 
     const r = uiRefs();
@@ -229,12 +263,15 @@
       return;
     }
 
-    // nombre es NOT NULL en tu tabla -> obligatorio
+    // nombre es NOT NULL -> obligatorio
     const nombre = String(r.nombreInput?.value || "").trim();
     if (!nombre) {
       if (r.estado) r.estado.textContent = "Escribe tu nombre (obligatorio).";
       return;
     }
+
+    // rol_key opcional (pero por defecto “miembro”)
+    const rolKey = String(r.rolInput?.value || "").trim() || "miembro";
 
     try {
       if (r.estado) r.estado.textContent = "Guardando perfil…";
@@ -246,29 +283,34 @@
         if (newUrl) avatarUrl = newUrl;
       } catch (e) {
         console.warn("[profile] avatar upload failed:", e);
-        // no bloqueamos el guardado del perfil si falla la foto
+        // no bloqueamos el guardado si falla la foto
       }
 
+      // ⚠️ Tu tabla NO muestra updated_at; así que NO lo mandamos (evita error “column does not exist”)
       const payload = {
         user_id: user.id,
         email: user.email || null,
         nombre,
         alias: String(r.aliasInput?.value || "").trim() || null,
         frase: String(r.fraseInput?.value || "").trim() || null,
-        rol_key: String(r.rolInput?.value || "").trim() || "miembro",
+        rol_key: rolKey,
         avatar_url: avatarUrl,
-        estado: "activo",
-        updated_at: new Date().toISOString()
+        estado: "activo"
       };
 
+      // ✅ En tu tabla: PK es id, pero queremos upsert por user_id
+      // Necesitas que exista UNIQUE index/constraint sobre user_id para upsert onConflict funcione perfecto.
+      // Si no existe, esto puede fallar. (Si ya lo creaste, perfecto.)
       const { error } = await sb.from("miembros").upsert(payload, { onConflict: "user_id" });
       if (error) throw error;
 
       if (r.estado) r.estado.textContent = "✅ Perfil guardado.";
 
-      // Limpia input de file para no re-subir accidentalmente
+      // Limpia input file
       if (r.avatarInput) {
-        try { r.avatarInput.value = ""; } catch {}
+        try {
+          r.avatarInput.value = "";
+        } catch {}
       }
 
       await loadProfile();
@@ -279,9 +321,13 @@
     }
   }
 
+  // ============================================================
+  // Logout
+  // ============================================================
   async function logout() {
-    const sb = JC.sb;
+    const sb = getSB();
     const { estado } = uiRefs();
+
     try {
       if (estado) estado.textContent = "Cerrando sesión…";
       await sb?.auth?.signOut?.();
@@ -292,11 +338,19 @@
       JC.state.user = null;
       JC.state.profile = null;
       JC.state.isMember = false;
+
       paintProfile();
       setGate("🔑 Sesión cerrada.");
+
+      // ✅ Ayuda a que otros módulos refresquen
+      JC.emit("auth:changed", { user: null });
+      JC.emit("profile:changed", { profile: null, isMember: false, user: null });
     }
   }
 
+  // ============================================================
+  // Bind UI
+  // ============================================================
   let __bound = false;
   function bindUI() {
     if (__bound) return;
@@ -317,18 +371,27 @@
       paintProfile();
     });
 
-    // Preview local del avatar al seleccionar
+    // Preview local del avatar
     r.avatarInput?.addEventListener("change", () => {
       const f = r.avatarInput.files?.[0];
       if (!f) return;
       const url = URL.createObjectURL(f);
       if (r.avatar) r.avatar.src = url;
-      setTimeout(() => { try { URL.revokeObjectURL(url); } catch {} }, 1500);
+      setTimeout(() => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {}
+      }, 1500);
     });
   }
 
+  // ============================================================
+  // Auth listener (UNA VEZ, sin pelear con auth.js)
+  // - No recarga dos veces (evita loops)
+  // - Emite auth:changed para módulos que lo escuchan
+  // ============================================================
   function bindAuthListenerOnce() {
-    const sb = JC.sb;
+    const sb = getSB();
     if (!sb?.auth?.onAuthStateChange) return;
 
     if (window.__JC_PROFILE_AUTH_BOUND__) return;
@@ -338,11 +401,17 @@
       window.currentUser = session?.user ?? null;
       JC.state.user = window.currentUser;
 
+      // avisa a otros módulos
+      JC.emit("auth:changed", { user: window.currentUser });
+
       await loadProfile();
       paintProfile();
     });
   }
 
+  // ============================================================
+  // Init
+  // ============================================================
   async function init() {
     bindUI();
     bindAuthListenerOnce();
@@ -351,6 +420,7 @@
     await loadProfile();
     paintProfile();
 
+    // compat global
     window.cargarPerfil = async function () {
       await loadProfile();
       paintProfile();
@@ -364,6 +434,7 @@
     init,
     loadProfile,
     paintProfile,
-    save: saveProfileFromUI
+    save: saveProfileFromUI,
+    logout
   };
 })();
