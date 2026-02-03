@@ -49,10 +49,11 @@
       aliasInput: $("#perfilAliasInput"),
       fraseInput: $("#perfilFraseInput"),
       rolInput: $("#perfilRolInput"),
+      emailInput: $("#perfilEmailInput"), // ✅ (nuevo en index) readonly
       estado: $("#perfilEstado"),
 
       btnLogout: $("#btnLogout"),
-      btnRefresh: $("#btnPerfilRefresh")
+      btnRefresh: $("#btnPerfilRefresh"),
     };
   }
 
@@ -119,9 +120,6 @@
     }
 
     try {
-      // ✅ IMPORTANTE:
-      // - en tu tabla miembros, user_id es nullable, pero para “tu perfil” usamos eq(user_id, auth.uid)
-      // - maybeSingle evita crash si no hay fila
       const { data, error } = await sb
         .from("miembros")
         .select("*")
@@ -140,7 +138,7 @@
       JC.emit("profile:changed", {
         profile: JC.state.profile,
         isMember: JC.state.isMember,
-        user
+        user,
       });
 
       return { profile: JC.state.profile, isMember: JC.state.isMember, user };
@@ -180,39 +178,43 @@
 
     showBox(true);
 
-    // Gate + “registro”
+    // ✅ Vista “tarjeta” (siempre visible con sesión)
+    if (r.nombre) r.nombre.textContent = p?.nombre || user.email || "Usuario";
+    if (r.email) r.email.textContent = user.email || "—";
+    if (r.fraseView) r.fraseView.textContent = p?.frase ? `“${p.frase}”` : "—";
+    if (r.avatar) r.avatar.src = p?.avatar_url || "";
+
+    // ✅ Si existe campo email en el formulario, rellenarlo (readonly)
+    try {
+      if (r.emailInput) r.emailInput.value = user.email || "";
+    } catch {}
+
+    // ✅ REGLA PRINCIPAL:
+    // - Si YA es miembro: ocultar el formulario de registro.
+    // - Si NO es miembro: mostrarlo para completar registro.
     if (JC.state.isMember) {
       setGate("✅ Perfil activo.");
       showRegisterBox(false);
-      // ✅ Para que SIEMPRE se vea tu formulario (edición) como antes
-      showForm(true);
+      showForm(false); // 🔥 aquí está el cambio importante
+
+      if (r.estado) r.estado.textContent = "✅ Perfil registrado. Puedes iniciar sesión en cualquier dispositivo con tu correo.";
     } else {
       setGate("📝 Completa tu perfil para registrarte como miembro.");
       showRegisterBox(true);
       showForm(true);
+
+      if (r.estado) r.estado.textContent = "🔒 Aún no estás registrado. Guarda tu perfil para activarlo.";
     }
 
-    // Vista “tarjeta”
-    if (r.nombre) r.nombre.textContent = p?.nombre || user.email || "Usuario";
-    if (r.email) r.email.textContent = user.email || "—";
-    if (r.fraseView) r.fraseView.textContent = p?.frase ? `“${p.frase}”` : "—";
-
-    // Avatar (si no hay avatar_url, deja vacío)
-    if (r.avatar) r.avatar.src = p?.avatar_url || "";
-
-    // Prefill inputs sin machacar lo que el usuario está escribiendo
-    try {
-      const active = document.activeElement;
-      if (r.nombreInput && active !== r.nombreInput) r.nombreInput.value = p?.nombre || "";
-      if (r.aliasInput && active !== r.aliasInput) r.aliasInput.value = p?.alias || "";
-      if (r.fraseInput && active !== r.fraseInput) r.fraseInput.value = p?.frase || "";
-      if (r.rolInput && active !== r.rolInput) r.rolInput.value = p?.rol_key || "miembro";
-    } catch {}
-
-    if (r.estado) {
-      r.estado.textContent = JC.state.isMember
-        ? "✅ Eres miembro registrado."
-        : "🔒 Aún no estás registrado. Guarda tu perfil para activarlo.";
+    // Prefill inputs SOLO cuando toca registro (no pisar al usuario y no mostrar si está oculto)
+    if (!JC.state.isMember) {
+      try {
+        const active = document.activeElement;
+        if (r.nombreInput && active !== r.nombreInput) r.nombreInput.value = p?.nombre || "";
+        if (r.aliasInput && active !== r.aliasInput) r.aliasInput.value = p?.alias || "";
+        if (r.fraseInput && active !== r.fraseInput) r.fraseInput.value = p?.frase || "";
+        if (r.rolInput && active !== r.rolInput) r.rolInput.value = p?.rol_key || "miembro";
+      } catch {}
     }
   }
 
@@ -228,17 +230,15 @@
     // Bucket actual (según tu implementación previa)
     const bucket = "miembros";
 
-    // Ext segura
     const rawExt = (file.name.split(".").pop() || "jpg").toLowerCase();
     const ext = ["png", "jpg", "jpeg", "webp"].includes(rawExt) ? rawExt : "jpg";
 
-    // Ruta estable por usuario (mismo path -> upsert true)
     const path = `${userId}/avatar.${ext}`;
 
     const up = await sb.storage.from(bucket).upload(path, file, {
       upsert: true,
       cacheControl: "3600",
-      contentType: file.type || undefined
+      contentType: file.type || undefined,
     });
 
     if (up.error) throw up.error;
@@ -248,7 +248,7 @@
   }
 
   // ============================================================
-  // Save profile
+  // Save profile (registro)
   // ============================================================
   async function saveProfileFromUI() {
     const sb = getSB();
@@ -263,14 +263,12 @@
       return;
     }
 
-    // nombre es NOT NULL -> obligatorio
     const nombre = String(r.nombreInput?.value || "").trim();
     if (!nombre) {
       if (r.estado) r.estado.textContent = "Escribe tu nombre (obligatorio).";
       return;
     }
 
-    // rol_key opcional (pero por defecto “miembro”)
     const rolKey = String(r.rolInput?.value || "").trim() || "miembro";
 
     try {
@@ -283,10 +281,8 @@
         if (newUrl) avatarUrl = newUrl;
       } catch (e) {
         console.warn("[profile] avatar upload failed:", e);
-        // no bloqueamos el guardado si falla la foto
       }
 
-      // ⚠️ Tu tabla NO muestra updated_at; así que NO lo mandamos (evita error “column does not exist”)
       const payload = {
         user_id: user.id,
         email: user.email || null,
@@ -295,12 +291,10 @@
         frase: String(r.fraseInput?.value || "").trim() || null,
         rol_key: rolKey,
         avatar_url: avatarUrl,
-        estado: "activo"
+        estado: "activo",
       };
 
-      // ✅ En tu tabla: PK es id, pero queremos upsert por user_id
-      // Necesitas que exista UNIQUE index/constraint sobre user_id para upsert onConflict funcione perfecto.
-      // Si no existe, esto puede fallar. (Si ya lo creaste, perfecto.)
+      // ✅ requiere UNIQUE sobre user_id para onConflict
       const { error } = await sb.from("miembros").upsert(payload, { onConflict: "user_id" });
       if (error) throw error;
 
@@ -308,13 +302,11 @@
 
       // Limpia input file
       if (r.avatarInput) {
-        try {
-          r.avatarInput.value = "";
-        } catch {}
+        try { r.avatarInput.value = ""; } catch {}
       }
 
       await loadProfile();
-      paintProfile();
+      paintProfile(); // 🔥 aquí se ocultará el form por ser miembro
     } catch (e) {
       console.error("[profile] save error", e);
       if (r.estado) r.estado.textContent = `❌ Error guardando perfil: ${e?.message || "revisa permisos/RLS"}`;
@@ -342,7 +334,6 @@
       paintProfile();
       setGate("🔑 Sesión cerrada.");
 
-      // ✅ Ayuda a que otros módulos refresquen
       JC.emit("auth:changed", { user: null });
       JC.emit("profile:changed", { profile: null, isMember: false, user: null });
     }
@@ -378,17 +369,13 @@
       const url = URL.createObjectURL(f);
       if (r.avatar) r.avatar.src = url;
       setTimeout(() => {
-        try {
-          URL.revokeObjectURL(url);
-        } catch {}
+        try { URL.revokeObjectURL(url); } catch {}
       }, 1500);
     });
   }
 
   // ============================================================
   // Auth listener (UNA VEZ, sin pelear con auth.js)
-  // - No recarga dos veces (evita loops)
-  // - Emite auth:changed para módulos que lo escuchan
   // ============================================================
   function bindAuthListenerOnce() {
     const sb = getSB();
@@ -401,7 +388,6 @@
       window.currentUser = session?.user ?? null;
       JC.state.user = window.currentUser;
 
-      // avisa a otros módulos
       JC.emit("auth:changed", { user: window.currentUser });
 
       await loadProfile();
@@ -420,7 +406,6 @@
     await loadProfile();
     paintProfile();
 
-    // compat global
     window.cargarPerfil = async function () {
       await loadProfile();
       paintProfile();
@@ -435,6 +420,6 @@
     loadProfile,
     paintProfile,
     save: saveProfileFromUI,
-    logout
+    logout,
   };
 })();
