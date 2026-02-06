@@ -1,15 +1,13 @@
 /* ============================================================
-   auth.js — Login modal + Magic Link (redirect a auth.html)
+   auth.js — Login modal + Magic Link (redirect DIRECTO a la app)
+   + consume ?code=... (PKCE) si viene
    + Auth state change (UNA VEZ)
-   Robusto para módulos, evita doble bind, no pisa exports.
    ============================================================ */
 (function () {
   "use strict";
 
-  // Namespace
   const JC = (window.JC = window.JC || {});
 
-  // Usa alias si existe
   const sb = window.sb || window.supabaseClient;
   if (!sb || !sb.auth) {
     console.warn("[JC][auth] Supabase client no disponible (sb/supabaseClient).");
@@ -17,49 +15,14 @@
     return;
   }
 
-  // Estado overlay (ui.js)
   const state = window.jcState || window.JC?.uiState || (window.JC.uiState = {});
   const syncOverlay = window.jcSyncOverlay || (() => {});
-
-  // ============================================================
-  // Config de rutas (GitHub Pages)
-  // ============================================================
-  const APP_ORIGIN = "https://luiskiode.github.io";
-  const APP_BASE = "/JuventudCnc/";
-  const AUTH_CALLBACK_URL = `${APP_ORIGIN}${APP_BASE}auth.html`;
 
   function jcSetLoginMsg(msg) {
     const el = document.getElementById("loginEstado");
     if (el) el.textContent = msg || "";
   }
 
-  // ============================================================
-  // (Opcional) Anon session (solo si tu backend lo usa)
-  // OJO: Para tu caso (leer foro público sin sesión) NO es obligatorio.
-  // ============================================================
-  async function jcEnsureAnonSession() {
-    try {
-      const { data } = await sb.auth.getSession();
-      if (data?.session?.user?.id) return data.session.user.id;
-
-      if (typeof sb.auth.signInAnonymously === "function") {
-        const { error } = await sb.auth.signInAnonymously();
-        if (error) throw error;
-        const { data: d2 } = await sb.auth.getSession();
-        return d2?.session?.user?.id || null;
-      }
-
-      return null;
-    } catch (e) {
-      console.warn("[JC][auth] Anon session error:", e);
-      return null;
-    }
-  }
-  window.jcEnsureAnonSession = jcEnsureAnonSession;
-
-  // ============================================================
-  // Modal helpers (no asume que existan los nodos)
-  // ============================================================
   function getEls() {
     return {
       btnLogin: document.getElementById("btnLogin"),
@@ -67,7 +30,7 @@
       loginClose: document.getElementById("loginClose"),
       loginForm: document.getElementById("loginForm"),
       loginEmail: document.getElementById("loginEmail"),
-      loginEstado: document.getElementById("loginEstado")
+      loginEstado: document.getElementById("loginEstado"),
     };
   }
 
@@ -95,23 +58,41 @@
   window.jcCloseLoginModal = closeLoginModal;
 
   // ============================================================
-  // Magic Link sender
+  // Consume ?code=... para crear sesión (PKCE)
+  // ============================================================
+  async function consumeAuthCodeIfPresent() {
+    try {
+      const url = new URL(location.href);
+      const code = url.searchParams.get("code");
+      if (!code) return false;
+
+      if (typeof sb.auth.exchangeCodeForSession === "function") {
+        const { error } = await sb.auth.exchangeCodeForSession(code);
+        if (error) console.warn("[JC][auth] exchangeCodeForSession error:", error);
+      }
+
+      url.searchParams.delete("code");
+      history.replaceState({}, document.title, url.toString());
+      return true;
+    } catch (e) {
+      console.warn("[JC][auth] consumeAuthCodeIfPresent error:", e);
+      return false;
+    }
+  }
+
+  // ============================================================
+  // Magic Link sender (redirige al index actual)
   // ============================================================
   async function sendMagicLink(email) {
-    if (!sb?.auth?.signInWithOtp) {
-      throw new Error("Auth no disponible (signInWithOtp).");
-    }
+    if (!sb?.auth?.signInWithOtp) throw new Error("Auth no disponible (signInWithOtp).");
 
-    // “next” le dice al callback dónde volver.
-    // Usamos query (no hash) para que sea sólido y fácil de parsear en auth.html.
-    const next = encodeURIComponent(`${APP_ORIGIN}${APP_BASE}?tab=perfil`);
-    const redirectTo = `${AUTH_CALLBACK_URL}?next=${next}&v=${encodeURIComponent(window.JC_BUILD || "")}`;
+    // Vuelve a la misma URL (GitHub Pages + carpeta) y abre Perfil
+    const redirectTo =
+      `${location.origin}${location.pathname}?tab=perfil&v=${encodeURIComponent(window.JC_BUILD || "")}`;
 
     const { error } = await sb.auth.signInWithOtp({
       email,
-      options: {
-        emailRedirectTo: redirectTo
-      }
+      options: { emailRedirectTo: redirectTo },
     });
 
     if (error) throw error;
@@ -158,25 +139,18 @@
   }
 
   // ============================================================
-  // Auth state global (UNA VEZ)
+  // Refresh de módulos / gates
   // ============================================================
   async function refreshGates() {
-    // Refresca módulos sin romper si no existen
     try { await window.cargarPerfil?.(); } catch {}
     try { await window.jcComunidad?.refreshAuthAndMiembro?.(); } catch {}
     try { await window.jcJudart?.refreshAuthAndMiembro?.(); } catch {}
     try { await window.jcEventos?.refreshAuth?.(); } catch {}
-
-    // Si estás en comunidad, refresca feed
-    try {
-      const tab = new URL(location.href).searchParams.get("tab")
-        || (location.hash || "#inicio").replace("#", "").trim();
-      if (tab === "comunidad" || tab === "foro") {
-        await window.jcComunidad?.cargarFeed?.({ force: true });
-      }
-    } catch {}
   }
 
+  // ============================================================
+  // Auth state global (UNA VEZ)
+  // ============================================================
   function bindAuthStateOnce() {
     if (window.__JC_AUTH_STATE_BOUND__) return;
     window.__JC_AUTH_STATE_BOUND__ = true;
@@ -191,10 +165,7 @@
     sb.auth.onAuthStateChange(async (_event, session) => {
       try {
         window.currentUser = session?.user ?? null;
-
-        // Si ya hay sesión, cerramos modal para evitar que quede abierto
         if (window.currentUser) closeLoginModal();
-
         await refreshGates();
       } catch (e) {
         console.error("[JC][auth] onAuthStateChange error:", e);
@@ -203,12 +174,14 @@
   }
 
   // ============================================================
-  // Public API (NO pisar JC.auth luego)
+  // Public API
   // ============================================================
   async function init() {
-    // UI listeners
     bindUIOnce();
     bindAuthStateOnce();
+
+    // 🔥 Si venimos de un magic link con ?code=..., lo convertimos en sesión aquí
+    await consumeAuthCodeIfPresent();
 
     // Carga estado inicial
     try {
@@ -217,14 +190,7 @@
       if (window.currentUser) closeLoginModal();
     } catch {}
 
-    // (Opcional) Anon session si lo necesitas en tu esquema
-    // Para tu regla actual (foro lectura pública), normalmente NO hace falta.
-    // Lo dejamos comentado por defecto para evitar usuarios “anon” ocupando cosas.
-    // try { await jcEnsureAnonSession(); } catch {}
-
-    // Refresca gates una primera vez
     try { await refreshGates(); } catch {}
-
     return true;
   }
 
@@ -257,9 +223,9 @@
     init,
     openLoginModal,
     closeLoginModal,
-    sendMagicLink, // útil para tests
+    sendMagicLink,
     signOut,
     getUser,
-    isLoggedIn
+    isLoggedIn,
   };
 })();
