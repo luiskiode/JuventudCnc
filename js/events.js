@@ -332,7 +332,7 @@
     try {
       const q = await sb
         .from("eventos")
-        .select("id,titulo,fecha,lugar,tipo,created_by,created_at")
+        .select("id,titulo,fecha,lugar,tipo,created_at")
         .order("fecha", { ascending: true });
 
       if (q.error) throw q.error;
