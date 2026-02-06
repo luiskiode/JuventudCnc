@@ -223,8 +223,10 @@
       }
 
       if (tab === "judart") {
-        await (JC.judart?.refresh?.({ force: true }) || window.jcJudart?.refresh?.({ force: true }));
-      }
+  await (JC.judart?.refresh?.({ force: true })
+    || window.jcJudart?.refresh?.({ force: true })
+    || window.jcJudart?.refresh?.()); // fallback
+}
     } catch (e) {
       console.warn("[JC] hook error", tab, e);
     }

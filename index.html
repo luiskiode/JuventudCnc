@@ -49,6 +49,7 @@
     <script defer src="js/members.js?v=2026-02-02.01"></script>
     <script defer src="js/community.js?v=2026-02-02.01"></script>
     <script defer src="js/resources.js?v=2026-02-02.01"></script>
+    <script defer src="js/judart.js?v=2026-02-02.01"></script>
     <script defer src="js/main.js?v=2026-02-02.01"></script>
   </head>
 
@@ -563,12 +564,14 @@
                 <textarea id="judDesc" rows="3" placeholder="Descripción / mensaje" maxlength="1500"></textarea>
 
                 <select id="judMediaType" aria-label="Tipo">
-                  <option value="image">Imagen (subir)</option>
-                  <option value="link">Link (URL)</option>
-                </select>
+  <option value="image">Imagen (subir)</option>
+  <option value="video">Video (subir)</option>
+  <option value="link">Link (URL)</option>
+</select>
 
                 <input id="judUrl" placeholder="https://..." style="display:none" />
-                <input id="judFile" type="file" accept="image/*" />
+                <input id="judFile" type="file" accept="image/*,video/*" />
+
 
                 <div style="display:flex; gap:10px; flex-wrap:wrap">
                   <button class="btn" type="submit">Publicar</button>
