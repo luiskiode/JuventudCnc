@@ -526,7 +526,7 @@ const JC_FLOAT = {
     div.innerHTML = `
       <div class="jc-float-top">
         <span class="jc-float-pill">${emoji} ${bot}</span>
-        <span class="muted small" style="opacity:.75">Consejo</span>
+        <span class="muted small" style="opacity:.75">Consejito consejito bonito</span>
       </div>
       <div class="jc-float-text">${String(text || "")}</div>
     `;
