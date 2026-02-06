@@ -1,13 +1,11 @@
 /* ==========================================================
    JUVENTUD CNC — styles.css (CONSOLIDADO / SIN PELEAS)
-   ✅ Fixes aplicados según problemas vistos:
-   - Topbar alineada EXACTO con el main (sin “corrimiento” por 100vw/scrollbar)
-   - Chat: NO aparece fuera de Box (evita duplicado/estorbos en Inicio)
-   - Box: chat “encerrado” (full width/alto controlado)
-   - Widgets Angie/Mia/Ciro: no tapan tabs, mejor responsive
-   - Overlay uniforme (sin mancha/blur raro)
-   - Calendario: grid 7 columnas usando .cal-weekdays / .cal-days / .cal-day
-   - Floater layer: se mantiene estable y no rompe layout
+   ✅ Topbar alineada con container
+   ✅ Chat: solo permitido en BOX (y JS decide ON/OFF)
+   ✅ Widgets Angie/Mia/Ciro: responsive y sin tapar tabs
+   ✅ Overlay uniforme
+   ✅ Calendario: grid 7 columnas (.cal-weekdays/.cal-days/.cal-day)
+   ✅ Floats: 1-slot (una tarjeta a la vez, reemplazo, no invade)
    ========================================================== */
 
 /* ==========================================================
@@ -83,6 +81,9 @@
   /* Layout (una sola fuente de verdad) */
   --jc-maxw: 960px;
   --jc-safe-pad: 14px;
+
+  /* Float */
+  --jc-float-bottom: calc(78px + env(safe-area-inset-bottom));
 }
 
 /* ==========================================================
@@ -179,10 +180,11 @@ body.jc-bg-dynamic::after{
   50%{ transform:translate3d(-20px,10px,0) scale(1.03); }
   100%{ transform:translate3d(25px,-10px,0) scale(1.04); }
 }
-body:not(.jc-bg-dynamic)::before,
-body:not(.jc-bg-dynamic)::after{ animation:none !important; }
+@media (prefers-reduced-motion: reduce){
+  body.jc-bg-dynamic::before{ animation:none !important; }
+}
 
-/* Si tienes video/fondo animado, que jamás tape */
+/* Si tienes video/fondo animado, que jamás tape contenido */
 video, .bg-video, .video-bg, #bgVideo{ z-index:0 !important; }
 
 /* ==========================================================
@@ -208,7 +210,6 @@ video, .bg-video, .video-bg, #bgVideo{ z-index:0 !important; }
   border-bottom:1px solid rgba(148,163,184,.25);
 }
 
-/* Inner mantiene mismo ancho/padding que .container */
 .topbar-inner{
   width:100%;
   max-width:var(--jc-maxw);
@@ -264,8 +265,8 @@ video, .bg-video, .video-bg, #bgVideo{ z-index:0 !important; }
 /* ==========================================================
    VISTAS / ROUTER
    ========================================================== */
-.view{ display:none !important; width:100%; min-height:calc(100dvh - 140px); }
-.view.active{ display:block !important; }
+.view{ display:none; width:100%; min-height:calc(100dvh - 140px); }
+.view.active{ display:block; }
 
 /* ==========================================================
    CARDS
@@ -491,7 +492,7 @@ input,select,textarea{
 }
 
 /* ==========================================================
-   DRAWER + OVERLAY (overlay uniforme, sin blur raro)
+   DRAWER + OVERLAY (overlay uniforme)
    ========================================================== */
 .drawer{
   position:fixed;
@@ -559,8 +560,8 @@ input,select,textarea{
 .overlay{
   position:fixed;
   inset:0;
-  background:var(--overlay-bg) !important;
-  backdrop-filter:none !important;
+  background:var(--overlay-bg);
+  backdrop-filter:none;
   z-index:100;
   opacity:0;
   visibility:hidden;
@@ -598,6 +599,7 @@ input,select,textarea{
   opacity:0;
   pointer-events:none;
   transition:transform .4s ease, opacity .35s ease-out;
+  z-index:205;
 }
 
 .angie-widget--visible,.mia-widget--visible,.ciro-widget--visible,
@@ -610,11 +612,11 @@ input,select,textarea{
 }
 
 /* NO tapar tabs */
-.angie-widget, #angieWidget{ left:16px; bottom:96px; z-index:205; }
+.angie-widget, #angieWidget{ left:16px; bottom:96px; }
 .mia-widget,   #miaWidget  { right:16px; bottom:186px; z-index:210; }
 .ciro-widget,  #ciroWidget { right:16px; bottom:276px; z-index:215; }
 
-/* En Box: fuera widgets (para que no estorben el chat grande) */
+/* En Box: ocultar widgets para que no estorben chat grande */
 body[data-view="box"] .angie-widget,
 body[data-view="box"] .mia-widget,
 body[data-view="box"] .ciro-widget,
@@ -689,21 +691,19 @@ body[data-view="box"] #ciroWidget{
 .bot-close:hover{ color:#e5e7eb; }
 
 /* ==========================================================
-   CHAT — SOLO EN BOX (evita “chat al costado” y duplicados)
+   CHAT — permitido solo en BOX (JS decide ON/OFF)
    ========================================================== */
-/* Por defecto: oculto siempre */
-.jc-chat, #jcChat{ display:none !important; }
+.jc-chat, #jcChat{ display:none; }
 
-/* En Box: visible y encerrado */
+/* Solo en BOX el chat puede mostrarse (si JS lo prende) */
 body[data-view="box"] .jc-chat,
 body[data-view="box"] #jcChat{
-  display:flex !important;
-  position:relative !important;
-  width:100% !important;
-  max-width:var(--jc-maxw) !important;
-  height:min(70vh, 680px) !important;
-  max-height:none !important;
-  margin:0 auto !important;
+  /* NO forzamos display aquí, solo damos estilo cuando exista */
+  position:relative;
+  width:100%;
+  max-width:var(--jc-maxw);
+  height:min(70vh, 680px);
+  margin:0 auto;
 
   flex-direction:column;
   background:rgba(15,23,42,.97);
@@ -752,130 +752,75 @@ body[data-view="box"] #jcChat{
   gap:8px;
   overflow:auto;
 }
-.jc-chat-msg{ display:flex; align-items:flex-start; gap:6px; }
-.jc-chat-avatar{
-  flex-shrink:0;
-  width:22px; height:22px;
-  border-radius:999px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:11px;
-  font-weight:600;
-  color:#0b1120;
-}
-.jc-chat-bubble{
-  max-width: min(520px, 78vw);
-  padding:6px 10px;
-  border-radius:14px;
-  border:1px solid rgba(148,163,184,.4);
-  background:rgba(15,23,42,.96);
-}
-.jc-chat-name{ font-weight:600; margin-bottom:1px; font-size:11px; }
-.jc-chat-text{ font-size:11px; }
-
-.from-mia .jc-chat-avatar{ background:var(--girl-soft); color:#fce7f3; }
-.from-mia .jc-chat-bubble{ border-color:var(--girl-main); }
-.from-ciro .jc-chat-avatar{ background:var(--guy-soft); color:#dbeafe; }
-.from-ciro .jc-chat-bubble{ border-color:var(--guy-main); }
-.from-angie .jc-chat-avatar{ background:rgba(236,72,153,.25); color:#f9a8d4; }
-.from-angie .jc-chat-bubble{ border-color:var(--accent); }
-.from-system .jc-chat-avatar{ background:rgba(148,163,184,.4); color:#020617; }
-.from-system .jc-chat-bubble{ border-style:dashed; border-color:rgba(148,163,184,.7); }
-
-.jc-chat--collapsed{ height:44px !important; }
-.jc-chat--collapsed .jc-chat-body{ display:none; }
-.jc-chat--collapsed .jc-chat-toggle{ transform:rotate(180deg); }
 
 /* ==========================================================
-   FLOATER LAYER + CARDS
+   FLOATER — 1 SLOT (REEMPLAZO)  ✅ compatible con tu bots.js
+   - #jcFloatLayer contiene solo .jc-float-card
    ========================================================== */
 #jcFloatLayer{
-  position:fixed !important;
-  inset:0 !important;
-  z-index:99980 !important;
+  position:fixed;
+  left:12px;
+  right:12px;
+  bottom:var(--jc-float-bottom);
+  z-index:98;            /* encima del contenido, debajo de overlay(100) y drawer(110) */
   pointer-events:none;
+  display:flex;
+  justify-content:center;
 }
 
-/* Si activas modo floats: oculta widgets grandes */
-body.jc-floats-on #angieWidget,
-body.jc-floats-on #miaWidget,
-body.jc-floats-on #ciroWidget,
-body.jc-floats-on .angie-widget,
-body.jc-floats-on .mia-widget,
-body.jc-floats-on .ciro-widget{
-  display:none !important;
+.jc-float-card{
+  pointer-events:none;
+  width:min(520px, calc(100vw - 24px));
+  padding:12px 14px;
+  border-radius:16px;
+  background:rgba(15,23,42,.86);
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.10);
+  box-shadow:0 16px 40px rgba(0,0,0,.35);
+  transform:translateY(18px);
+  opacity:0;
+  transition:opacity .22s ease, transform .22s ease;
 }
 
-@keyframes jcFloatBob2 {
-  0%   { transform: translateY(0); }
-  50%  { transform: translateY(-3px); }
-  100% { transform: translateY(0); }
+.jc-float-card.is-show{
+  opacity:1;
+  transform:translateY(0);
 }
 
-#jcFloatLayer .jc-float-wrap{
-  left:10px !important;
-  right:10px !important;
-  bottom:calc(78px + env(safe-area-inset-bottom)) !important;
-  max-width:none !important;
-  gap:12px !important;
+.jc-float-card .jc-float-top{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:6px;
 }
 
-#jcFloatLayer .jc-float-card{
-  width:100% !important;
-  max-width:520px !important;
-  margin:0 !important;
-
-  display:grid !important;
-  grid-template-columns:64px 1fr !important;
-  align-items:stretch !important;
-  gap:12px !important;
-
-  padding:10px 12px !important;
-  border-radius:18px !important;
-
-  background: rgba(10,16,32,.86) !important;
-  border: 1px solid rgba(255,255,255,.10) !important;
-  box-shadow: 0 14px 32px rgba(0,0,0,.35) !important;
-
-  clip-path:none !important;
-  animation: jcFloatBob2 3.6s ease-in-out infinite !important;
-}
-#jcFloatLayer .jc-float-card::before,
-#jcFloatLayer .jc-float-card::after{
-  content:none !important;
-  display:none !important;
-}
-#jcFloatLayer .jc-float-ava{
-  width:64px !important;
-  height:64px !important;
-  border-radius:16px !important;
-  object-fit:cover !important;
-  align-self:stretch !important;
-  justify-self:stretch !important;
-  background:rgba(255,255,255,.08) !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.10) !important;
-}
-#jcFloatLayer .jc-float-name{
-  font-size:12px !important;
-  letter-spacing:.06em !important;
-  text-transform:uppercase !important;
-  opacity:.9 !important;
-  margin:0 0 4px 0 !important;
-}
-#jcFloatLayer .jc-float-text{
-  font-size:14px !important;
-  line-height:1.25 !important;
-  margin:0 !important;
-  overflow:hidden !important;
-  display:-webkit-box !important;
-  -webkit-box-orient:vertical !important;
-  -webkit-line-clamp:3 !important;
-  overflow-wrap:anywhere !important;
+.jc-float-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.10);
+  font-size:12px;
+  font-weight:700;
 }
 
-/* Fuera de Inicio: opcional ocultar floats */
-body:not([data-view="inicio"]) #jcFloatLayer{ display:none !important; }
+.jc-float-text{
+  font-size:13.5px;
+  line-height:1.35;
+  opacity:.98;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+
+/* Si no quieres floats fuera de INICIO, descomenta:
+body:not([data-view="inicio"]) #jcFloatLayer{ display:none; }
+*/
+
+/* Accesibilidad */
+@media (prefers-reduced-motion: reduce){
+  .jc-float-card{ transition:none !important; }
+}
 
 /* ==========================================================
    LISTA MIEMBROS
@@ -921,8 +866,8 @@ body:not([data-view="inicio"]) #jcFloatLayer{ display:none !important; }
 .jc-modal-body{ padding:12px; overflow:auto; }
 
 /* Angie Palette iframe modal */
-#angiePaletteModal .jc-modal-card{ width: min(980px, 100%); }
-#angiePaletteModal .jc-modal-body{ padding:0; background: rgba(2,6,23,.55); }
+#angiePaletteModal .jc-modal-card{ width:min(980px, 100%); }
+#angiePaletteModal .jc-modal-body{ padding:0; background:rgba(2,6,23,.55); }
 #angiePaletteFrame{
   display:block;
   width:100%;
@@ -951,7 +896,7 @@ body:not([data-view="inicio"]) #jcFloatLayer{ display:none !important; }
 
   .hero{ grid-template-columns:1fr; }
 
-  /* Widgets escalonados (más arriba para no tapar tabs) */
+  /* Widgets escalonados */
   .angie-widget, #angieWidget{ left:10px; bottom:102px; right:auto; }
   .mia-widget,   #miaWidget  { right:10px; bottom:186px; left:auto; }
   .ciro-widget,  #ciroWidget { right:10px; bottom:270px; left:auto; }
@@ -959,19 +904,4 @@ body:not([data-view="inicio"]) #jcFloatLayer{ display:none !important; }
   .event-item{ flex-direction:column; align-items:flex-start; }
   .event-meta{ white-space:normal; text-align:left; }
   .event-search-row{ flex-direction:column; align-items:stretch; }
-}
-
-@media (max-width:360px){
-  #jcFloatLayer .jc-float-card{ grid-template-columns:56px 1fr !important; }
-  #jcFloatLayer .jc-float-ava{
-    width:56px !important;
-    height:56px !important;
-    border-radius:14px !important;
-  }
-}
-
-/* Accesibilidad */
-@media (prefers-reduced-motion: reduce){
-  body.jc-bg-dynamic::before{ animation:none !important; }
-  #jcFloatLayer .jc-float-card{ animation:none !important; transition:none !important; }
 }
