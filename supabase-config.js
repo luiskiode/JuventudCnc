@@ -2,13 +2,11 @@
 // Requiere SDK cargado antes (index.html SIN defer):
 // <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 //
-// ✅ FIXES aplicados según errores típicos que vimos:
-// - Cliente único e idempotente (no se recrea ni se pisa)
-// - Alias consistentes: window.sb, window.supabaseClient
-// - Storage robusto (fallback si localStorage falla en PWA / modo privado)
-// - Hook de debug + self-test no invasivo
-// - NO asume tablas (evita confusión con RLS)
-// - Logs limpios (solo una vez)
+// ✅ Cliente único e idempotente (no se recrea ni se pisa)
+// ✅ Alias consistentes: window.sb, window.supabaseClient
+// ✅ Storage robusto (fallback si localStorage falla en PWA / modo privado)
+// ✅ PKCE + detectSessionInUrl (Supabase maneja el exchange automáticamente)
+// ✅ Self-test NO invasivo y NO corre cuando vienes con ?code= (evita AbortError)
 
 (() => {
   "use strict";
@@ -51,7 +49,7 @@
     return {
       getItem: (k) => (m.has(k) ? m.get(k) : null),
       setItem: (k, v) => m.set(k, String(v)),
-      removeItem: (k) => m.delete(k)
+      removeItem: (k) => m.delete(k),
     };
   })();
 
@@ -83,7 +81,7 @@
               memStore.removeItem(key);
             } catch {}
           }
-        }
+        },
       }
     : memStore;
 
@@ -93,7 +91,7 @@
   if (!window.supabaseClient) {
     window.supabaseClient = SDK.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
-        // ✅ Magic link + navegación moderna
+        // ✅ PKCE + detectSessionInUrl: Supabase hace el exchange automáticamente
         flowType: "pkce",
         detectSessionInUrl: true,
 
@@ -103,8 +101,8 @@
 
         // ✅ Estabilidad
         storageKey: AUTH_STORAGE_KEY,
-        storage
-      }
+        storage,
+      },
     });
   }
 
@@ -120,7 +118,7 @@
     hasClient: !!window.supabaseClient,
     build: window.JC_BUILD || "(sin build)",
     storageKey: AUTH_STORAGE_KEY,
-    storageType: storage === memStore ? "memory" : "localStorage"
+    storageType: storage === memStore ? "memory" : "localStorage",
   };
 
   // Log una sola vez
@@ -130,7 +128,7 @@
       hasClient: !!window.supabaseClient,
       build: window.JC_BUILD || "(sin build)",
       url: window.supabaseClient?.supabaseUrl,
-      storage: window.__JC_SUPABASE__?.storageType
+      storage: window.__JC_SUPABASE__?.storageType,
     });
   }
 })();
@@ -167,9 +165,16 @@ window.jcSupabaseSelfTest = async function () {
 };
 
 // Auto test (solo si estás en modo debug)
+// ✅ NO corre si vienes con ?code=... (evita AbortError durante el exchange PKCE)
 document.addEventListener("DOMContentLoaded", () => {
-  // Si quieres apagarlo en prod, en config.js pon window.JC_DEBUG=false
   const DEBUG = window.JC_DEBUG ?? true;
   if (!DEBUG) return;
-  setTimeout(() => window.jcSupabaseSelfTest(), 800);
+
+  setTimeout(() => {
+    try {
+      const u = new URL(location.href);
+      if (u.searchParams.get("code")) return; // no interferir con callback PKCE
+      window.jcSupabaseSelfTest();
+    } catch {}
+  }, 800);
 });
