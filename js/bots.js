@@ -491,19 +491,22 @@
     return fallback;
   }
 
-  // ---------------------------
-  // Float cards (1-slot): usa el #jcFloatLayer del index
-  // ---------------------------
-  const JC_FLOAT = {
-    layerId: "jcFloatLayer",
-    cardClass: "jc-float-card",
-    showClass: "is-show",
-    visibleMs: 9500,
-    fadeMs: 220,
-    busy: false,
-    lastKey: "",
-    currentEl: null,
-  };
+// ---------------------------
+// Float cards (1-slot): usa el #jcFloatLayer del index
+// ---------------------------
+const JC_FLOAT = {
+  layerId: "jcFloatLayer",
+  cardClass: "jc-float-card",
+  showClass: "is-show",
+
+  // ⏱️ TIEMPOS
+  visibleMs: 5000,   // 👉 la tarjeta permanece visible 5s
+  fadeMs: 220,       // fade in/out (debe coincidir con CSS)
+
+  busy: false,
+  lastKey: "",
+  currentEl: null,
+};
 
   function jcGetFloatLayer() {
     return document.getElementById(JC_FLOAT.layerId);
