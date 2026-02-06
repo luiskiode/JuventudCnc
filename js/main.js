@@ -188,7 +188,10 @@
 
       if (tab === "cursos") window.initCursosView?.();
       if (tab === "notificaciones") window.initNotificacionesView?.();
-      if (tab === "miembros-activos") window.initMiembrosView?.();
+      if (tab === "miembros-activos") {
+  window.initMiembrosView?.();
+  await window.jcMiembros?.cargarMiembros?.({ force: true });
+}
 
       if (tab === "box") {
         // algunos builds montan chat grande aquí
@@ -326,6 +329,8 @@
     try { JC.resources?.init?.(); } catch (e) { console.warn("[JC] resources init error", e); }
     try { JC.community?.init?.(); } catch (e) { console.warn("[JC] community init error", e); }
     try { JC.judart?.init?.(); } catch (e) { console.warn("[JC] judart init error", e); }
+    try { window.jcMiembros?.init?.(); } catch (e) { console.warn("[JC] members init error", e); }
+
 
     bindNav();
 
