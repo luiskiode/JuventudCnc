@@ -263,10 +263,29 @@ video, .bg-video, .video-bg, #bgVideo{ z-index:0 !important; }
 .icon-btn:active{ transform:translateY(0); }
 
 /* ==========================================================
-   VISTAS / ROUTER
+   VISTAS / ROUTER (fade + slide suave)
    ========================================================== */
-.view{ display:none; width:100%; min-height:calc(100dvh - 140px); }
-.view.active{ display:block; }
+.view{
+  display:none !important;
+  width:100%;
+  min-height:calc(100dvh - 140px);
+}
+
+/* Entrada suave al activar */
+.view.active{
+  display:block !important;
+  animation: jcViewIn 180ms ease both;
+}
+
+@keyframes jcViewIn{
+  from{ opacity:0; transform:translateY(10px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+/* Accesibilidad: reduce motion */
+@media (prefers-reduced-motion: reduce){
+  .view.active{ animation:none !important; }
+}
 
 /* ==========================================================
    CARDS
