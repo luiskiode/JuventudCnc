@@ -608,8 +608,8 @@ input,select,textarea{
 /* ==========================================================
    WIDGETS (Angie / Mia / Ciro)
    ========================================================== */
-.angie-widget,.mia-widget,.ciro-widget,
-#angieWidget,#miaWidget,#ciroWidget{
+.angie-widget,.mia-widget,.ciro-widget,.alma-widget,
+#angieWidget,#miaWidget,#ciroWidget,#almaWidget{
   position:fixed;
   display:flex;
   align-items:flex-end;
@@ -621,10 +621,11 @@ input,select,textarea{
   z-index:205;
 }
 
-.angie-widget--visible,.mia-widget--visible,.ciro-widget--visible,
+.angie-widget--visible,.mia-widget--visible,.ciro-widget--visible,.alma-widget--visible,
 #angieWidget.angie-widget--visible,
 #miaWidget.mia-widget--visible,
-#ciroWidget.ciro-widget--visible{
+#ciroWidget.ciro-widget--visible,
+#almaWidget.alma-widget--visible{
   transform:translateY(0) scale(1);
   opacity:1;
   pointer-events:auto;
@@ -708,6 +709,22 @@ body[data-view="box"] #ciroWidget{
   font-size:14px;
 }
 .bot-close:hover{ color:#e5e7eb; }
+
+
+/* Alma (no tapa tabs, stack con Angie) */
+.alma-widget, #almaWidget{ left:16px; bottom:186px; z-index:208; }
+
+/* Estilo de Alma: suave/infantil */
+.alma-avatar{ background:radial-gradient(circle at 30% 25%, #fde68a, #f59e0b); }
+.alma-name{ color:#fde68a; }
+
+/* En Box: fuera widgets */
+body[data-view="box"] .alma-widget,
+body[data-view="box"] #almaWidget{
+  opacity:0 !important;
+  pointer-events:none !important;
+  transform:translateY(130%) scale(.88) !important;
+}
 
 /* ==========================================================
    CHAT — permitido solo en BOX (JS decide ON/OFF)
@@ -903,6 +920,10 @@ body:not([data-view="inicio"]) #jcFloatLayer{ display:none; }
 @media (max-width:560px){
   :root{ --jc-safe-pad: 12px; }
 
+
+    .alma-widget, #almaWidget{ left:10px; bottom:186px; }
+
+    
   .topbar-title{
     font-size:15px;
     white-space:nowrap;
