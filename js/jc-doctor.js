@@ -249,11 +249,11 @@
 
     // Assets “canary” (ajusta 2–4 rutas reales de tu app)
     const canaryAssets = [
-      "assets/angie-feliz-saludo.png",
-      "assets/mia-feliz-saludo.png",
-      "assets/ciro-feliz-saludo.png",
-      "manifest.json",
-    ];
+  "assets/angie-feliz-saludo.png",
+  "assets/mia-casual.png",
+  "assets/ciro-happy.png",
+  "manifest.json",
+];
     for (const url of canaryAssets) {
       const r = await pingAsset(url, Doctor.config.assetTimeoutMs);
       addCheck(`Asset ${url}`, r.ok, r, r.ok ? "info" : "warn");
