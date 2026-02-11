@@ -20,13 +20,13 @@
     warnings: [],
     errors: [],
     config: {
-      supabaseTimeoutMs: 3500,
-      retryInitMax: 3,
-      retryInitDelayMs: 450,
-      enableConsoleHook: true,
-      enableInitGuards: true,
-      enableLocalStorageFix: true,
-    },
+  supabaseTimeoutMs: 3500,
+  retryInitMax: 0,            // 🔥 DESACTIVA reintentos automáticos
+  retryInitDelayMs: 450,
+  enableConsoleHook: false,   // opcional
+  enableInitGuards: true,
+  enableLocalStorageFix: true,
+},
   };
 
   function log(...a) { console.log(PREFIX, ...a); }
@@ -227,7 +227,6 @@
       applyInitGuards();
       applySupabasePatch();
       applyLocalStorageFix();
-      await retryInit();
       log("Repair aplicado ✅", Repair.report());
     } catch (e) {
       Repair.errors.push(String(e?.message || e));
@@ -236,6 +235,12 @@
 
     window.JC_REPAIR = Repair;
   }
-
+const __url = new URL(location.href);
+const REPAIR_ON = __url.searchParams.get("repair") === "1";
+if (!REPAIR_ON) {
+  console.log("[JC][Repair] Desactivado (usa ?repair=1)");
+  window.JC_REPAIR = { report: () => ({ ok:false, reason:"disabled (add ?repair=1)" }) };
+  return;
+}
   applyAll();
 })();
