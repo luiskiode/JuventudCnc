@@ -249,7 +249,7 @@
 
     // Assets “canary” (ajusta 2–4 rutas reales de tu app)
     const canaryAssets = [
-  "assets/angie-happy.png",
+  "assets/angie-sonrisa-saludo.png",
   "assets/mia-casual.png",
   "assets/ciro-happy.png",
   "manifest.json",
