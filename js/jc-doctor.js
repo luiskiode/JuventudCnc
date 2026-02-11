@@ -28,11 +28,41 @@
       domReadyTimeoutMs: 6000,
       logPrefix: "[JC][Doctor]",
       requiredDomIds: [
+  // Shell / navegación
+  "drawer",
+  "closeDrawer",
+
+  // Bots (widgets reales)
   "btnBots",
-  // pon aquí los IDs reales de tu HTML:
-  "sidebar",
-  "main",
-  "viewContainer"
+  "angieWidget",
+  "angieAvatarImg",
+  "angieText",
+  "almaWidget",
+  "almaAvatarImg",
+  "almaText",
+  "ciroWidget",
+  "ciroAvatarImg",
+  "ciroText",
+
+  // Box / chat
+  "boxChatMount",
+
+  // Auth / perfil
+  "btnLogin",
+  "btnLogout",
+  "btnPerfil",
+  "btnPerfilRefresh",
+
+  // Comunidad
+  "comuGate",
+  "comuList",
+  "comuComposer",
+  "comuText",
+  "btnComuRefresh",
+
+  // Miembros
+  "miembrosList",
+  "btnMiembrosRefresh",
 ],
       requiredGlobals: [
         // Ajusta según tu arquitectura:
