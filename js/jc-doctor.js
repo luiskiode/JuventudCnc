@@ -27,12 +27,10 @@
       supabaseTimeoutMs: 3500,
       domReadyTimeoutMs: 6000,
       logPrefix: "[JC][Doctor]",
-      requiredDomIds: [
-  // Shell / navegación
+     requiredDomIds: [
   "drawer",
   "closeDrawer",
 
-  // Bots (widgets reales)
   "btnBots",
   "angieWidget",
   "angieAvatarImg",
@@ -44,23 +42,19 @@
   "ciroAvatarImg",
   "ciroText",
 
-  // Box / chat
   "boxChatMount",
 
-  // Auth / perfil
   "btnLogin",
   "btnLogout",
   "btnPerfil",
   "btnPerfilRefresh",
 
-  // Comunidad
   "comuGate",
   "comuList",
   "comuComposer",
   "comuText",
   "btnComuRefresh",
 
-  // Miembros
   "miembrosList",
   "btnMiembrosRefresh",
 ],
