@@ -1,62 +1,81 @@
-  <!DOCTYPE html>
-  <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark light" />
-    <meta name="description" content="Juventud CNC — Un espacio para crecer, servir y caminar juntos." />
-    <title>Juventud CNC</title>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="description" content="Juventud CNC — Un espacio para crecer, servir y caminar juntos." />
+  <title>Juventud CNC</title>
 
-    <!-- Build -->
-    <script>
-      window.JC_BUILD = "2026-02-02.01"; // cambia esto en cada release
-    </script>
+  <!-- ========================================================= -->
+  <!-- BUILD VERSION (CAMBIAR EN CADA RELEASE)                  -->
+  <!-- ========================================================= -->
+  <script>
+    window.JC_BUILD = "2026-02-02.02"; 
+  </script>
 
-    <!-- PWA -->
-    <link rel="manifest" href="manifest.json?v=2026-02-02.01" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1020" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0d2c7a" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="application-name" content="Juventud CNC" />
+  <!-- ========================================================= -->
+  <!-- PWA                                                       -->
+  <!-- ========================================================= -->
+  <link rel="manifest" href="manifest.json?v=2026-02-02.02" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1020" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0d2c7a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Juventud CNC" />
 
-    <!-- iOS (PWA) -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Juventud CNC" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <!-- iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Juventud CNC" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png?v=2026-02-02.02" />
 
-    <!-- Windows/Edge -->
-    <meta name="msapplication-TileColor" content="#0d2c7a" />
+  <!-- Windows -->
+  <meta name="msapplication-TileColor" content="#0d2c7a" />
 
-    <!-- Styles (solo una vez, versionado) -->
-    <link rel="stylesheet" href="styles.css?v=2026-02-02.01" />
+  <!-- ========================================================= -->
+  <!-- STYLES                                                    -->
+  <!-- ========================================================= -->
+  <link rel="stylesheet" href="styles.css?v=2026-02-02.02" />
 
-    <!-- Supabase SDK (SIN defer) -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <!-- ========================================================= -->
+  <!-- SUPABASE SDK (SIN defer — debe cargar primero)           -->
+  <!-- ========================================================= -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-    <!-- Config (SIN defer) -->
-    <script src="js/config.js?v=2026-02-02.01"></script>
+  <!-- ========================================================= -->
+  <!-- CONFIG GLOBAL (SIN defer)                                 -->
+  <!-- ========================================================= -->
+  <script src="js/config.js?v=2026-02-02.02"></script>
+  <script src="supabase-config.js?v=2026-02-02.02"></script>
 
-    <!-- Supabase client (SIN defer) -->
-    <script src="supabase-config.js?v=2026-02-02.01"></script>
+  <!-- ========================================================= -->
+  <!-- DIAGNÓSTICO Y REPARACIÓN AUTOMÁTICA                      -->
+  <!-- (cargan temprano para interceptar errores)                -->
+  <!-- ========================================================= -->
+  <script src="js/jc-doctor.js?v=2026-02-02.02"></script>
+  <script src="js/jc-repair.js?v=2026-02-02.02"></script>
 
-    <!-- App modules (DEFER) -->
-    <script defer src="js/ui.js?v=2026-02-02.01"></script>
-    <script defer src="js/auth.js?v=2026-02-02.01"></script>
-    <script defer src="js/bots.js?v=2026-02-02.01"></script>
-    <script defer src="js/events.js?v=2026-02-02.01"></script>
-    <script defer src="js/profile.js?v=2026-02-02.01"></script>
-    <script defer src="js/members.js?v=2026-02-02.01"></script>
-    <script defer src="js/community.js?v=2026-02-02.01"></script>
-    <script defer src="js/resources.js?v=2026-02-02.01"></script>
-    <script defer src="js/judart.js?v=2026-02-02.01"></script>
-    <script defer src="js/main.js?v=2026-02-02.01"></script>
-  </head>
+  <!-- ========================================================= -->
+  <!-- MÓDULOS PRINCIPALES (DEFER PARA EVITAR BLOQUEOS)         -->
+  <!-- ========================================================= -->
+  <script defer src="js/ui.js?v=2026-02-02.02"></script>
+  <script defer src="js/auth.js?v=2026-02-02.02"></script>
+  <script defer src="js/bots.js?v=2026-02-02.02"></script>
+  <script defer src="js/events.js?v=2026-02-02.02"></script>
+  <script defer src="js/profile.js?v=2026-02-02.02"></script>
+  <script defer src="js/members.js?v=2026-02-02.02"></script>
+  <script defer src="js/community.js?v=2026-02-02.02"></script>
+  <script defer src="js/resources.js?v=2026-02-02.02"></script>
+  <script defer src="js/judart.js?v=2026-02-02.02"></script>
+  <script defer src="js/main.js?v=2026-02-02.02"></script>
 
-  <!-- IMPORTANTÍSIMO:
-      - data-view se usa en tu styles.css para mostrar/ocultar chat y floats.
-      - Si NO existe, el CSS los esconde siempre. -->
-  <body class="app-shell" data-view="inicio" data-theme="mix">
+</head>
+
+<!-- IMPORTANTE:
+     - data-view controla chat, bots y floats
+     - data-theme controla paletas
+-->
+<body class="app-shell" data-view="inicio" data-theme="mix">
 
     <!-- Fondo global (siempre detrás de toda la app) -->
     <div id="jcAppBgLayer"></div>
