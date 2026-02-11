@@ -28,13 +28,12 @@
       domReadyTimeoutMs: 6000,
       logPrefix: "[JC][Doctor]",
       requiredDomIds: [
-        // Ajusta esta lista a tus IDs reales críticos:
-        "app",
-        "views",
-        "btnBots",
-        "botsDock",
-        "chatDock",
-      ],
+  "btnBots",
+  // pon aquí los IDs reales de tu HTML:
+  "sidebar",
+  "main",
+  "viewContainer"
+],
       requiredGlobals: [
         // Ajusta según tu arquitectura:
         "JC",

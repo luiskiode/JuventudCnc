@@ -4,10 +4,14 @@
 //
 // ✅ Cliente único e idempotente
 // ✅ window.sb / window.supabaseClient
+// ✅ window.JC.supabase (FIX CRÍTICO para Doctor/Repair y módulos)
 // ✅ Storage robusto (fallback si localStorage falla)
-// ✅ FLOW IMPLICIT (más estable en GitHub Pages/PWA para magic links)
+// ✅ FLOW IMPLICIT (estable en GitHub Pages/PWA para magic links)
 // ✅ detectSessionInUrl=true (captura tokens del link automáticamente)
 // ✅ Self-test NO corre cuando vienes con ?code= o #access_token
+//
+// Notas:
+// - Si vienes de PKCE -> implicit, usa jcSupabaseHardResetAuth() una vez y recarga.
 
 (() => {
   "use strict";
@@ -52,30 +56,30 @@
   })();
 
   const canUseLS = hasLocalStorage();
-  const storage = canUseLS
-    ? {
-        getItem: (key) => {
-          try { return window.localStorage.getItem(key); } catch { return null; }
-        },
-        setItem: (key, value) => {
-          try { window.localStorage.setItem(key, value); }
-          catch (e) {
-            try { memStore.setItem(key, value); } catch {}
-            console.warn("[Supabase] localStorage setItem falló:", e?.name || e);
-          }
-        },
-        removeItem: (key) => {
-          try { window.localStorage.removeItem(key); }
-          catch { try { memStore.removeItem(key); } catch {} }
-        },
-      }
-    : memStore;
+  const storage =
+    canUseLS
+      ? {
+          getItem: (key) => {
+            try { return window.localStorage.getItem(key); } catch { return null; }
+          },
+          setItem: (key, value) => {
+            try {
+              window.localStorage.setItem(key, value);
+            } catch (e) {
+              try { memStore.setItem(key, value); } catch {}
+              console.warn("[Supabase] localStorage setItem falló:", e?.name || e);
+            }
+          },
+          removeItem: (key) => {
+            try { window.localStorage.removeItem(key); }
+            catch { try { memStore.removeItem(key); } catch {} }
+          },
+        }
+      : memStore;
 
   // ============================================================
   // Cliente único (idempotente)
   // ============================================================
-  // ⚠️ IMPORTANTE: si estabas usando PKCE antes, conviene limpiar storage al hacer el switch.
-  // Te dejo helper abajo.
   if (!window.supabaseClient) {
     window.supabaseClient = SDK.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
@@ -92,9 +96,15 @@
     });
   }
 
+  // Aliases comunes
   window.sb = window.supabaseClient;
   window.supabaseSDK = SDK;
 
+  // ✅ FIX CRÍTICO: expone el cliente donde tus módulos/Doctor lo esperan
+  window.JC = window.JC || {};
+  window.JC.supabase = window.supabaseClient;
+
+  // Metadata útil de debug
   window.__JC_SUPABASE__ = {
     url: SUPABASE_URL,
     hasClient: !!window.supabaseClient,
@@ -119,16 +129,26 @@
   window.jcSupabaseHardResetAuth = async function () {
     try { await window.sb?.auth?.signOut?.(); } catch {}
     try { window.localStorage.removeItem(AUTH_STORAGE_KEY); } catch {}
-    // Limpia restos comunes (por si quedaron de builds anteriores)
+
+    // Limpieza conservadora (NO borra a ciegas)
     try {
-      Object.keys(localStorage || {}).forEach((k) => {
-        if (k.includes("supabase") || k.includes("sb-") || k.includes("pkce") || k.includes("code-verifier")) {
-          // no borres todo a ciegas, solo lo relevante
-          // si esto te preocupa, comenta este bloque
-          // localStorage.removeItem(k);
-        }
-      });
+      const ls = window.localStorage;
+      if (ls) {
+        Object.keys(ls).forEach((k) => {
+          // Solo candidatos claros, pero por defecto NO borramos automáticamente
+          if (
+            k.includes("supabase") ||
+            k.includes("sb-") ||
+            k.includes("pkce") ||
+            k.includes("code-verifier")
+          ) {
+            // Si algún día quieres borrar, descomenta:
+            // ls.removeItem(k);
+          }
+        });
+      }
     } catch {}
+
     console.log("[JC] Supabase auth reset OK. Recarga la página.");
     return true;
   };
@@ -148,8 +168,11 @@ window.jcSupabaseSelfTest = async function () {
       return { ok: false, step: "client" };
     }
 
+    // Preferimos JC.supabase si existe
+    const client = window.JC?.supabase || window.sb;
+
     console.log("[JC] Supabase: probando auth.getSession()…");
-    const s = await window.sb.auth.getSession();
+    const s = await client.auth.getSession();
     const has = !!s?.data?.session;
     console.log("[JC] Session:", has ? "OK (logueado)" : "No session");
     return { ok: true, step: "auth", session: has ? "yes" : "no" };
