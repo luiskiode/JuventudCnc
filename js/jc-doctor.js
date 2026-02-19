@@ -1,13 +1,25 @@
 /* js/jc-doctor.js
    Juventud CNC — Doctor (verifica/analiza/diagnostica)
-   - No rompe la app si algo falta
-   - Genera reporte + overlay opcional
+   ✅ No rompe la app si algo falta
+   ✅ Genera reporte + overlay opcional (por defecto: OFF / silencioso)
+   ✅ Trabaja “detrás de todo”: no inyecta UI a menos que lo pidas
 */
 (() => {
   "use strict";
 
-  const BUILD = (window.JC_BUILD || window.__JC_BUILD || "unknown") + "";
+  const BUILD = String(window.JC_BUILD || window.__JC_BUILD || "unknown");
   const START_TS = Date.now();
+
+  // ------------------------------------------------------------
+  // Config de ejecución
+  // - Por defecto: silencioso (sin overlay)
+  // - Puedes forzar overlay así en index ANTES de cargar jc-doctor.js:
+  //   <script>window.JC_DOCTOR_OVERLAY = true;</script>
+  // - O silenciar explícito:
+  //   <script>window.JC_DOCTOR_SILENT = true;</script>
+  // ------------------------------------------------------------
+  const WANT_OVERLAY =
+    window.JC_DOCTOR_OVERLAY === true && window.JC_DOCTOR_SILENT !== true;
 
   const Doctor = {
     build: BUILD,
@@ -22,44 +34,64 @@
       duplicateInits: 0,
     },
     config: {
-      overlay: true,     // ponlo en false si no quieres UI
+      overlay: WANT_OVERLAY, // ✅ por defecto OFF
       assetTimeoutMs: 2500,
       supabaseTimeoutMs: 3500,
       domReadyTimeoutMs: 6000,
       logPrefix: "[JC][Doctor]",
-     requiredDomIds: [
-  "drawer",
-  "closeDrawer",
 
-  "btnBots",
-  "angieWidget",
-  "angieAvatarImg",
-  "angieText",
-  "almaWidget",
-  "almaAvatarImg",
-  "almaText",
-  "ciroWidget",
-  "ciroAvatarImg",
-  "ciroText",
+      // IDs que realmente deben existir según tu index actual
+      requiredDomIds: [
+        // Layout / shell
+        "drawer",
+        "closeDrawer",
+        "overlay",
+        "openDrawer",
 
-  "boxChatMount",
+        // Topbar
+        "btnBots",
+        "btnLogin",
+        "btnPerfil",
 
-  "btnLogin",
-  "btnLogout",
-  "btnPerfil",
-  "btnPerfilRefresh",
+        // Floats + fondo
+        "jcFloatLayer",
+        "jcAppBgLayer",
+        "jcAppBgOverlay",
 
-  "comuGate",
-  "comuList",
-  "comuComposer",
-  "comuText",
-  "btnComuRefresh",
+        // Chat (vive dentro de la vista box)
+        "jcChat",
+        "jcChatBody",
+        "jcChatToggle",
 
-  "miembrosList",
-  "btnMiembrosRefresh",
-],
+        // Widgets bots
+        "angieWidget",
+        "angieAvatarImg",
+        "angieText",
+        "miaWidget",
+        "miaAvatarImg",
+        "miaText",
+        "ciroWidget",
+        "ciroAvatarImg",
+        "ciroText",
+        "almaWidget",
+        "almaAvatarImg",
+        "almaText",
+
+        // Comunidad
+        "comuGate",
+        "comuList",
+        "comuComposer",
+        "btnComuRefresh",
+
+        // Miembros
+        "miembrosList",
+        "btnMiembrosRefresh",
+
+        // Perfil
+        "btnPerfilRefresh",
+      ],
+
       requiredGlobals: [
-        // Ajusta según tu arquitectura:
         "JC",
       ],
     },
@@ -92,7 +124,7 @@
   });
 
   // ----------------------------
-  // Overlay UI
+  // Overlay UI (OPCIONAL)
   // ----------------------------
   let overlayEl = null;
 
@@ -106,7 +138,7 @@
       "position:fixed",
       "right:12px",
       "bottom:12px",
-      "z-index:999999",
+      "z-index:1",            // ✅ “detrás”: no invade UI (y encima no se muestra si overlay=false)
       "width:min(420px, calc(100vw - 24px))",
       "max-height:55vh",
       "overflow:auto",
@@ -117,6 +149,7 @@
       "font:12px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial",
       "box-shadow:0 10px 30px rgba(0,0,0,.35)",
       "backdrop-filter: blur(8px)",
+      "pointer-events:auto",
     ].join(";");
 
     overlayEl.innerHTML = `
@@ -135,7 +168,6 @@
     `;
 
     document.documentElement.appendChild(overlayEl);
-
     overlayEl.querySelector("#jcDocBuild").textContent = Doctor.build;
 
     overlayEl.querySelector("#jcDocBtnHide").onclick = () => {
@@ -147,7 +179,7 @@
         const txt = JSON.stringify(Doctor.report(), null, 2);
         await navigator.clipboard.writeText(txt);
         toast("Reporte copiado ✅");
-      } catch (e) {
+      } catch {
         toast("No se pudo copiar ❌");
       }
     };
@@ -156,6 +188,7 @@
   function toast(msg) {
     if (!overlayEl) return;
     const s = overlayEl.querySelector("#jcDocStatus");
+    if (!s) return;
     s.textContent = msg;
     setTimeout(() => { if (s.textContent === msg) s.textContent = ""; }, 1600);
   }
@@ -163,6 +196,7 @@
   function renderOverlay() {
     if (!overlayEl) return;
     const pre = overlayEl.querySelector("#jcDocPre");
+    if (!pre) return;
     pre.textContent = JSON.stringify(Doctor.report(), null, 2);
   }
 
@@ -197,19 +231,27 @@
 
   function domHasId(id) { return !!document.getElementById(id); }
 
+  function getSupabaseClient() {
+    // Tu app suele exponer sb / supabaseClient
+    const sb = window.sb || window.supabaseClient || window.JC?.supabase || null;
+    return sb || null;
+  }
+
   // ----------------------------
   // Checks principales
   // ----------------------------
   async function runChecks() {
+    // ✅ Overlay solo si lo pides explícitamente
     ensureOverlay();
 
     // Build / versión
     addCheck("BUILD definido", Doctor.build !== "unknown", Doctor.build, Doctor.build !== "unknown" ? "info" : "warn");
 
     // DOM ready (por si hay carga lenta)
-    const domReady = (document.readyState === "interactive" || document.readyState === "complete")
-      ? Promise.resolve(true)
-      : new Promise((res) => document.addEventListener("DOMContentLoaded", () => res(true), { once: true }));
+    const domReady =
+      (document.readyState === "interactive" || document.readyState === "complete")
+        ? Promise.resolve(true)
+        : new Promise((res) => document.addEventListener("DOMContentLoaded", () => res(true), { once: true }));
 
     try {
       await withTimeout(domReady, Doctor.config.domReadyTimeoutMs, "DOM Ready");
@@ -225,29 +267,24 @@
 
     // DOM IDs críticos
     for (const id of Doctor.config.requiredDomIds) {
-      addCheck(`DOM #${id}`, domHasId(id), domHasId(id) ? "OK" : "No existe", domHasId(id) ? "info" : "warn");
+      const ok = domHasId(id);
+      addCheck(`DOM #${id}`, ok, ok ? "OK" : "No existe", ok ? "info" : "warn");
     }
 
     // Duplicidad de init (banderas comunes)
-    const flags = [
-      "__JC_MAIN_INIT_DONE",
-      "__JC_BOTS_INIT_DONE",
-      "__JC_INIT_DONE",
-      "__JC_APP_INIT",
-    ];
+    const flags = ["__JC_MAIN_INIT_DONE", "__JC_BOTS_INIT_DONE", "__JC_INIT_DONE", "__JC_APP_INIT"];
     let found = 0;
     for (const f of flags) if (window[f]) found++;
     if (found >= 2) {
       Doctor.stats.duplicateInits++;
-      addCheck("Posible doble init (flags)", false, flags.filter(f => window[f]), "warn");
+      addCheck("Posible doble init (flags)", false, flags.filter((f) => window[f]), "warn");
     } else {
       addCheck("Doble init (flags)", true, "No evidente");
     }
 
     // Supabase
-    const hasJC = !!window.JC;
-    const sb = hasJC ? window.JC.supabase : null;
-    addCheck("Supabase cliente en JC.supabase", !!sb, sb ? "OK" : "No encontrado", sb ? "info" : "error");
+    const sb = getSupabaseClient();
+    addCheck("Supabase client detectado", !!sb, sb ? "OK" : "No encontrado", sb ? "info" : "warn");
 
     if (sb?.auth?.getSession) {
       try {
@@ -271,13 +308,14 @@
       }
     }
 
-    // Assets “canary” (ajusta 2–4 rutas reales de tu app)
+    // Assets “canary” (rutas reales según tu index)
     const canaryAssets = [
-  "assets/angie-sonrisa-saludo.png",
-  "assets/mia-casual.png",
-  "assets/ciro-happy.png",
-  "manifest.json",
-];
+      "assets/angie-sonrisa-saludo.png",
+      "assets/mia-casual-wink.png",
+      "assets/ciro-happy.png",
+      "assets/alma-agradecida.png",
+      "manifest.json",
+    ];
     for (const url of canaryAssets) {
       const r = await pingAsset(url, Doctor.config.assetTimeoutMs);
       addCheck(`Asset ${url}`, r.ok, r, r.ok ? "info" : "warn");

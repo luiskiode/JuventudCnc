@@ -948,3 +948,16 @@ body:not([data-view="inicio"]) #jcFloatLayer{ display:none; }
 
 #btnBots.is-on{ filter:brightness(1.15); }
 #btnBots.is-on{ box-shadow:0 0 0 3px rgba(56,189,248,.18); }
+
+/* =========================================
+   JC Doctor oculto (modo silencioso)
+   ========================================= */
+#jcDoctorPanel,
+#jcDoctorBadge,
+.jc-doctor-panel,
+.jc-doctor-badge {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
