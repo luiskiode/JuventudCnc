@@ -74,8 +74,8 @@
 
   /* Fondos por tema */
   --jc-bg-default: url("assets/bg-floral.webp");
-  --jc-bg-chicos:  url("assets/bg-blue.webp");
-  --jc-bg-chicas:  url("assets/bg-pink.webp");
+  --jc-bg-chicos:  url("assets/bg-floral.webp");
+  --jc-bg-chicas:  url("assets/bg-floral.webp");
   --jc-bg-overlay: rgba(2,6,23,.55);
 
   /* Layout (una sola fuente de verdad) */
