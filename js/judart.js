@@ -193,21 +193,33 @@
     };
   }
 
-  async function fetchPosts() {
-    const sb = getSB();
-    if (!sb) throw new Error("Supabase no disponible");
+async function fetchPosts() {
+  const sb = getSB();
+  if (!sb) throw new Error("Supabase no disponible");
 
-    const table = await detectTableOnce();
+  const table = await detectTableOnce();
 
-    // Pedimos * para ser tolerantes con esquemas
-    const q = await sb.from(table).select("*").order("created_at", { ascending: false }).limit(200);
-    if (q.error) throw q.error;
+  // ✅ En celular baja el límite para no matar memoria/render (videos/iframes)
+  const isMobile =
+    (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(max-width: 560px)").matches) ||
+    (typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || ""));
 
-    const rows = (q.data || []).map(normalizeRow);
-    st.rows = rows;
-    st.cacheTs = Date.now();
-    return rows;
-  }
+  const limit = isMobile ? 60 : 200;
+
+  // Pedimos * para ser tolerantes con esquemas
+  const q = await sb
+    .from(table)
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (q.error) throw q.error;
+
+  const rows = (q.data || []).map(normalizeRow);
+  st.rows = rows;
+  st.cacheTs = Date.now();
+  return rows;
+}
 
   // Inserción tolerante: intentamos payloads con columnas alternativas
   async function insertPost({ user, titulo, descripcion, media_type, media_url, mime }) {
@@ -344,45 +356,85 @@
     }
   }
 
-  function renderMedia(row) {
-    const t = (row.media_type || "image").toLowerCase();
-    const url = row.media_url;
+function renderMediaList(row) {
+  const t = (row.media_type || "image").toLowerCase();
+  const url = row.media_url;
 
-    if (t === "video" && url) {
-      const type = row.mime || "video/mp4";
-      return `
-        <video controls playsinline preload="metadata"
-               style="width:100%; border-radius:14px; background:#000; display:block">
-          <source src="${safeText(url)}" type="${safeText(type)}">
-        </video>
-      `;
-    }
-
-    if (t === "image" && url) {
-      return `
-        <img src="${safeText(url)}" alt="Arte"
-             style="width:100%; border-radius:14px; display:block; object-fit:cover" loading="lazy" />
-      `;
-    }
-
-    if ((t === "link" || t === "url") && url) {
-      if (isYouTube(url)) {
-        const embed = toYouTubeEmbed(url);
-        return `
-          <div style="position:relative; width:100%; padding-top:56.25%; border-radius:14px; overflow:hidden; background:#000">
-            <iframe src="${safeText(embed)}"
-                    title="Video"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen
-                    style="position:absolute; inset:0; width:100%; height:100%; border:0"></iframe>
-          </div>
-        `;
-      }
-      return `<a class="link" href="${safeText(url)}" target="_blank" rel="noopener noreferrer">Abrir link</a>`;
-    }
-
-    return `<div class="muted small">Sin media</div>`;
+  // ✅ LISTA: NUNCA <video> (evita crash en celular)
+  if (t === "video" && url) {
+    return `
+      <div class="muted small" style="padding:12px;border-radius:14px;background:rgba(0,0,0,.25)">
+        🎬 Video listo. Toca <strong>Ver</strong> para abrirlo.
+      </div>
+    `;
   }
+
+  // Imagen sí (liviana)
+  if (t === "image" && url) {
+    return `
+      <img src="${safeText(url)}" alt="Arte"
+           style="width:100%; border-radius:14px; display:block; object-fit:cover"
+           loading="lazy" />
+    `;
+  }
+
+  // Link igual que antes (YouTube embed es pesado; mejor también en modal, pero lo dejamos)
+  if ((t === "link" || t === "url") && url) {
+    if (isYouTube(url)) {
+      return `
+        <div class="muted small" style="padding:12px;border-radius:14px;background:rgba(0,0,0,.25)">
+          ▶️ YouTube. Toca <strong>Ver</strong> para abrir.
+        </div>
+      `;
+    }
+    return `<a class="link" href="${safeText(url)}" target="_blank" rel="noopener noreferrer">Abrir link</a>`;
+  }
+
+  return `<div class="muted small">Sin media</div>`;
+}
+
+function renderMediaModal(row) {
+  const t = (row.media_type || "image").toLowerCase();
+  const url = row.media_url;
+
+  if (t === "video" && url) {
+    const type = row.mime || "video/mp4";
+    // ✅ cache-bust para evitar 304/caché raro en Android
+    const bust = url + (url.includes("?") ? "&" : "?") + "t=" + Date.now();
+    return `
+      <video controls playsinline preload="metadata"
+             style="width:100%; border-radius:14px; background:#000; display:block">
+        <source src="${safeText(bust)}" type="${safeText(type)}">
+      </video>
+    `;
+  }
+
+  if (t === "image" && url) {
+    return `
+      <img src="${safeText(url)}" alt="Arte"
+           style="width:100%; border-radius:14px; display:block; object-fit:cover" loading="lazy" />
+    `;
+  }
+
+  if ((t === "link" || t === "url") && url) {
+    if (isYouTube(url)) {
+      const embed = toYouTubeEmbed(url);
+      return `
+        <div style="position:relative; width:100%; padding-top:56.25%; border-radius:14px; overflow:hidden; background:#000">
+          <iframe src="${safeText(embed)}"
+                  title="Video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                  style="position:absolute; inset:0; width:100%; height:100%; border:0"></iframe>
+        </div>
+      `;
+    }
+    return `<a class="link" href="${safeText(url)}" target="_blank" rel="noopener noreferrer">Abrir link</a>`;
+  }
+
+  return `<div class="muted small">Sin media</div>`;
+}
+
 
   function card(row) {
     const when = row.created_at ? new Date(row.created_at).toLocaleString("es-PE") : "";
@@ -405,7 +457,7 @@
           <button class="btn small ghost" type="button" data-jud-open="${safeText(row.id)}">Ver</button>
         </div>
 
-        <div style="margin-top:10px">${renderMedia(row)}</div>
+        <div style="margin-top:10px">${renderMediaList(row)}</div>
 
         ${desc ? `<div class="muted small" style="margin-top:10px; white-space:pre-wrap">${desc}</div>` : ``}
       </article>
@@ -478,7 +530,7 @@
       const when = row.created_at ? new Date(row.created_at).toLocaleString("es-PE") : "";
       r.modalMeta.textContent = when ? `Publicado: ${when}` : "—";
     }
-    if (r.modalMedia) r.modalMedia.innerHTML = renderMedia(row);
+    if (r.modalMedia) r.modalMedia.innerHTML = renderMediaModal(row);
     if (r.modalDesc) r.modalDesc.textContent = row.descripcion || "";
 
     r.modal.style.display = "flex";
