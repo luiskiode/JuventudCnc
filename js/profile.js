@@ -191,7 +191,7 @@
     // NO uses "" porque se vuelve la URL del sitio
     r.avatar.removeAttribute("src");
     // opcional: placeholder si tienes uno
-    r.avatar.src = "assets/avatar-default.png";
+    r.avatar.src = "assets/icon-192.png";
   }
 }
 
