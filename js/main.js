@@ -269,10 +269,10 @@
     await runViewHooks(tab);
 
     // Bots según vista
+// Bots según vista (nombres reales del módulo bots.js)
 try {
-  JC.bots?.botsSegunVista?.(tab);
-  JC.bots?.segunVista?.(tab); // si algún build viejo lo tenía
-  window.botsSegunVista?.(tab); // si existe global por compat
+  JC.bots?.botsSegunVista?.(tab);   // ✅ actualiza JC.state.activeTab dentro de bots.js
+  JC.emit?.("tab:changed", { tab }); // ✅ (opcional) por si otros módulos escuchan
 } catch {}
 
     // Focus accesible al main (sin romper scroll)

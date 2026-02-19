@@ -945,3 +945,6 @@ body:not([data-view="inicio"]) #jcFloatLayer{ display:none; }
   .event-meta{ white-space:normal; text-align:left; }
   .event-search-row{ flex-direction:column; align-items:stretch; }
 }
+
+#btnBots.is-on{ filter:brightness(1.15); }
+#btnBots.is-on{ box-shadow:0 0 0 3px rgba(56,189,248,.18); }
