@@ -587,7 +587,7 @@
     const inBox = (JC.state.activeTab || "") === "box";
 
     const show = enabled && inBox;
-    chat.style.display = show ? "block" : "none";
+    chat.style.display = show ? "flex" : "none";
     chat.setAttribute("aria-hidden", show ? "false" : "true");
 
     const btn = btnBotsToggle();
@@ -598,20 +598,12 @@
     }
   }
 
-  function placeChatForTab(tab) {
-    const chat = elChat();
-    if (!chat) return;
-
-    const mount = elBoxMount();
-    if (tab === "box" && mount) {
-      if (chat.parentElement !== mount) mount.appendChild(chat);
-      st.mountedInBox = true;
-      setCollapsed(false);
-    } else {
-      if (chat.parentElement !== document.body) document.body.appendChild(chat);
-      st.mountedInBox = false;
-    }
-  }
+function placeChatForTab(tab) {
+  // No movemos el chat en el DOM.
+  // El chat vive en la vista "box" (index.html) y solo lo mostramos/ocultamos por CSS/JS.
+  st.mountedInBox = (String(tab || "") === "box");
+  if (st.mountedInBox && JC.state.botsEnabled) setCollapsed(false);
+}
 
   function setCollapsed(collapsed) {
     const chat = elChat();

@@ -1,0 +1,359 @@
+// js/jc-health.js
+// Juventud CNC — Health Monitor (shadow mode)
+// ✅ Observa + diagnostica + repara lo reparable
+// ✅ No recarga la página
+// ✅ Rate-limit / backoff para evitar loops
+// ✅ Hook de errores globales
+// ✅ Intenta “curar” fallos típicos: supabase, módulos, DOM anchors, assets fallback, SW update notify
+
+(() => {
+  "use strict";
+
+  const BUILD = String(window.JC_BUILD || "unknown");
+  const PREFIX = "[JC][Health]";
+
+  // =========================
+  // Config (ajústalo si quieres)
+  // =========================
+  const CFG = {
+    enabled: true,
+    silent: true,                 // true = no UI
+    tickMs: 2500,                 // frecuencia base del monitor
+    maxRepairsPerSession: 10,     // evita loops de reparación
+    maxSameRepair: 3,             // evita insistir con lo mismo
+    backoffBaseMs: 900,
+    supabaseTimeoutMs: 3500,
+    assetTimeoutMs: 2200,
+    allowSoftPatch: true,         // parches NO destructivos
+    allowStorageCleanup: true,    // solo keys corruptas
+    swNotify: true,               // notifica update (no recarga)
+    // Checks DOM críticos (usa tus IDs reales)
+    domCritical: [
+      "main",
+      "drawer",
+      "btnBots",
+      "angieWidget",
+      "almaWidget",
+      "ciroWidget",
+      "boxChatMount",
+      "btnLogin",
+      "btnLogout",
+      "comuGate",
+      "comuList",
+      "miembrosList",
+    ],
+    // Canary assets (reales)
+    canaryAssets: [
+      "assets/angie-sonrisa-saludo.png",
+      "assets/mia-casual.png",
+      "assets/ciro-happy.png",
+      "manifest.json",
+    ],
+  };
+
+  // =========================
+  // Estado interno
+  // =========================
+  const S = {
+    startedAt: Date.now(),
+    ticks: 0,
+    repairs: 0,
+    repairsByKey: Object.create(null),
+    lastError: null,
+    lastSupabaseOk: null,
+    lastDomOk: null,
+    lastAssetsOk: null,
+    pausedUntil: 0,
+  };
+
+  function log(...a) { if (!CFG.silent) console.log(PREFIX, ...a); }
+  function warn(...a) { if (!CFG.silent) console.warn(PREFIX, ...a); }
+  function now() { return Date.now(); }
+
+  // =========================
+  // Utilidades
+  // =========================
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function withTimeout(promise, ms, label) {
+    let t;
+    const timeout = new Promise((_, rej) => {
+      t = setTimeout(() => rej(new Error(`Timeout ${ms}ms ${label || ""}`)), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(t));
+  }
+
+  async function ping(url, timeoutMs) {
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), timeoutMs);
+      const res = await fetch(url, { method: "GET", cache: "no-store", signal: controller.signal });
+      clearTimeout(t);
+      return { ok: res.ok, status: res.status };
+    } catch (e) {
+      return { ok: false, status: 0, error: String(e?.message || e) };
+    }
+  }
+
+  function domHas(id) { return !!document.getElementById(id); }
+
+  function canRepair(key) {
+    if (S.repairs >= CFG.maxRepairsPerSession) return false;
+    const n = S.repairsByKey[key] || 0;
+    return n < CFG.maxSameRepair;
+  }
+
+  function markRepair(key) {
+    S.repairs++;
+    S.repairsByKey[key] = (S.repairsByKey[key] || 0) + 1;
+  }
+
+  function backoff(key) {
+    const n = S.repairsByKey[key] || 0;
+    const ms = CFG.backoffBaseMs * Math.max(1, n);
+    S.pausedUntil = now() + ms;
+    warn("Backoff", key, ms + "ms");
+  }
+
+  // =========================
+  // Captura errores globales (sin romper)
+  // =========================
+  window.addEventListener("error", (e) => {
+    S.lastError = {
+      type: "error",
+      msg: e?.message,
+      file: e?.filename,
+      line: e?.lineno,
+    };
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    S.lastError = {
+      type: "unhandledrejection",
+      msg: String(e?.reason?.message || e?.reason || "unknown"),
+    };
+  });
+
+  // =========================
+  // Reparaciones seguras
+  // =========================
+
+  // 1) Asegurar JC.supabase (bridge)
+  function ensureJCSupabase() {
+    if (!CFG.allowSoftPatch) return { ok: true, skipped: true };
+
+    window.JC = window.JC || {};
+    // Si ya existe, OK
+    if (window.JC.supabase) return { ok: true };
+
+    // Intentar puentes comunes
+    const candidate = window.supabaseClient || window.sb || null;
+    if (candidate) {
+      window.JC.supabase = candidate;
+      return { ok: true, bridgedFrom: candidate === window.sb ? "sb" : "supabaseClient" };
+    }
+    return { ok: false };
+  }
+
+  // 2) Storage: limpiar keys corruptas (solo si detectamos corrupción)
+  function cleanupStorageIfCorrupt() {
+    if (!CFG.allowStorageCleanup) return { ok: true, skipped: true };
+
+    const keys = ["jc_bg_main_dataurl", "jc_theme", "jc_user_profile"];
+    let fixed = 0;
+
+    try {
+      for (const k of keys) {
+        const v = localStorage.getItem(k);
+        if (!v) continue;
+
+        if ((k.includes("theme") || k.includes("profile")) && (v.trim().startsWith("{") || v.trim().startsWith("["))) {
+          try { JSON.parse(v); }
+          catch { localStorage.removeItem(k); fixed++; }
+        }
+
+        if (k.includes("bg") && typeof v === "string") {
+          const ok = v.startsWith("data:image/") && v.length > 200;
+          if (!ok) { localStorage.removeItem(k); fixed++; }
+        }
+      }
+      return { ok: true, fixed };
+    } catch (e) {
+      return { ok: false, error: String(e?.message || e) };
+    }
+  }
+
+  // 3) Reintento *NO invasivo* de inicialización (solo si existe un init explícito)
+  //    IMPORTANTE: NO llama 20 veces, y nunca en bucle.
+  async function nudgeInitOnce() {
+    if (!CFG.allowSoftPatch) return { ok: true, skipped: true };
+    if (!canRepair("nudgeInit")) return { ok: false, blocked: true };
+
+    // Preferimos inicializadores explícitos si existen
+    const initFns = [
+      window?.JC?.init,
+      window?.JC?.mainInit,
+      window?.JC?.bots?.init,
+    ].filter(fn => typeof fn === "function");
+
+    if (!initFns.length) return { ok: true, nothing: true };
+
+    markRepair("nudgeInit");
+    try {
+      // Ejecuta una sola vez (y con try/catch)
+      for (const fn of initFns) {
+        try { fn(); } catch {}
+      }
+      return { ok: true, ran: initFns.length };
+    } catch (e) {
+      return { ok: false, error: String(e?.message || e) };
+    }
+  }
+
+  // 4) Assets fallback (solo reporta; no “inventa” archivos)
+  async function checkAssets() {
+    const results = [];
+    for (const a of CFG.canaryAssets) results.push({ a, ...(await ping(a, CFG.assetTimeoutMs)) });
+    return results;
+  }
+
+  // 5) Supabase session check (no login, no reload)
+  async function checkSupabase() {
+    const client = window?.JC?.supabase;
+    if (!client?.auth?.getSession) return { ok: false, reason: "no-client" };
+    try {
+      const r = await withTimeout(client.auth.getSession(), CFG.supabaseTimeoutMs, "getSession");
+      return { ok: true, hasSession: !!r?.data?.session };
+    } catch (e) {
+      return { ok: false, error: String(e?.message || e) };
+    }
+  }
+
+  // 6) Service Worker: notificar update (no recargar)
+  async function swUpdateNotify() {
+    if (!CFG.swNotify) return { ok: true, skipped: true };
+    if (!("serviceWorker" in navigator)) return { ok: true, skipped: true };
+
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) return { ok: true, none: true };
+
+      // Si hay waiting, hay update listo
+      if (reg.waiting && !window.__JC_SW_UPDATE_TOASTED) {
+        window.__JC_SW_UPDATE_TOASTED = true;
+        console.warn("[JC][SW] Hay una actualización lista. Puedes recargar cuando quieras.");
+        // Si tienes UI propia, aquí disparas un banner.
+      }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: String(e?.message || e) };
+    }
+  }
+
+  // =========================
+  // TICK: Check -> Repair -> Verify
+  // =========================
+  async function tick() {
+    if (!CFG.enabled) return;
+    if (now() < S.pausedUntil) return;
+
+    S.ticks++;
+
+    // 1) DOM critical
+    const domMissing = CFG.domCritical.filter(id => !domHas(id));
+    const domOk = domMissing.length === 0;
+    S.lastDomOk = domOk;
+
+    // 2) Supabase bridge
+    const bridge = ensureJCSupabase();
+    if (!bridge.ok && canRepair("bridgeSupabase")) {
+      markRepair("bridgeSupabase");
+      backoff("bridgeSupabase");
+    }
+
+    // 3) Supabase check
+    const sb = await checkSupabase();
+    S.lastSupabaseOk = sb.ok;
+
+    // 4) Assets check (más liviano: cada 3 ticks)
+    let assetsOk = S.lastAssetsOk;
+    if (S.ticks % 3 === 1) {
+      const assets = await checkAssets();
+      assetsOk = assets.every(x => x.ok);
+      S.lastAssetsOk = assetsOk;
+
+      // si falla un asset, no intentamos “arreglar” automático (solo reportamos)
+      if (!assetsOk) warn("Assets con fallo:", assets.filter(x => !x.ok));
+    }
+
+    // 5) SW notify (no reload)
+    await swUpdateNotify();
+
+    // 6) Reparaciones condicionales (solo si detecta estado malo)
+    //    - Si falta supabase o supabase falla
+    //    - Si faltan nodos críticos de DOM (posible init incompleto)
+    //    - Si hubo error global reciente
+    const needsHelp =
+      !sb.ok ||
+      !domOk ||
+      !!S.lastError;
+
+    if (needsHelp) {
+      // Limpieza suave de storage si hay corrupción
+      if (canRepair("storageCleanup")) {
+        const r = cleanupStorageIfCorrupt();
+        if (r?.fixed > 0) { markRepair("storageCleanup"); backoff("storageCleanup"); }
+      }
+
+      // Un “empujón” al init (UNA vez, rate-limited)
+      if (canRepair("nudgeInit")) {
+        const r = await nudgeInitOnce();
+        if (!r.ok) { backoff("nudgeInit"); }
+      }
+
+      // Limpia el último error para no “perseguirlo” para siempre
+      S.lastError = null;
+    }
+
+    // Debug minimal (solo si no es silent)
+    log("tick", {
+      ticks: S.ticks,
+      repairs: S.repairs,
+      domOk,
+      domMissing,
+      supabase: sb,
+      assetsOk,
+    });
+  }
+
+  // =========================
+  // API pública (por si quieres ver estado)
+  // =========================
+  window.JC_HEALTH = {
+    build: BUILD,
+    config: CFG,
+    state: S,
+    report: () => ({
+      build: BUILD,
+      uptimeMs: now() - S.startedAt,
+      ticks: S.ticks,
+      repairs: S.repairs,
+      repairsByKey: S.repairsByKey,
+      lastSupabaseOk: S.lastSupabaseOk,
+      lastDomOk: S.lastDomOk,
+      lastAssetsOk: S.lastAssetsOk,
+      pausedUntil: S.pausedUntil,
+    }),
+    pause: (ms = 10000) => { S.pausedUntil = now() + ms; return true; },
+    resume: () => { S.pausedUntil = 0; return true; },
+    tick,
+  };
+
+  // =========================
+  // Loop
+  // =========================
+  setInterval(() => { tick().catch(() => {}); }, CFG.tickMs);
+  // primer tick “rápido”
+  setTimeout(() => { tick().catch(() => {}); }, 350);
+
+  console.log("[JC] Health monitor ON", { build: BUILD });
+})();

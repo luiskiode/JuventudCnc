@@ -6,11 +6,34 @@
   JC.resources = JC.resources || {};
   JC.state = JC.state || {};
 
-  const $ = (sel, root = document) => root.querySelector(sel);
+  const $ = JC.$ || ((sel, root = document) => root.querySelector(sel));
 
   // ✅ Siempre toma el cliente correcto (alias estándar)
   function getSB() {
     return window.sb || window.supabaseClient || JC.sb || null;
+  }
+
+  // ============================================================
+  // Helpers de vista (no dependas de location.hash)
+  // - Tu router usa .view.active + data-view
+  // - A veces main.js también setea body[data-view]
+  // ============================================================
+  function getCurrentView() {
+    try {
+      const v = document.querySelector(".view.active")?.getAttribute("data-view");
+      if (v) return v;
+      const b = document.body?.getAttribute("data-view");
+      if (b) return b;
+      const h = (location.hash || "").replace("#", "").trim();
+      if (h) return h;
+      return "inicio";
+    } catch {
+      return "inicio";
+    }
+  }
+
+  function isRecursosVisible() {
+    return getCurrentView() === "recursos";
   }
 
   // Links configurables
@@ -98,6 +121,21 @@
     }
   }
 
+  async function getUserId() {
+    const u = JC.state.user || window.currentUser;
+    if (u?.id) return String(u.id);
+
+    const sb = getSB();
+    if (!sb?.auth?.getSession) return "";
+    try {
+      const { data } = await sb.auth.getSession();
+      const id = data?.session?.user?.id;
+      return id ? String(id) : "";
+    } catch {
+      return "";
+    }
+  }
+
   // ============================================================
   // CATEFA: cargar grupos asignados
   // ============================================================
@@ -114,17 +152,14 @@
     }
 
     try {
-      const userId = (JC.state.user?.id || window.currentUser?.id || "").toString();
+      const userId = await getUserId();
       if (!userId) {
         sel.innerHTML = `<option value="">(Inicia sesión)</option>`;
         return;
       }
 
       // 1) asignaciones (RLS debe filtrar por user_id)
-      const a = await sb
-        .from("catefa_asignaciones")
-        .select("grupo_id")
-        .eq("user_id", userId);
+      const a = await sb.from("catefa_asignaciones").select("grupo_id").eq("user_id", userId);
 
       if (a.error) throw a.error;
 
@@ -164,8 +199,8 @@
     try {
       renderEmptyIfNeeded();
 
-      const logged = !!(JC.state.user || window.currentUser);
-      if (!logged) {
+      const userId = await getUserId();
+      if (!userId) {
         setCatefaGate("🔑 Inicia sesión para usar Catefa.");
         setCatefaEstado("");
         return { ok: false, reason: "no_session" };
@@ -198,9 +233,7 @@
     if (bindCatefaRefreshOnce.__bound) return;
     bindCatefaRefreshOnce.__bound = true;
 
-    document
-      .getElementById("btnCatefaRefresh")
-      ?.addEventListener("click", () => listarRecursos("catefa"));
+    document.getElementById("btnCatefaRefresh")?.addEventListener("click", () => listarRecursos("catefa"));
   }
 
   function bindFabUploadHookOnce() {
@@ -212,8 +245,22 @@
     if (!fab || !fileRec) return;
 
     fab.addEventListener("click", () => {
-      const current = (location.hash || "#inicio").replace("#", "");
-      if (current === "recursos") fileRec.click();
+      if (isRecursosVisible()) fileRec.click();
+    });
+  }
+
+  function bindGrupoSelectOnce() {
+    if (bindGrupoSelectOnce.__bound) return;
+    bindGrupoSelectOnce.__bound = true;
+
+    const sel = document.getElementById("catefaGrupoSelect");
+    if (!sel) return;
+
+    sel.addEventListener("change", () => {
+      // Por ahora, mantenemos UI consistente sin inventar tablas/queries.
+      // Aquí es donde luego conectamos catefa_ninos / catefa_sesiones / asistencia.
+      renderEmptyIfNeeded();
+      setCatefaEstado(sel.value ? `Grupo: ${sel.options[sel.selectedIndex]?.textContent || sel.value}` : "");
     });
   }
 
@@ -225,7 +272,7 @@
     if (__inited) return;
     __inited = true;
 
-    // compat global
+    // compat global (evita el crash “listarRecursos is not defined”)
     window.listarRecursos = listarRecursos;
 
     JC.resources.listarRecursos = listarRecursos;
@@ -235,17 +282,21 @@
     bindFabUploadHookOnce();
     bindCatefaLinksOnce();
     bindCatefaRefreshOnce();
+    bindGrupoSelectOnce();
 
     // ✅ Reacciona cuando el perfil cambia (login / logout / rol)
     JC.on("profile:changed", () => {
-      // Solo si está visible la vista recursos
-      const current = (location.hash || "#inicio").replace("#", "");
-      if (current === "recursos") listarRecursos("catefa");
+      if (isRecursosVisible()) listarRecursos("catefa");
+    });
+
+    // ✅ Reacciona a cambios de auth aunque profile.js no haya emitido todavía
+    // (evita estados “pegados” cuando entra/sale sesión)
+    JC.on("auth:changed", () => {
+      if (isRecursosVisible()) listarRecursos("catefa");
     });
 
     // ✅ Precarga SOLO si estás en recursos (evita ruido al arrancar)
-    const start = (location.hash || "#inicio").replace("#", "");
-    if (start === "recursos") listarRecursos("catefa");
+    if (isRecursosVisible()) listarRecursos("catefa");
   }
 
   JC.resources.init = init;

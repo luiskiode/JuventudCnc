@@ -798,7 +798,7 @@ body[data-view="box"] #jcChat{
   left:12px;
   right:12px;
   bottom:var(--jc-float-bottom);
-  z-index:98;            /* encima del contenido, debajo de overlay(100) y drawer(110) */
+  z-index:220;           /* subir por encima de widgets/chat */
   pointer-events:none;
   display:flex;
   justify-content:center;
