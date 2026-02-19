@@ -182,7 +182,18 @@
     if (r.nombre) r.nombre.textContent = p?.nombre || user.email || "Usuario";
     if (r.email) r.email.textContent = user.email || "—";
     if (r.fraseView) r.fraseView.textContent = p?.frase ? `“${p.frase}”` : "—";
-    if (r.avatar) r.avatar.src = p?.avatar_url || "";
+    if (r.avatar) {
+  const url = String(p?.avatar_url || "").trim();
+  if (url) {
+    // cache-bust para que no se quede con foto vieja (PWA/SW)
+    r.avatar.src = url + (url.includes("?") ? "&" : "?") + "t=" + Date.now();
+  } else {
+    // NO uses "" porque se vuelve la URL del sitio
+    r.avatar.removeAttribute("src");
+    // opcional: placeholder si tienes uno
+    r.avatar.src = "assets/avatar-default.png";
+  }
+}
 
     // ✅ Si existe campo email en el formulario, rellenarlo (readonly)
     try {
