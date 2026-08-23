@@ -73,7 +73,7 @@ html { overflow-y: scroll; }
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text-main);
-  background: var(--neutral-900);
+  background-color: #020617;
   position: relative;
 }
 
@@ -83,29 +83,26 @@ p { margin: 0; }
 .muted { color: var(--text-muted); }
 .with-emoji[data-emoji]::before { content: attr(data-emoji) " "; margin-right: 6px; }
 
-/* CAPAS DE FONDO */
+/* ==========================================================
+   CAPAS DE FONDO
+   ========================================================== */
 #jcAppBgLayer, #jcAppBgOverlay {
   position: fixed;
   inset: 0;
   pointer-events: none;
 }
 
+/* Capa 1: Imagen fija visible */
 #jcAppBgLayer {
   z-index: -3 !important;
-  background-image: var(--jc-bg-image);
+  background-image: var(--jc-bg-image, url("assets/bg-floral.webp"));
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  opacity: 0.65;
+  opacity: 0.85;
 }
 
-#jcAppBgOverlay {
-  z-index: -1 !important;
-  background: var(--overlay-bg);
-  opacity: 0.45;
-  transition: opacity 0.18s ease;
-}
-
+/* Capa 2: Efecto dinámico Flow semitransparente */
 body.jc-bg-dynamic::before,
 body.jc-bg-dynamic::after {
   content: "";
@@ -117,19 +114,19 @@ body.jc-bg-dynamic::after {
 body.jc-bg-dynamic::before {
   inset: -20px;
   z-index: -2;
-  opacity: 0.85;
+  opacity: 0.35;
   background:
     radial-gradient(circle at 0% 0%, var(--bg-a), transparent 55%),
     radial-gradient(circle at 100% 0%, var(--bg-b), transparent 55%),
     radial-gradient(circle at 0% 100%, var(--bg-c), transparent 55%),
-    linear-gradient(135deg, var(--bg-base-1), var(--bg-base-2));
+    linear-gradient(135deg, rgba(2, 6, 23, 0.4), rgba(0, 0, 0, 0.6));
   animation: bg-flow 22s ease-in-out infinite alternate;
   filter: saturate(1.15);
 }
 
 body.jc-bg-dynamic::after {
-  z-index: -1;
-  opacity: 1;
+  z-index: -2;
+  opacity: 0.4;
   background: radial-gradient(circle at top, var(--veil-a), var(--veil-b));
 }
 
@@ -139,7 +136,16 @@ body.jc-bg-dynamic::after {
   100% { transform: translate3d(25px, -10px, 0) scale(1.04); }
 }
 
-/* LAYOUT */
+/* Capa 3: Overlay para contraste */
+#jcAppBgOverlay {
+  z-index: -1 !important;
+  background: rgba(2, 6, 23, 0.45);
+  transition: opacity 0.18s ease;
+}
+
+/* ==========================================================
+   LAYOUT
+   ========================================================== */
 .container {
   width: 100%;
   max-width: var(--jc-maxw);
@@ -258,7 +264,7 @@ input, select, textarea {
   border-color: rgba(148, 163, 184, 0.22);
 }
 
-/* FLOATER */
+/* FLOATER (Burbuja Flotante de Bots) */
 #jcFloatLayer {
   position: fixed;
   left: 14px;

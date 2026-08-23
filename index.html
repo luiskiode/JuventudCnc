@@ -137,11 +137,15 @@
       // ==========================================
       const btnChangeBg = document.getElementById('btnChangeBg');
       const bgFileInput = document.getElementById('bgFileInput');
+      const bgLayer = document.getElementById('jcAppBgLayer');
       const DEFAULT_BG = 'url("assets/bg-floral.webp")';
 
       function applyBackground(bgUrl) {
-        const root = document.documentElement;
-        root.style.setProperty('--jc-bg-image', bgUrl || DEFAULT_BG);
+        const finalBg = bgUrl || DEFAULT_BG;
+        document.documentElement.style.setProperty('--jc-bg-image', finalBg);
+        if (bgLayer) {
+          bgLayer.style.backgroundImage = finalBg;
+        }
       }
 
       // Cargar fondo guardado o predeterminado
@@ -149,11 +153,9 @@
       applyBackground(savedBg || DEFAULT_BG);
 
       btnChangeBg.addEventListener('click', () => {
-        // Clic largo o normal: abre selector de imagen
         bgFileInput.click();
       });
 
-      // Clic derecho en el icono de fondo: restablece al fondo floral por defecto
       btnChangeBg.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         localStorage.removeItem('jc_custom_bg');
@@ -167,7 +169,11 @@
         const reader = new FileReader();
         reader.onload = (event) => {
           const base64Bg = `url("${event.target.result}")`;
-          localStorage.setItem('jc_custom_bg', base64Bg);
+          try {
+            localStorage.setItem('jc_custom_bg', base64Bg);
+          } catch (err) {
+            console.warn('Imagen grande para localStorage, se aplica temporalmente.');
+          }
           applyBackground(base64Bg);
         };
         reader.readAsDataURL(file);
