@@ -1,12 +1,8 @@
 /* ==========================================================
-   JUVENTUD CNC — styles.css (BASE LIMPIA)
+   JUVENTUD CNC — styles.css
    ========================================================== */
 
-/* ==========================================================
-   ROOT / TOKENS (Variables enlazadas con Angie)
-   ========================================================== */
 :root {
-  /* Neutrales */
   --neutral-900: #020617;
   --neutral-800: #020617;
   --neutral-700: #0b1120;
@@ -15,28 +11,23 @@
   --neutral-200: #e5e7eb;
   --neutral-100: #f3f4f6;
 
-  /* Texto */
   --text-main: #e5e7eb;
   --text-muted: #9ca3af;
 
-  /* Colores Principales */
   --brand: #2563eb;
   --brand-2: #1d4ed8;
   --accent: #ec4899;
   --accent-2: #f97316;
 
-  /* Paletas secundarias */
   --guy-main: #38bdf8;
   --guy-soft: rgba(56, 189, 248, 0.18);
   --girl-main: #f472b6;
   --girl-soft: rgba(244, 114, 182, 0.22);
 
-  /* Tarjetas */
   --card-bg: rgba(15, 23, 42, 0.90);
   --card-border: rgba(148, 163, 184, 0.26);
   --card-soft: rgba(15, 23, 42, 0.45);
 
-  /* Botones y Formas */
   --btn-radius: 999px;
   --btn-px: 14px;
   --btn-py: 8px;
@@ -44,14 +35,10 @@
   --radius-lg: 18px;
   --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.55);
 
-  /* Superficies UI */
   --topbar-bg: #0f172a;
-  --tabs-bg: #0f172a;
-  --drawer-bg: #0b1120;
   --overlay-bg: #000000;
   --icon-glow: #ec4899;
 
-  /* Fondo Dinámico "Flow" */
   --bg-a: #38bdf8;
   --bg-b: #f472b6;
   --bg-c: #3b82f6;
@@ -60,19 +47,11 @@
   --veil-a: #0f172a;
   --veil-b: #0b1120;
 
-  /* Layout */
   --jc-maxw: 960px;
   --jc-safe-pad: 14px;
 }
 
-/* ==========================================================
-   RESET / BASE
-   ========================================================== */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+*, *::before, *::after { box-sizing: border-box; }
 
 html, body {
   width: 100%;
@@ -81,12 +60,9 @@ html, body {
   min-height: 100%;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
 }
 
-html {
-  overflow-y: scroll;
-}
+html { overflow-y: scroll; }
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -101,23 +77,13 @@ p { margin: 0; }
 .muted { color: var(--text-muted); }
 .with-emoji[data-emoji]::before { content: attr(data-emoji) " "; margin-right: 6px; }
 
-/* ==========================================================
-   FONDO DINÁMICO
-   ========================================================== */
-#jcAppBgLayer,
-#jcAppBgOverlay {
+/* FONDO DINÁMICO */
+#jcAppBgLayer, #jcAppBgOverlay {
   position: fixed;
   inset: 0;
   pointer-events: none;
 }
-
-#jcAppBgLayer {
-  z-index: -2 !important;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
+#jcAppBgLayer { z-index: -2 !important; }
 #jcAppBgOverlay {
   z-index: -1 !important;
   background: var(--overlay-bg);
@@ -132,7 +98,6 @@ body.jc-bg-dynamic::after {
   inset: 0;
   pointer-events: none;
 }
-
 body.jc-bg-dynamic::before {
   inset: -20px;
   z-index: -2;
@@ -145,36 +110,25 @@ body.jc-bg-dynamic::before {
   animation: bg-flow 22s ease-in-out infinite alternate;
   filter: saturate(1.15);
 }
-
 body.jc-bg-dynamic::after {
   z-index: -1;
   opacity: 1;
   background: radial-gradient(circle at top, var(--veil-a), var(--veil-b));
 }
-
 @keyframes bg-flow {
-  0%   { transform: translate3d(0, 0, 0) scale(1); }
-  50%  { transform: translate3d(-20px, 10px, 0) scale(1.03); }
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-20px, 10px, 0) scale(1.03); }
   100% { transform: translate3d(25px, -10px, 0) scale(1.04); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  body.jc-bg-dynamic::before { animation: none !important; }
-}
-
-/* ==========================================================
-   LAYOUT PRINCIPAL
-   ========================================================== */
+/* LAYOUT */
 .container {
   width: 100%;
   max-width: var(--jc-maxw);
   margin: 0 auto;
-  padding: 18px var(--jc-safe-pad) 40px;
+  padding: 18px var(--jc-safe-pad) 80px;
 }
 
-/* ==========================================================
-   TOPBAR
-   ========================================================== */
 .topbar {
   position: sticky;
   top: 0;
@@ -196,17 +150,8 @@ body.jc-bg-dynamic::after {
   gap: 10px;
 }
 
-.topbar-title {
-  margin: 0;
-  font-size: 17px;
-  letter-spacing: 0.02em;
-}
-
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.topbar-title { font-size: 17px; letter-spacing: 0.02em; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
 
 .icon-btn {
   border: none;
@@ -218,37 +163,11 @@ body.jc-bg-dynamic::after {
   font-size: 18px;
   transition: transform 0.14s ease, filter 0.14s ease;
 }
+.icon-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+.icon-btn:active { transform: translateY(0); }
+#btnBots.is-on { box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.35); }
 
-.icon-btn:hover {
-  filter: brightness(1.12);
-  transform: translateY(-1px);
-}
-
-.icon-btn:active {
-  transform: translateY(0);
-}
-
-/* ==========================================================
-   VISTAS
-   ========================================================== */
-.view {
-  display: none !important;
-  width: 100%;
-}
-
-.view.active {
-  display: block !important;
-  animation: jcViewIn 180ms ease both;
-}
-
-@keyframes jcViewIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ==========================================================
-   CARDS / TARJETAS
-   ========================================================== */
+/* CARDS */
 .card {
   background: linear-gradient(to bottom right, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.85));
   border-radius: var(--radius-lg);
@@ -257,7 +176,6 @@ body.jc-bg-dynamic::after {
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(10px);
 }
-
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -266,26 +184,45 @@ body.jc-bg-dynamic::after {
   flex-wrap: wrap;
   margin-bottom: 8px;
 }
+.card-body { font-size: 14px; }
 
-.card-body {
-  font-size: 14px;
-}
-
-/* HERO (Bienvenida) */
 .hero {
   background: linear-gradient(135deg, var(--brand), var(--accent));
   border-radius: var(--radius-lg);
   padding: 18px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  animation: heroGlow 6s ease-in-out infinite alternate;
 }
 
-@keyframes heroGlow {
-  0%   { filter: brightness(1); }
-  100% { filter: brightness(1.15); }
+/* BOTONES E INPUTS */
+.btn {
+  border: none;
+  border-radius: var(--btn-radius);
+  padding: var(--btn-py) var(--btn-px);
+  background: linear-gradient(135deg, var(--guy-main), var(--girl-main));
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: var(--btn-fw);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn.small { padding: 6px 10px; font-size: 11px; }
+.btn.ghost {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: var(--text-main);
 }
 
-/* BADGES */
+input, select, textarea {
+  width: 100%;
+  padding: 9px 12px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  color: var(--text-main);
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -294,36 +231,95 @@ body.jc-bg-dynamic::after {
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.02em;
   border: 1px solid rgba(148, 163, 184, 0.28);
   background: rgba(2, 6, 23, 0.3);
   color: #fff;
 }
-
 .badge-mix {
   background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(244, 114, 182, 0.25));
   border-color: rgba(148, 163, 184, 0.22);
 }
 
-/* ==========================================================
-   MODALES Y OVERLAYS
-   ========================================================== */
+/* WIDGETS / BOTS */
+.angie-widget, .mia-widget, .ciro-widget, .alma-widget {
+  position: fixed;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  transform: translateY(130%) scale(0.88);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.4s ease, opacity 0.35s ease-out;
+  z-index: 205;
+}
+
+.angie-widget--visible {
+  transform: translateY(0) scale(1) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.angie-widget { left: 16px; bottom: 20px; }
+.alma-widget  { left: 16px; bottom: 120px; z-index: 208; }
+.mia-widget   { right: 16px; bottom: 20px; z-index: 210; }
+.ciro-widget  { right: 16px; bottom: 120px; z-index: 215; }
+
+.bot-avatar {
+  width: 58px; height: 58px;
+  border-radius: 999px;
+  padding: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.55);
+}
+.angie-avatar { background: radial-gradient(circle at 30% 25%, #f472b6, #be185d); }
+.mia-avatar   { background: radial-gradient(circle at 30% 25%, #c084fc, #6b21a8); }
+.ciro-avatar  { background: radial-gradient(circle at 30% 25%, #60a5fa, #1d4ed8); }
+.alma-avatar  { background: radial-gradient(circle at 30% 25%, #fde68a, #f59e0b); }
+.bot-avatar img { width: 100%; height: 100%; object-fit: contain; }
+
+.bot-bubble {
+  max-width: 240px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  color: var(--text-main);
+  font-size: 12.5px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.8);
+  position: relative;
+  line-height: 1.35;
+}
+.bot-name { font-weight: 700; font-size: 11px; text-transform: uppercase; margin-bottom: 2px; }
+.angie-name { color: #f472b6; }
+.mia-name   { color: #c084fc; }
+.ciro-name  { color: #60a5fa; }
+.alma-name  { color: #fde68a; }
+
+.bot-close {
+  position: absolute;
+  top: 4px; right: 6px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* MODALES */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.65);
   z-index: 100;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.18s ease, visibility 0.18s ease;
+  transition: opacity 0.18s ease;
 }
-
-.overlay.show {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
+.overlay.show { opacity: 1; visibility: visible; pointer-events: auto; }
 
 .jc-modal {
   position: fixed;
@@ -334,30 +330,20 @@ body.jc-bg-dynamic::after {
   padding: 18px 14px;
   z-index: 130;
 }
-
-.jc-modal.show {
-  display: flex;
-}
-
+.jc-modal.show { display: flex; }
 .jc-modal-card {
-  width: min(980px, 100%);
+  width: min(500px, 100%);
   max-height: calc(100vh - 80px);
   overflow: hidden;
   border-radius: 22px;
   border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(2, 6, 23, 0.85);
+  background: rgba(2, 6, 23, 0.92);
   backdrop-filter: blur(16px);
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7);
   display: flex;
   flex-direction: column;
 }
 
-.jc-modal-body {
-  padding: 12px;
-  overflow: auto;
-}
-
-/* Iframe de Angie */
 #angiePaletteModal .jc-modal-card { width: min(980px, 100%); }
 #angiePaletteModal .jc-modal-body { padding: 0; background: rgba(2, 6, 23, 0.55); }
 #angiePaletteFrame {
@@ -366,21 +352,5 @@ body.jc-bg-dynamic::after {
   height: min(78vh, 720px);
   border: 0;
   border-radius: 0 0 22px 22px;
-  overflow: hidden;
   background: #fff;
-}
-
-/* ==========================================================
-   RESPONSIVE
-   ========================================================== */
-@media (max-width: 560px) {
-  :root { --jc-safe-pad: 12px; }
-
-  .topbar-title {
-    font-size: 15px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 60vw;
-  }
 }
