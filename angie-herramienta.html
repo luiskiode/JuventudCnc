@@ -52,17 +52,13 @@
       background: #2563eb;
       color: white;
     }
-    .btn-primary:hover {
-      background: #1d4ed8;
-    }
+    .btn-primary:hover { background: #1d4ed8; }
     .btn-ghost {
       background: transparent;
       border: 1px solid #d1d5db;
       color: #374151;
     }
-    .btn-ghost:hover {
-      background: #f3f4f6;
-    }
+    .btn-ghost:hover { background: #f3f4f6; }
     .row {
       display: flex;
       gap: 0.5rem;
@@ -76,7 +72,7 @@
     .sep {
       grid-column: 1 / -1;
       border: none;
-      border-top: 1px solid rgba(148, 163, 184, 0.25);
+      border-top: 1px solid rgba(148,163,184,.25);
       margin: 10px 0;
     }
     .grid p.section-title {
@@ -94,8 +90,6 @@
     <small>Cambia cualquier color y se reflejará al instante en Juventud CNC.</small>
 
     <div class="grid" style="margin-top: 0.75rem;">
-
-      <!-- Colores Principales -->
       <p class="section-title"><strong>Colores base</strong></p>
 
       <label>
@@ -120,7 +114,6 @@
 
       <hr class="sep" />
 
-      <!-- UI -->
       <p class="section-title"><strong>Interfaz (UI)</strong></p>
 
       <label>
@@ -140,7 +133,6 @@
 
       <hr class="sep" />
 
-      <!-- Fondo Animado Flow -->
       <p class="section-title"><strong>Fondo animado (Flow)</strong></p>
 
       <label>
@@ -221,30 +213,29 @@
       } catch (e) {}
     }
 
-    function sendTokens(tokens) {
+    function sendTokens(tokens, andClose = false) {
       if (!window.parent || window.parent === window) return;
       window.parent.postMessage({ type: 'applyTokens', tokens }, '*');
       persistTokens(tokens);
+      if (andClose) {
+        window.parent.postMessage({ type: 'closeAngieModal' }, '*');
+      }
     }
 
-    function syncTokens() {
-      sendTokens(buildTokens());
-    }
+    inputs.forEach(i => i.addEventListener('input', () => sendTokens(buildTokens(), false)));
 
-    // Aplicar en vivo con cada cambio
-    inputs.forEach(i => i.addEventListener('input', syncTokens));
-    btnAplicar.addEventListener('click', syncTokens);
+    btnAplicar.addEventListener('click', () => {
+      sendTokens(buildTokens(), true);
+    });
 
-    // Reset general
     btnReset.addEventListener('click', () => {
       for (const [k, v] of Object.entries(DEFAULTS)) {
         const el = document.getElementById(k);
         if (el) el.value = v;
       }
-      syncTokens();
+      sendTokens(buildTokens(), false);
     });
 
-    // Restaurar guardados al cargar el iframe
     (function restore() {
       let saved = null;
       try {
@@ -257,7 +248,7 @@
           if (saved[id]) input.value = saved[id];
         }
       }
-      syncTokens();
+      sendTokens(buildTokens(), false);
     })();
   </script>
 </body>
