@@ -39,13 +39,18 @@
   --overlay-bg: #000000;
   --icon-glow: #ec4899;
 
+  /* Fondo Floral por Defecto */
+  --jc-bg-default: url("assets/bg-floral.webp");
+  --jc-bg-image: var(--jc-bg-default);
+
+  /* Gradiente Dinámico Flow */
   --bg-a: #38bdf8;
   --bg-b: #f472b6;
   --bg-c: #3b82f6;
   --bg-base-1: #020617;
   --bg-base-2: #000000;
-  --veil-a: #0f172a;
-  --veil-b: #0b1120;
+  --veil-a: rgba(15, 23, 42, 0.75);
+  --veil-b: rgba(11, 17, 32, 0.90);
 
   --jc-maxw: 960px;
   --jc-safe-pad: 14px;
@@ -78,17 +83,26 @@ p { margin: 0; }
 .muted { color: var(--text-muted); }
 .with-emoji[data-emoji]::before { content: attr(data-emoji) " "; margin-right: 6px; }
 
-/* FONDO DINÁMICO */
+/* CAPAS DE FONDO */
 #jcAppBgLayer, #jcAppBgOverlay {
   position: fixed;
   inset: 0;
   pointer-events: none;
 }
-#jcAppBgLayer { z-index: -2 !important; }
+
+#jcAppBgLayer {
+  z-index: -3 !important;
+  background-image: var(--jc-bg-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.65;
+}
+
 #jcAppBgOverlay {
   z-index: -1 !important;
   background: var(--overlay-bg);
-  opacity: 0.55;
+  opacity: 0.45;
   transition: opacity 0.18s ease;
 }
 
@@ -99,10 +113,11 @@ body.jc-bg-dynamic::after {
   inset: 0;
   pointer-events: none;
 }
+
 body.jc-bg-dynamic::before {
   inset: -20px;
   z-index: -2;
-  opacity: 1;
+  opacity: 0.85;
   background:
     radial-gradient(circle at 0% 0%, var(--bg-a), transparent 55%),
     radial-gradient(circle at 100% 0%, var(--bg-b), transparent 55%),
@@ -111,11 +126,13 @@ body.jc-bg-dynamic::before {
   animation: bg-flow 22s ease-in-out infinite alternate;
   filter: saturate(1.15);
 }
+
 body.jc-bg-dynamic::after {
   z-index: -1;
   opacity: 1;
   background: radial-gradient(circle at top, var(--veil-a), var(--veil-b));
 }
+
 @keyframes bg-flow {
   0% { transform: translate3d(0, 0, 0) scale(1); }
   50% { transform: translate3d(-20px, 10px, 0) scale(1.03); }
@@ -152,7 +169,7 @@ body.jc-bg-dynamic::after {
 }
 
 .topbar-title { font-size: 17px; letter-spacing: 0.02em; }
-.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
 
 .icon-btn {
   border: none;
@@ -241,7 +258,7 @@ input, select, textarea {
   border-color: rgba(148, 163, 184, 0.22);
 }
 
-/* FLOATER (Burbuja Flotante de Bots) */
+/* FLOATER */
 #jcFloatLayer {
   position: fixed;
   left: 14px;

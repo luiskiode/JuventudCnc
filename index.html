@@ -17,7 +17,7 @@
 
 <body class="app-shell jc-bg-dynamic" data-view="inicio" data-theme="mix">
 
-    <!-- Capas de fondo dinámico -->
+    <!-- Capas de fondo -->
     <div id="jcAppBgLayer"></div>
     <div id="jcAppBgOverlay"></div>
 
@@ -32,6 +32,8 @@
       <div class="topbar-inner">
         <h1 class="topbar-title">Juventud CNC · Catefa</h1>
         <div class="topbar-actions" aria-label="Acciones">
+          <input type="file" id="bgFileInput" accept="image/*" style="display:none;" />
+          <button id="btnChangeBg" class="icon-btn" type="button" title="Cambiar fondo de pantalla" aria-label="Cambiar fondo">🖼️</button>
           <button id="btnBots" class="icon-btn is-on" type="button" title="Activar/Desactivar Bots" aria-label="Bots">🤖</button>
           <button id="btnAngie" class="icon-btn" type="button" title="Diseño Angie" aria-label="Diseño Angie">🎨</button>
           <button id="btnLogin" class="icon-btn" type="button" title="Iniciar sesión" aria-label="Iniciar sesión">🔑</button>
@@ -131,7 +133,48 @@
     <!-- SCRIPT PRINCIPAL -->
     <script>
       // ==========================================
-      // 1. MODALES Y TOKENS CSS (ANGIE)
+      // 1. GESTIÓN DEL FONDO DINÁMICO Y PERSONALIZADO
+      // ==========================================
+      const btnChangeBg = document.getElementById('btnChangeBg');
+      const bgFileInput = document.getElementById('bgFileInput');
+      const DEFAULT_BG = 'url("assets/bg-floral.webp")';
+
+      function applyBackground(bgUrl) {
+        const root = document.documentElement;
+        root.style.setProperty('--jc-bg-image', bgUrl || DEFAULT_BG);
+      }
+
+      // Cargar fondo guardado o predeterminado
+      const savedBg = localStorage.getItem('jc_custom_bg');
+      applyBackground(savedBg || DEFAULT_BG);
+
+      btnChangeBg.addEventListener('click', () => {
+        // Clic largo o normal: abre selector de imagen
+        bgFileInput.click();
+      });
+
+      // Clic derecho en el icono de fondo: restablece al fondo floral por defecto
+      btnChangeBg.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        localStorage.removeItem('jc_custom_bg');
+        applyBackground(DEFAULT_BG);
+      });
+
+      bgFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64Bg = `url("${event.target.result}")`;
+          localStorage.setItem('jc_custom_bg', base64Bg);
+          applyBackground(base64Bg);
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // ==========================================
+      // 2. MODALES Y TOKENS CSS (ANGIE)
       // ==========================================
       const btnAngie = document.getElementById('btnAngie');
       const angieModal = document.getElementById('angiePaletteModal');
@@ -165,7 +208,6 @@
         if (savedTokens) applyCssTokens(savedTokens);
       } catch (e) {}
 
-      // Escuchar eventos desde el iframe (incluye cierre automático)
       window.addEventListener('message', (event) => {
         if (event.data?.type === 'applyTokens' && event.data.tokens) {
           applyCssTokens(event.data.tokens);
@@ -176,7 +218,7 @@
       });
 
       // ==========================================
-      // 2. SISTEMA DE BOTS ROTATIVOS (BURBUJITAS FLOTANTES)
+      // 3. SISTEMA DE BOTS ROTATIVOS (BURBUJITAS)
       // ==========================================
       const BOT_MESSAGES = [
         { bot: "Angie", emoji: "💙", text: "¡Holaaa! Qué bueno verte por aquí 😄" },
@@ -210,10 +252,8 @@
         `;
         floatLayer.appendChild(card);
 
-        // Entrada suave
         requestAnimationFrame(() => card.classList.add('is-show'));
 
-        // Salida a los 5 segundos
         setTimeout(() => {
           card.classList.remove('is-show');
           setTimeout(() => {
@@ -236,7 +276,7 @@
         stopBotRotation();
         if (!botsEnabled) return;
         rotateBots();
-        botRotationTimer = setInterval(rotateBots, 20000); // Rota cada 20s
+        botRotationTimer = setInterval(rotateBots, 20000);
       }
 
       function stopBotRotation() {
@@ -258,7 +298,7 @@
       }
 
       // ==========================================
-      // 3. CARGA DEL MENSAJE SEMANAL (SUPABASE)
+      // 4. CARGA DEL MENSAJE SEMANAL (SUPABASE)
       // ==========================================
       async function cargarMensajeSemanal() {
         const msgTitle = document.getElementById('msgTitle');
@@ -294,7 +334,7 @@
       }
 
       // ==========================================
-      // 4. AUTENTICACIÓN SIMPLIFICADA
+      // 5. AUTENTICACIÓN SIMPLIFICADA
       // ==========================================
       const btnLogin = document.getElementById('btnLogin');
       const btnLogoutTop = document.getElementById('btnLogoutTop');
