@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Juventud CNC · Iniciando sesión…</title>
+
+  <!-- Evita caching raro del callback -->
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <!-- PWA / Theme -->
+  <meta name="theme-color" content="#0b1020" />
+  <!-- IMPORTANTE: path absoluto para GH Pages subfolder -->
+  <link rel="manifest" href="/JuventudCnc/manifest.json" />
+
+  <style>
+    :root { color-scheme: dark light; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #0b1020;
+      color: #e5e7eb;
+      display: grid;
+      min-height: 100vh;
+      place-items: center;
+      padding: 24px;
+    }
+    .card {
+      width: min(520px, 92vw);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 18px;
+      padding: 18px 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    h1 { font-size: 18px; margin: 0 0 10px; }
+    p { margin: 8px 0; line-height: 1.4; }
+    .muted { opacity: .85; font-size: 13px; }
+    .ok { color: #86efac; }
+    .bad { color: #fca5a5; }
+    .spin {
+      width: 18px; height: 18px; border-radius: 999px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: rgba(255,255,255,0.9);
+      animation: r 1s linear infinite;
+      display: inline-block; vertical-align: -3px; margin-right: 8px;
+    }
+    @keyframes r { to { transform: rotate(360deg); } }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  </style>
+
+  <!-- Supabase SDK (SIN defer) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- Supabase client (SIN defer) -->
+  <!-- IMPORTANTE: path absoluto para GH Pages subfolder -->
+  <script src="/JuventudCnc/supabase-config.js"></script>
+</head>
+
+<body>
+  <div class="card" role="status" aria-live="polite">
+    <h1><span class="spin" aria-hidden="true"></span>Iniciando sesión…</h1>
+    <p id="status" class="muted">Procesando tu enlace seguro.</p>
+    <p class="muted">Si no avanza, vuelve a la app y prueba otra vez.</p>
+    <p class="muted">Destino: <code id="nextUrl">—</code></p>
+  </div>
+
+  <script>
+    (async function () {
+      const statusEl = document.getElementById("status");
+      const nextEl = document.getElementById("nextUrl");
+
+      function setStatus(msg, kind) {
+        statusEl.textContent = msg;
+        statusEl.className = kind ? kind : "muted";
+      }
+
+      // ✅ Base real de tu app en GH Pages (subfolder)
+      const APP_BASE = "https://luiskiode.github.io/JuventudCnc/";
+      // ✅ Tu router usa hash (#perfil)
+      const DEFAULT_NEXT = APP_BASE + "#perfil";
+
+      try {
+        const u = new URL(location.href);
+
+        // next viene desde auth.js como URL absoluta encodeada
+        const next = u.searchParams.get("next")
+          ? decodeURIComponent(u.searchParams.get("next"))
+          : DEFAULT_NEXT;
+
+        nextEl.textContent = next;
+
+        // Errores del callback
+        const errDesc = u.searchParams.get("error_description") || u.searchParams.get("error");
+        if (errDesc) {
+          setStatus("❌ Error en el enlace: " + errDesc, "bad");
+          setTimeout(() => location.replace(APP_BASE), 1200);
+          return;
+        }
+
+        const sb = window.sb || window.supabaseClient;
+        if (!sb || !sb.auth) {
+          setStatus("❌ No se pudo inicializar el login (cliente Supabase no disponible).", "bad");
+          setTimeout(() => location.replace(APP_BASE), 1200);
+          return;
+        }
+
+        // PKCE: ?code=...
+        const code = u.searchParams.get("code");
+        if (code && typeof sb.auth.exchangeCodeForSession === "function") {
+          setStatus("Verificando sesión…", "muted");
+          const { error } = await sb.auth.exchangeCodeForSession(code);
+          if (error) console.warn("[JC][auth.html] exchangeCodeForSession error:", error);
+        }
+
+        // Hash token: detectSessionInUrl=true ya lo procesa,
+        // pero esperamos un tick para que Supabase termine de guardar sesión
+        await new Promise(r => setTimeout(r, 50));
+
+        const { data } = await sb.auth.getSession();
+        const hasSession = !!data?.session?.user?.id;
+
+        if (hasSession) {
+          setStatus("✅ Sesión iniciada. Entrando a la app…", "ok");
+          setTimeout(() => location.replace(next), 250);
+          return;
+        }
+
+        setStatus("⚠️ No se detectó sesión. Volviendo a la app…", "bad");
+        setTimeout(() => location.replace(APP_BASE), 900);
+      } catch (e) {
+        console.error("[JC][auth.html] crash:", e);
+        setStatus("❌ Ocurrió un problema procesando el enlace. Volviendo a la app…", "bad");
+        setTimeout(() => location.replace("https://luiskiode.github.io/JuventudCnc/"), 1200);
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,386 @@
+/* ==========================================================
+   JUVENTUD CNC — styles.css (BASE LIMPIA)
+   ========================================================== */
+
+/* ==========================================================
+   ROOT / TOKENS (Variables enlazadas con Angie)
+   ========================================================== */
+:root {
+  /* Neutrales */
+  --neutral-900: #020617;
+  --neutral-800: #020617;
+  --neutral-700: #0b1120;
+  --neutral-600: #111827;
+  --neutral-400: #9ca3af;
+  --neutral-200: #e5e7eb;
+  --neutral-100: #f3f4f6;
+
+  /* Texto */
+  --text-main: #e5e7eb;
+  --text-muted: #9ca3af;
+
+  /* Colores Principales */
+  --brand: #2563eb;
+  --brand-2: #1d4ed8;
+  --accent: #ec4899;
+  --accent-2: #f97316;
+
+  /* Paletas secundarias */
+  --guy-main: #38bdf8;
+  --guy-soft: rgba(56, 189, 248, 0.18);
+  --girl-main: #f472b6;
+  --girl-soft: rgba(244, 114, 182, 0.22);
+
+  /* Tarjetas */
+  --card-bg: rgba(15, 23, 42, 0.90);
+  --card-border: rgba(148, 163, 184, 0.26);
+  --card-soft: rgba(15, 23, 42, 0.45);
+
+  /* Botones y Formas */
+  --btn-radius: 999px;
+  --btn-px: 14px;
+  --btn-py: 8px;
+  --btn-fw: 500;
+  --radius-lg: 18px;
+  --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.55);
+
+  /* Superficies UI */
+  --topbar-bg: #0f172a;
+  --tabs-bg: #0f172a;
+  --drawer-bg: #0b1120;
+  --overlay-bg: #000000;
+  --icon-glow: #ec4899;
+
+  /* Fondo Dinámico "Flow" */
+  --bg-a: #38bdf8;
+  --bg-b: #f472b6;
+  --bg-c: #3b82f6;
+  --bg-base-1: #020617;
+  --bg-base-2: #000000;
+  --veil-a: #0f172a;
+  --veil-b: #0b1120;
+
+  /* Layout */
+  --jc-maxw: 960px;
+  --jc-safe-pad: 14px;
+}
+
+/* ==========================================================
+   RESET / BASE
+   ========================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+html {
+  overflow-y: scroll;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text-main);
+  background: var(--neutral-900);
+  position: relative;
+}
+
+h1, h2, h3 { font-weight: 600; margin: 0; }
+p { margin: 0; }
+.small { font-size: 12px; }
+.muted { color: var(--text-muted); }
+.with-emoji[data-emoji]::before { content: attr(data-emoji) " "; margin-right: 6px; }
+
+/* ==========================================================
+   FONDO DINÁMICO
+   ========================================================== */
+#jcAppBgLayer,
+#jcAppBgOverlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#jcAppBgLayer {
+  z-index: -2 !important;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+#jcAppBgOverlay {
+  z-index: -1 !important;
+  background: var(--overlay-bg);
+  opacity: 0.55;
+  transition: opacity 0.18s ease;
+}
+
+body.jc-bg-dynamic::before,
+body.jc-bg-dynamic::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+body.jc-bg-dynamic::before {
+  inset: -20px;
+  z-index: -2;
+  opacity: 1;
+  background:
+    radial-gradient(circle at 0% 0%, var(--bg-a), transparent 55%),
+    radial-gradient(circle at 100% 0%, var(--bg-b), transparent 55%),
+    radial-gradient(circle at 0% 100%, var(--bg-c), transparent 55%),
+    linear-gradient(135deg, var(--bg-base-1), var(--bg-base-2));
+  animation: bg-flow 22s ease-in-out infinite alternate;
+  filter: saturate(1.15);
+}
+
+body.jc-bg-dynamic::after {
+  z-index: -1;
+  opacity: 1;
+  background: radial-gradient(circle at top, var(--veil-a), var(--veil-b));
+}
+
+@keyframes bg-flow {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(-20px, 10px, 0) scale(1.03); }
+  100% { transform: translate3d(25px, -10px, 0) scale(1.04); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.jc-bg-dynamic::before { animation: none !important; }
+}
+
+/* ==========================================================
+   LAYOUT PRINCIPAL
+   ========================================================== */
+.container {
+  width: 100%;
+  max-width: var(--jc-maxw);
+  margin: 0 auto;
+  padding: 18px var(--jc-safe-pad) 40px;
+}
+
+/* ==========================================================
+   TOPBAR
+   ========================================================== */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  width: 100%;
+  background: var(--topbar-bg);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.topbar-inner {
+  width: 100%;
+  max-width: var(--jc-maxw);
+  margin: 0 auto;
+  padding: 10px var(--jc-safe-pad);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.topbar-title {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-btn {
+  border: none;
+  background: radial-gradient(circle at 20% 20%, var(--icon-glow), transparent);
+  padding: 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--text-main);
+  font-size: 18px;
+  transition: transform 0.14s ease, filter 0.14s ease;
+}
+
+.icon-btn:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+.icon-btn:active {
+  transform: translateY(0);
+}
+
+/* ==========================================================
+   VISTAS
+   ========================================================== */
+.view {
+  display: none !important;
+  width: 100%;
+}
+
+.view.active {
+  display: block !important;
+  animation: jcViewIn 180ms ease both;
+}
+
+@keyframes jcViewIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================
+   CARDS / TARJETAS
+   ========================================================== */
+.card {
+  background: linear-gradient(to bottom right, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.85));
+  border-radius: var(--radius-lg);
+  padding: 16px 14px;
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(10px);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.card-body {
+  font-size: 14px;
+}
+
+/* HERO (Bienvenida) */
+.hero {
+  background: linear-gradient(135deg, var(--brand), var(--accent));
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  animation: heroGlow 6s ease-in-out infinite alternate;
+}
+
+@keyframes heroGlow {
+  0%   { filter: brightness(1); }
+  100% { filter: brightness(1.15); }
+}
+
+/* BADGES */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(2, 6, 23, 0.3);
+  color: #fff;
+}
+
+.badge-mix {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(244, 114, 182, 0.25));
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+/* ==========================================================
+   MODALES Y OVERLAYS
+   ========================================================== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
+}
+
+.overlay.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.jc-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 14px;
+  z-index: 130;
+}
+
+.jc-modal.show {
+  display: flex;
+}
+
+.jc-modal-card {
+  width: min(980px, 100%);
+  max-height: calc(100vh - 80px);
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(2, 6, 23, 0.85);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+}
+
+.jc-modal-body {
+  padding: 12px;
+  overflow: auto;
+}
+
+/* Iframe de Angie */
+#angiePaletteModal .jc-modal-card { width: min(980px, 100%); }
+#angiePaletteModal .jc-modal-body { padding: 0; background: rgba(2, 6, 23, 0.55); }
+#angiePaletteFrame {
+  display: block;
+  width: 100%;
+  height: min(78vh, 720px);
+  border: 0;
+  border-radius: 0 0 22px 22px;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
+@media (max-width: 560px) {
+  :root { --jc-safe-pad: 12px; }
+
+  .topbar-title {
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60vw;
+  }
+}

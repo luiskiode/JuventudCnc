@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Angie · Herramienta de colores</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: light;
+    }
+    body {
+      margin: 0;
+      padding: 1rem;
+      background: #f9fafb;
+      color: #111827;
+    }
+    h1 {
+      font-size: 1.1rem;
+      margin: 0 0 0.75rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem 0.75rem;
+      margin-bottom: 1rem;
+    }
+    label {
+      font-size: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    input[type="color"] {
+      width: 100%;
+      height: 2.2rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 0;
+      background: #fff;
+      cursor: pointer;
+    }
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 0.5rem 1rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid #d1d5db;
+      color: #374151;
+    }
+    .btn-ghost:hover {
+      background: #f3f4f6;
+    }
+    .row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
+    }
+    small {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+    .sep {
+      grid-column: 1 / -1;
+      border: none;
+      border-top: 1px solid rgba(148, 163, 184, 0.25);
+      margin: 10px 0;
+    }
+    .grid p.section-title {
+      grid-column: 1 / -1;
+      margin: 0 0 0.25rem;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>🎨 Angie – Paleta de colores</h1>
+
+  <section>
+    <small>Cambia cualquier color y se reflejará al instante en Juventud CNC.</small>
+
+    <div class="grid" style="margin-top: 0.75rem;">
+
+      <!-- Colores Principales -->
+      <p class="section-title"><strong>Colores base</strong></p>
+
+      <label>
+        Principal (brand)
+        <input type="color" id="brand" value="#2563eb" />
+      </label>
+
+      <label>
+        Secundario (brand-2)
+        <input type="color" id="brand-2" value="#1d4ed8" />
+      </label>
+
+      <label>
+        Acento (accent)
+        <input type="color" id="accent" value="#ec4899" />
+      </label>
+
+      <label>
+        Fondo oscuro (neutral-900)
+        <input type="color" id="neutral-900" value="#020617" />
+      </label>
+
+      <hr class="sep" />
+
+      <!-- UI -->
+      <p class="section-title"><strong>Interfaz (UI)</strong></p>
+
+      <label>
+        Topbar (topbar-bg)
+        <input type="color" id="topbar-bg" value="#0f172a" />
+      </label>
+
+      <label>
+        Overlay (overlay-bg)
+        <input type="color" id="overlay-bg" value="#000000" />
+      </label>
+
+      <label>
+        Glow botón (icon-glow)
+        <input type="color" id="icon-glow" value="#ec4899" />
+      </label>
+
+      <hr class="sep" />
+
+      <!-- Fondo Animado Flow -->
+      <p class="section-title"><strong>Fondo animado (Flow)</strong></p>
+
+      <label>
+        Radial A (bg-a)
+        <input type="color" id="bg-a" value="#38bdf8" />
+      </label>
+
+      <label>
+        Radial B (bg-b)
+        <input type="color" id="bg-b" value="#f472b6" />
+      </label>
+
+      <label>
+        Radial C (bg-c)
+        <input type="color" id="bg-c" value="#3b82f6" />
+      </label>
+
+      <label>
+        Base 1 (bg-base-1)
+        <input type="color" id="bg-base-1" value="#020617" />
+      </label>
+
+      <label>
+        Base 2 (bg-base-2)
+        <input type="color" id="bg-base-2" value="#000000" />
+      </label>
+
+      <label>
+        Velo A (veil-a)
+        <input type="color" id="veil-a" value="#0f172a" />
+      </label>
+
+      <label>
+        Velo B (veil-b)
+        <input type="color" id="veil-b" value="#0b1120" />
+      </label>
+    </div>
+
+    <div class="row">
+      <button id="btnAplicar" class="btn-primary" type="button">Aplicar cambios</button>
+      <button id="btnReset" class="btn-ghost" type="button">Restablecer valores</button>
+    </div>
+  </section>
+
+  <script>
+    const STORAGE_KEY = 'angie_tokens_ui';
+
+    const inputs = [...document.querySelectorAll('input[type="color"]')];
+    const btnAplicar = document.getElementById('btnAplicar');
+    const btnReset = document.getElementById('btnReset');
+
+    const DEFAULTS = {
+      "brand": "#2563eb",
+      "brand-2": "#1d4ed8",
+      "accent": "#ec4899",
+      "neutral-900": "#020617",
+      "topbar-bg": "#0f172a",
+      "overlay-bg": "#000000",
+      "icon-glow": "#ec4899",
+      "bg-a": "#38bdf8",
+      "bg-b": "#f472b6",
+      "bg-c": "#3b82f6",
+      "bg-base-1": "#020617",
+      "bg-base-2": "#000000",
+      "veil-a": "#0f172a",
+      "veil-b": "#0b1120"
+    };
+
+    function buildTokens() {
+      const tokens = {};
+      inputs.forEach(i => tokens[i.id] = i.value);
+      return tokens;
+    }
+
+    function persistTokens(tokens) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
+      } catch (e) {}
+    }
+
+    function sendTokens(tokens) {
+      if (!window.parent || window.parent === window) return;
+      window.parent.postMessage({ type: 'applyTokens', tokens }, '*');
+      persistTokens(tokens);
+    }
+
+    function syncTokens() {
+      sendTokens(buildTokens());
+    }
+
+    // Aplicar en vivo con cada cambio
+    inputs.forEach(i => i.addEventListener('input', syncTokens));
+    btnAplicar.addEventListener('click', syncTokens);
+
+    // Reset general
+    btnReset.addEventListener('click', () => {
+      for (const [k, v] of Object.entries(DEFAULTS)) {
+        const el = document.getElementById(k);
+        if (el) el.value = v;
+      }
+      syncTokens();
+    });
+
+    // Restaurar guardados al cargar el iframe
+    (function restore() {
+      let saved = null;
+      try {
+        saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      } catch (e) {}
+
+      if (saved && typeof saved === 'object') {
+        for (const input of inputs) {
+          const id = input.id;
+          if (saved[id]) input.value = saved[id];
+        }
+      }
+      syncTokens();
+    })();
+  </script>
+</body>
+</html>
