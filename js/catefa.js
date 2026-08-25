@@ -17,6 +17,34 @@
     }
   }
 
+  // Cargar Parejas Guías desde la BD
+  async function cargarParejasGuias() {
+    const client = getClient();
+    const select = document.getElementById('selectParejaGuia');
+    if (!client || !select) return;
+
+    try {
+      const { data: guias, error } = await client
+        .from('catefa_usuarios')
+        .select('nombre')
+        .eq('rol', 'pareja_guia')
+        .order('nombre', { ascending: true });
+
+      if (error) throw error;
+
+      select.innerHTML = '<option value="">-- Selecciona Pareja Guía --</option>';
+      (guias || []).forEach((g) => {
+        const opt = document.createElement('option');
+        opt.value = g.nombre;
+        opt.textContent = g.nombre;
+        select.appendChild(opt);
+      });
+    } catch (e) {
+      console.error('[Catefa] Error cargando parejas guías:', e);
+    }
+  }
+
+  // Cargar Grupos existentes
   async function cargarGrupos() {
     const client = getClient();
     const select = document.getElementById('selectGrupo');
@@ -47,6 +75,7 @@
     }
   }
 
+  // Cargar Niños del Grupo Seleccionado
   async function cargarNinos(grupoId) {
     const list = document.getElementById('listaNinos');
     const client = getClient();
@@ -111,6 +140,7 @@
 
     btnNuevoGrupo?.addEventListener('click', () => {
       if (formNuevoGrupoWrap) formNuevoGrupoWrap.style.display = 'block';
+      cargarParejasGuias();
       inputNombreGrupo?.focus();
     });
 
@@ -176,8 +206,10 @@
     init: () => {
       bindUI();
       cargarGrupos();
+      cargarParejasGuias();
     },
     cargarGrupos,
-    cargarNinos
+    cargarNinos,
+    cargarParejasGuias
   };
 })();
