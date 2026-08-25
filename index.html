@@ -59,7 +59,7 @@
         </section>
 
         <!-- Tarjeta Mensaje Semanal (Carga dinámica de Supabase) -->
-        <section class="card" id="mensaje-semanal">
+        <section class="card" id="mensaje-semanal" style="margin-bottom: 1rem;">
           <header class="card-header">
             <h2 class="with-emoji" data-emoji="🕊️">Mensaje semanal</h2>
             <span class="badge badge-mix">Para todos</span>
@@ -69,6 +69,63 @@
             <p id="msgBody" style="margin-top: 6px;">Un momento por favor...</p>
             <small id="msgMeta" class="muted" style="display:block; margin-top:8px;"></small>
           </article>
+        </section>
+
+        <!-- MÓDULO CATEFA: GESTIÓN DE GRUPOS Y NIÑOS (Visible al iniciar sesión) -->
+        <section class="card" id="catefaModule" style="display:none; margin-bottom: 1rem;">
+          <header class="card-header">
+            <h2 class="with-emoji" data-emoji="👥">Grupos y Niños</h2>
+            <span class="badge badge-mix" id="grupoStatusBadge">Catefa</span>
+          </header>
+          
+          <div class="card-body" style="display: flex; flex-direction: column; gap: 14px;">
+            <!-- Selector / Creación de Grupo -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <div style="flex:1; min-width:200px;">
+                <label class="small muted" for="selectGrupo">Seleccionar Grupo:</label>
+                <select id="selectGrupo" style="margin-top:4px;">
+                  <option value="">Cargando grupos...</option>
+                </select>
+              </div>
+              <button id="btnNuevoGrupo" class="btn small" type="button" style="margin-top:18px;">+ Crear Grupo</button>
+            </div>
+
+            <!-- Formulario Crear Grupo (Oculto por defecto) -->
+            <div id="formNuevoGrupoWrap" style="display:none; background:rgba(2,6,23,0.4); padding:12px; border-radius:12px; border:1px solid rgba(148,163,184,0.2);">
+              <h4 style="margin:0 0 8px; font-size:14px;">Nuevo Grupo de Catequesis</h4>
+              <div style="display:flex; gap:8px;">
+                <input id="inputNombreGrupo" type="text" placeholder="Ej: Comunión 1 - Sábados" />
+                <button id="btnGuardarGrupo" class="btn small" type="button">Guardar</button>
+                <button id="btnCancelarGrupo" class="btn small ghost" type="button">✕</button>
+              </div>
+            </div>
+
+            <hr style="border:0; border-top:1px solid rgba(148,163,184,0.2); margin:4px 0;" />
+
+            <!-- Formulario Registrar Niño -->
+            <div id="formNinoWrap">
+              <h3 style="font-size:15px; margin-bottom:8px;">📝 Agregar Niño al Grupo</h3>
+              <form id="formNino" style="display:grid; gap:10px;">
+                <div>
+                  <label class="small muted" for="ninoNombre">Nombre del Niño:</label>
+                  <input id="ninoNombre" type="text" placeholder="Ej: Mateo Ramos" required style="margin-top:4px;" />
+                </div>
+                <div>
+                  <label class="small muted" for="ninoNotas">Notitas compartidas (Escucha / Pastoral):</label>
+                  <textarea id="ninoNotas" rows="2" placeholder="Ej: Le gusta participar, vive con sus abuelos..." style="margin-top:4px;"></textarea>
+                </div>
+                <button class="btn" type="submit" style="justify-self:start;">+ Guardar Niño</button>
+              </form>
+            </div>
+
+            <!-- Lista de Niños Registrados -->
+            <div>
+              <h3 style="font-size:15px; margin-bottom:8px;">👦 Lista de Acompañamiento</h3>
+              <div id="listaNinos" style="display:grid; gap:8px;">
+                <p class="muted small">Selecciona o crea un grupo para ver los niños registrados.</p>
+              </div>
+            </div>
+          </div>
         </section>
 
       </section>
@@ -148,14 +205,10 @@
         }
       }
 
-      // Cargar fondo guardado o predeterminado
       const savedBg = localStorage.getItem('jc_custom_bg');
       applyBackground(savedBg || DEFAULT_BG);
 
-      btnChangeBg.addEventListener('click', () => {
-        bgFileInput.click();
-      });
-
+      btnChangeBg.addEventListener('click', () => bgFileInput.click());
       btnChangeBg.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         localStorage.removeItem('jc_custom_bg');
@@ -172,7 +225,7 @@
           try {
             localStorage.setItem('jc_custom_bg', base64Bg);
           } catch (err) {
-            console.warn('Imagen grande para localStorage, se aplica temporalmente.');
+            console.warn('Imagen grande para localStorage.');
           }
           applyBackground(base64Bg);
         };
@@ -340,7 +393,160 @@
       }
 
       // ==========================================
-      // 5. AUTENTICACIÓN SIMPLIFICADA
+      // 5. GESTIÓN DE GRUPOS Y NIÑOS (CATEFA)
+      // ==========================================
+      const catefaModule = document.getElementById('catefaModule');
+      const selectGrupo = document.getElementById('selectGrupo');
+      const btnNuevoGrupo = document.getElementById('btnNuevoGrupo');
+      const formNuevoGrupoWrap = document.getElementById('formNuevoGrupoWrap');
+      const inputNombreGrupo = document.getElementById('inputNombreGrupo');
+      const btnGuardarGrupo = document.getElementById('btnGuardarGrupo');
+      const btnCancelarGrupo = document.getElementById('btnCancelarGrupo');
+      const formNinoWrap = document.getElementById('formNinoWrap');
+      const formNino = document.getElementById('formNino');
+      const ninoNombre = document.getElementById('ninoNombre');
+      const ninoNotas = document.getElementById('ninoNotas');
+      const listaNinos = document.getElementById('listaNinos');
+
+      let currentGrupoId = null;
+
+      async function cargarGrupos() {
+        const client = window.JC?.supabase || window.sb;
+        if (!client) return;
+
+        try {
+          const { data: grupos, error } = await client
+            .from('catefa_grupos')
+            .select('*')
+            .order('nombre', { ascending: true });
+
+          if (error) throw error;
+
+          selectGrupo.innerHTML = '<option value="">-- Elige un grupo --</option>';
+          grupos.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.id;
+            opt.textContent = g.nombre;
+            selectGrupo.appendChild(opt);
+          });
+
+          if (currentGrupoId) {
+            selectGrupo.value = currentGrupoId;
+            cargarNinos(currentGrupoId);
+          }
+        } catch (e) {
+          console.error('[Cargar Grupos]', e);
+        }
+      }
+
+      async function cargarNinos(grupoId) {
+        if (!grupoId) {
+          listaNinos.innerHTML = '<p class="muted small">Selecciona un grupo para ver a los niños.</p>';
+          return;
+        }
+
+        listaNinos.innerHTML = '<p class="muted small">Cargando niños...</p>';
+        const client = window.JC?.supabase || window.sb;
+
+        try {
+          const { data: ninos, error } = await client
+            .from('catefa_ninos')
+            .select('*')
+            .eq('grupo_id', grupoId)
+            .order('nombre', { ascending: true });
+
+          if (error) throw error;
+
+          if (!ninos || ninos.length === 0) {
+            listaNinos.innerHTML = '<p class="muted small">No hay niños registrados en este grupo aún.</p>';
+            return;
+          }
+
+          listaNinos.innerHTML = '';
+          ninos.forEach(n => {
+            const item = document.createElement('div');
+            item.style.cssText = 'background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.15); display:flex; justify-content:space-between; align-items:flex-start; gap:8px;';
+            item.innerHTML = `
+              <div>
+                <strong>${n.nombre}</strong>
+                ${n.notas ? `<p class="muted small" style="margin-top:4px; font-style:italic;">"${n.notas}"</p>` : '<p class="muted small" style="margin-top:4px; opacity:0.6;">Sin notitas</p>'}
+              </div>
+            `;
+            listaNinos.appendChild(item);
+          });
+        } catch (e) {
+          console.error('[Cargar Niños]', e);
+          listaNinos.innerHTML = '<p class="muted small">Error al cargar la lista.</p>';
+        }
+      }
+
+      selectGrupo.addEventListener('change', (e) => {
+        currentGrupoId = e.target.value;
+        cargarNinos(currentGrupoId);
+      });
+
+      btnNuevoGrupo.addEventListener('click', () => {
+        formNuevoGrupoWrap.style.display = 'block';
+        inputNombreGrupo.focus();
+      });
+
+      btnCancelarGrupo.addEventListener('click', () => {
+        formNuevoGrupoWrap.style.display = 'none';
+        inputNombreGrupo.value = '';
+      });
+
+      btnGuardarGrupo.addEventListener('click', async () => {
+        const nombre = inputNombreGrupo.value.trim();
+        if (!nombre) return;
+
+        const user = JSON.parse(localStorage.getItem('jc_user') || '{}');
+        const client = window.JC?.supabase || window.sb;
+
+        try {
+          const { data: nuevo, error } = await client
+            .from('catefa_grupos')
+            .insert([{ nombre, animador_id: user.id || null }])
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          inputNombreGrupo.value = '';
+          formNuevoGrupoWrap.style.display = 'none';
+          currentGrupoId = nuevo.id;
+          await cargarGrupos();
+        } catch (e) {
+          console.error('[Guardar Grupo]', e);
+        }
+      });
+
+      formNino.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentGrupoId) {
+          alert('Por favor, selecciona o crea un grupo primero.');
+          return;
+        }
+
+        const nombre = ninoNombre.value.trim();
+        const notas = ninoNotas.value.trim();
+        const client = window.JC?.supabase || window.sb;
+
+        try {
+          const { error } = await client
+            .from('catefa_ninos')
+            .insert([{ grupo_id: currentGrupoId, nombre, notas }]);
+
+          if (error) throw error;
+
+          formNino.reset();
+          cargarNinos(currentGrupoId);
+        } catch (e) {
+          console.error('[Guardar Niño]', e);
+        }
+      });
+
+      // ==========================================
+      // 6. AUTENTICACIÓN SIMPLIFICADA
       // ==========================================
       const btnLogin = document.getElementById('btnLogin');
       const btnLogoutTop = document.getElementById('btnLogoutTop');
@@ -366,12 +572,19 @@
             userBadgeWrap.style.display = 'block';
             btnLogin.style.display = 'none';
             btnLogoutTop.style.display = 'inline-flex';
+            
+            // Mostrar módulo Catefa
+            catefaModule.style.display = 'block';
+            cargarGrupos();
           } else {
             heroTitulo.textContent = 'Bienvenido a Juventud CNC';
             heroSubtitulo.textContent = 'Un espacio para crecer, servir y caminar juntos.';
             userBadgeWrap.style.display = 'none';
             btnLogin.style.display = 'inline-flex';
             btnLogoutTop.style.display = 'none';
+            
+            // Ocultar módulo Catefa
+            catefaModule.style.display = 'none';
           }
         } catch (e) {}
       }
