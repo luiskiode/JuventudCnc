@@ -24,7 +24,7 @@
     }
   }
 
-  // 1. Parejas Guías
+  // 1. Cargar Parejas Guías en el formulario de creación
   async function cargarParejasGuias() {
     const select = document.getElementById('selectParejaGuia');
     if (!select) return;
@@ -57,27 +57,43 @@
     });
   }
 
-  // 2. Grupos
+  // 2. Cargar Grupos según el ROL y USUARIO actual
   async function cargarGrupos() {
     const select = document.getElementById('selectGrupo');
     const client = getClient();
+    const user = getUser();
     if (!select || !client) return;
 
     try {
-      const { data: grupos, error } = await client
-        .from('catefa_grupos')
-        .select('*')
-        .order('nombre', { ascending: true });
+      let query = client.from('catefa_grupos').select('*').order('nombre', { ascending: true });
 
+      // Si es Pareja Guía, se priorizan/filtran los grupos asignados a su nombre
+      if (user.rol === 'pareja_guia') {
+        query = query.ilike('pareja_guia', `%${user.nombre}%`);
+      }
+
+      const { data: grupos, error } = await query;
       if (error) throw error;
 
       select.innerHTML = '<option value="">-- Selecciona tu grupo --</option>';
-      (grupos || []).forEach((g) => {
-        const opt = document.createElement('option');
-        opt.value = g.id;
-        opt.textContent = g.nombre;
-        select.appendChild(opt);
-      });
+      
+      if (!grupos || grupos.length === 0) {
+        select.innerHTML = '<option value="">-- No hay grupos asignados --</option>';
+      } else {
+        grupos.forEach((g) => {
+          const opt = document.createElement('option');
+          opt.value = g.id;
+          opt.textContent = `${g.nombre} ${g.pareja_guia ? '· [' + g.pareja_guia + ']' : ''}`;
+          select.appendChild(opt);
+        });
+
+        // Auto-seleccionar el primero si solo tiene uno
+        if (grupos.length === 1 && !currentGrupoId) {
+          currentGrupoId = grupos[0].id;
+          select.value = currentGrupoId;
+          cargarNinos(currentGrupoId);
+        }
+      }
 
       if (currentGrupoId) {
         select.value = currentGrupoId;
@@ -88,7 +104,7 @@
     }
   }
 
-  // 3. Niños y Fichas de Notitas
+  // 3. Niños y Notitas
   async function cargarNinos(grupoId) {
     const list = document.getElementById('listaNinos');
     const client = getClient();
@@ -176,14 +192,13 @@
     }
   }
 
-  // 4. Detección de Faltas Consecutivas (Alerta >= 2)
+  // 4. Inasistencias previas por grupo
   async function calcularInasistenciasPrevias(grupoId) {
     const client = getClient();
     const mapaAlertas = {};
     if (!client || !grupoId) return mapaAlertas;
 
     try {
-      // Obtener las últimas 2 sesiones anteriores del grupo
       const { data: sesiones } = await client
         .from('catefa_sesiones')
         .select('id, fecha')
@@ -194,14 +209,14 @@
 
       if (!sesiones || sesiones.length < 2) return mapaAlertas;
 
-      const sesionIds = sesiones.map(s => s.id);
+      const sesionIds = sesiones.map((s) => s.id);
       const { data: asistencias } = await client
         .from('catefa_asistencias')
-        .select('nino_id, sesion_id, presente')
+        .select('nino_id, presente')
         .in('sesion_id', sesionIds);
 
       const conteoFaltas = {};
-      (asistencias || []).forEach(a => {
+      (asistencias || []).forEach((a) => {
         if (!a.presente) {
           conteoFaltas[a.nino_id] = (conteoFaltas[a.nino_id] || 0) + 1;
         }
@@ -216,7 +231,7 @@
     return mapaAlertas;
   }
 
-  // 5. Asistencias
+  // 5. Asistencias del Grupo
   async function cargarAsistencias(grupoId) {
     const list = document.getElementById('listaAsistencias');
     const badgeContador = document.getElementById('contadorAsistencias');
@@ -330,14 +345,13 @@
     }
   }
 
-  // 6. Formatear y Asegurar Sesión (Título - Fecha)
+  // 6. Sesión Independiente por Grupo y Fecha
   async function asegurarSesionHoy(grupoId, forzarTema = '') {
     if (!grupoId) return;
     const client = getClient();
     const hoy = new Date().toISOString().split('T')[0];
     
     let baseTema = forzarTema || document.getElementById('inputTemaSesion')?.value.trim() || 'Sesión Ordinaria';
-    // Limpiar si ya tenía fecha concatenada para no duplicar
     baseTema = baseTema.replace(/ - \d{4}-\d{2}-\d{2}$/, '').trim();
     const temaCompleto = `${baseTema} - ${hoy}`;
 
@@ -378,7 +392,7 @@
     }
   }
 
-  // 7. Descargar Reporte en Excel (.CSV UTF-8)
+  // 7. Descarga en Excel (.CSV)
   async function descargarReporteExcel() {
     if (!currentGrupoId || !currentSesionId) {
       alert('Selecciona un grupo y abre una sesión primero para descargar el reporte.');
@@ -387,18 +401,19 @@
 
     const client = getClient();
     try {
-      const { data: grupo } = await client.from('catefa_grupos').select('nombre').eq('id', currentGrupoId).single();
+      const { data: grupo } = await client.from('catefa_grupos').select('nombre, pareja_guia').eq('id', currentGrupoId).single();
       const { data: sesion } = await client.from('catefa_sesiones').select('tema, fecha').eq('id', currentSesionId).single();
       const { data: ninos } = await client.from('catefa_ninos').select('id, nombre, notas').eq('grupo_id', currentGrupoId).order('nombre', { ascending: true });
       const { data: asistencias } = await client.from('catefa_asistencias').select('nino_id, presente').eq('sesion_id', currentSesionId);
       const alertas = await calcularInasistenciasPrevias(currentGrupoId);
 
       const asistMap = {};
-      (asistencias || []).forEach(a => asistMap[a.nino_id] = a.presente);
+      (asistencias || []).forEach((a) => (asistMap[a.nino_id] = a.presente));
 
-      let csvContent = "\uFEFF"; // BOM UTF-8 para visualización correcta en Excel
+      let csvContent = "\uFEFF";
       csvContent += `Reporte de Asistencia Catefa\n`;
       csvContent += `Grupo:,"${grupo?.nombre || ''}"\n`;
+      csvContent += `Pareja Guia:,"${grupo?.pareja_guia || 'Sin asignar'}"\n`;
       csvContent += `Sesion:,"${sesion?.tema || ''}"\n`;
       csvContent += `Fecha:,"${sesion?.fecha || ''}"\n\n`;
       csvContent += `N°,Nombre del Niño,Estado,Alerta Pastoral,Notitas Pastorales\n`;
@@ -424,7 +439,7 @@
     }
   }
 
-  // 8. Enlace de Eventos
+  // 8. Eventos UI
   function bindUI() {
     if (window.__JC_CATEFA_BOUND__) return;
     window.__JC_CATEFA_BOUND__ = true;
@@ -489,14 +504,17 @@
       const parejaGuia = selectParejaGuia?.value.trim();
       if (!nombreBase) return;
 
-      const nombreFinal = parejaGuia ? `${nombreBase} (${parejaGuia})` : nombreBase;
       const user = getUser();
       const client = getClient();
 
       try {
         const { data: nuevo, error } = await client
           .from('catefa_grupos')
-          .insert([{ nombre: nombreFinal, animador_id: user.id || null }])
+          .insert([{ 
+            nombre: nombreBase, 
+            pareja_guia: parejaGuia || null, 
+            animador_id: user.id || null 
+          }])
           .select()
           .single();
 
