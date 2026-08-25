@@ -88,7 +88,7 @@
     }
   }
 
-  // 3. Niños y Edición de Notitas
+  // 3. Niños y Fichas de Notitas
   async function cargarNinos(grupoId) {
     const list = document.getElementById('listaNinos');
     const client = getClient();
@@ -176,7 +176,47 @@
     }
   }
 
-  // 4. Módulo de Asistencias (Robusto)
+  // 4. Detección de Faltas Consecutivas (Alerta >= 2)
+  async function calcularInasistenciasPrevias(grupoId) {
+    const client = getClient();
+    const mapaAlertas = {};
+    if (!client || !grupoId) return mapaAlertas;
+
+    try {
+      // Obtener las últimas 2 sesiones anteriores del grupo
+      const { data: sesiones } = await client
+        .from('catefa_sesiones')
+        .select('id, fecha')
+        .eq('grupo_id', grupoId)
+        .neq('id', currentSesionId || '00000000-0000-0000-0000-000000000000')
+        .order('fecha', { ascending: false })
+        .limit(2);
+
+      if (!sesiones || sesiones.length < 2) return mapaAlertas;
+
+      const sesionIds = sesiones.map(s => s.id);
+      const { data: asistencias } = await client
+        .from('catefa_asistencias')
+        .select('nino_id, sesion_id, presente')
+        .in('sesion_id', sesionIds);
+
+      const conteoFaltas = {};
+      (asistencias || []).forEach(a => {
+        if (!a.presente) {
+          conteoFaltas[a.nino_id] = (conteoFaltas[a.nino_id] || 0) + 1;
+        }
+      });
+
+      Object.entries(conteoFaltas).forEach(([ninoId, faltas]) => {
+        if (faltas >= 2) mapaAlertas[ninoId] = true;
+      });
+    } catch (e) {
+      console.warn('[Catefa] Error calculando inasistencias:', e);
+    }
+    return mapaAlertas;
+  }
+
+  // 5. Asistencias
   async function cargarAsistencias(grupoId) {
     const list = document.getElementById('listaAsistencias');
     const badgeContador = document.getElementById('contadorAsistencias');
@@ -184,7 +224,7 @@
     if (!list || !grupoId) return;
 
     if (!currentSesionId) {
-      list.innerHTML = '<p class="muted small">Pulsa "Cargar / Abrir Sesión de Hoy" para iniciar el pase de lista.</p>';
+      list.innerHTML = '<p class="muted small">Pulsa "Cargar / Guardar Sesión" para iniciar el pase de lista.</p>';
       badgeContador.textContent = '0 presentes';
       return;
     }
@@ -194,7 +234,7 @@
     try {
       const { data: ninos, error: errN } = await client
         .from('catefa_ninos')
-        .select('id, nombre')
+        .select('id, nombre, notas')
         .eq('grupo_id', grupoId)
         .order('nombre', { ascending: true });
 
@@ -213,6 +253,8 @@
 
       if (errA) throw errA;
 
+      const alertasFaltas = await calcularInasistenciasPrevias(grupoId);
+
       const asistMap = {};
       (asistencias || []).forEach((a) => {
         asistMap[a.nino_id] = a.presente;
@@ -225,12 +267,17 @@
         const isPresente = asistMap[n.id] === true;
         if (isPresente) presentesCount++;
 
+        const tieneAlerta = alertasFaltas[n.id];
+
         const row = document.createElement('div');
         row.style.cssText =
-          'background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.15); display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;';
+          'background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.15); display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;';
 
         row.innerHTML = `
-          <strong>${n.nombre}</strong>
+          <div>
+            <strong>${n.nombre}</strong>
+            ${tieneAlerta ? '<span style="display:inline-block; font-size:11px; background:rgba(239,68,68,0.2); color:#fca5a5; border:1px solid rgba(239,68,68,0.3); padding:2px 6px; border-radius:999px; margin-left:6px;">⚠️ 2+ Faltas</span>' : ''}
+          </div>
           <button class="btn small ${isPresente ? '' : 'ghost'} btn-asistencia" data-nino="${n.id}" data-presente="${isPresente}">
             ${isPresente ? '✅ Presente' : '❌ Falta'}
           </button>
@@ -247,7 +294,6 @@
           btn.disabled = true;
 
           try {
-            // Verificar si ya existe registro para update o insert seguro
             const { data: existing } = await client
               .from('catefa_asistencias')
               .select('id')
@@ -284,15 +330,19 @@
     }
   }
 
-  // 5. Iniciar / Detectar Sesión de Hoy
+  // 6. Formatear y Asegurar Sesión (Título - Fecha)
   async function asegurarSesionHoy(grupoId, forzarTema = '') {
     if (!grupoId) return;
     const client = getClient();
     const hoy = new Date().toISOString().split('T')[0];
-    const tema = forzarTema || document.getElementById('inputTemaSesion')?.value.trim() || 'Sesión ordinaria';
+    
+    let baseTema = forzarTema || document.getElementById('inputTemaSesion')?.value.trim() || 'Sesión Ordinaria';
+    // Limpiar si ya tenía fecha concatenada para no duplicar
+    baseTema = baseTema.replace(/ - \d{4}-\d{2}-\d{2}$/, '').trim();
+    const temaCompleto = `${baseTema} - ${hoy}`;
 
     try {
-      let { data: sesion, error } = await client
+      let { data: sesion } = await client
         .from('catefa_sesiones')
         .select('*')
         .eq('grupo_id', grupoId)
@@ -302,17 +352,25 @@
       if (!sesion) {
         const { data: nueva, error: errInsert } = await client
           .from('catefa_sesiones')
-          .insert([{ grupo_id: grupoId, tema, fecha: hoy }])
+          .insert([{ grupo_id: grupoId, tema: temaCompleto, fecha: hoy }])
           .select()
           .single();
 
         if (errInsert) throw errInsert;
         sesion = nueva;
+      } else if (forzarTema) {
+        const { data: updated } = await client
+          .from('catefa_sesiones')
+          .update({ tema: temaCompleto })
+          .eq('id', sesion.id)
+          .select()
+          .single();
+        if (updated) sesion = updated;
       }
 
       currentSesionId = sesion.id;
       if (document.getElementById('inputTemaSesion')) {
-        document.getElementById('inputTemaSesion').value = sesion.tema || '';
+        document.getElementById('inputTemaSesion').value = sesion.tema || temaCompleto;
       }
       await cargarAsistencias(grupoId);
     } catch (err) {
@@ -320,7 +378,53 @@
     }
   }
 
-  // 6. Enlace de Eventos
+  // 7. Descargar Reporte en Excel (.CSV UTF-8)
+  async function descargarReporteExcel() {
+    if (!currentGrupoId || !currentSesionId) {
+      alert('Selecciona un grupo y abre una sesión primero para descargar el reporte.');
+      return;
+    }
+
+    const client = getClient();
+    try {
+      const { data: grupo } = await client.from('catefa_grupos').select('nombre').eq('id', currentGrupoId).single();
+      const { data: sesion } = await client.from('catefa_sesiones').select('tema, fecha').eq('id', currentSesionId).single();
+      const { data: ninos } = await client.from('catefa_ninos').select('id, nombre, notas').eq('grupo_id', currentGrupoId).order('nombre', { ascending: true });
+      const { data: asistencias } = await client.from('catefa_asistencias').select('nino_id, presente').eq('sesion_id', currentSesionId);
+      const alertas = await calcularInasistenciasPrevias(currentGrupoId);
+
+      const asistMap = {};
+      (asistencias || []).forEach(a => asistMap[a.nino_id] = a.presente);
+
+      let csvContent = "\uFEFF"; // BOM UTF-8 para visualización correcta en Excel
+      csvContent += `Reporte de Asistencia Catefa\n`;
+      csvContent += `Grupo:,"${grupo?.nombre || ''}"\n`;
+      csvContent += `Sesion:,"${sesion?.tema || ''}"\n`;
+      csvContent += `Fecha:,"${sesion?.fecha || ''}"\n\n`;
+      csvContent += `N°,Nombre del Niño,Estado,Alerta Pastoral,Notitas Pastorales\n`;
+
+      (ninos || []).forEach((n, idx) => {
+        const estado = asistMap[n.id] ? "PRESENTE" : "FALTA";
+        const alerta = alertas[n.id] ? "ALERTA (2+ Faltas Consecutivas)" : "Al día";
+        const notas = (n.notas || '').replace(/"/g, '""');
+        csvContent += `${idx + 1},"${n.nombre}","${estado}","${alerta}","${notas}"\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Asistencia_${(grupo?.nombre || 'Catefa').replace(/\s+/g, '_')}_${sesion?.fecha || 'hoy'}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error('[Catefa] Error al exportar excel:', e);
+      alert('Error al generar el reporte.');
+    }
+  }
+
+  // 8. Enlace de Eventos
   function bindUI() {
     if (window.__JC_CATEFA_BOUND__) return;
     window.__JC_CATEFA_BOUND__ = true;
@@ -341,6 +445,7 @@
     const subvistaNinos = document.getElementById('subvistaNinos');
     const subvistaAsistencias = document.getElementById('subvistaAsistencias');
     const btnIniciarSesion = document.getElementById('btnIniciarSesion');
+    const btnDescargarExcel = document.getElementById('btnDescargarExcel');
     const inputTemaSesion = document.getElementById('inputTemaSesion');
 
     tabBtnNinos?.addEventListener('click', () => {
@@ -439,6 +544,8 @@
       const tema = inputTemaSesion?.value.trim();
       await asegurarSesionHoy(currentGrupoId, tema);
     });
+
+    btnDescargarExcel?.addEventListener('click', descargarReporteExcel);
   }
 
   function init() {
@@ -453,7 +560,8 @@
     cargarNinos,
     cargarParejasGuias,
     cargarAsistencias,
-    asegurarSesionHoy
+    asegurarSesionHoy,
+    descargarReporteExcel
   };
 
   if (document.readyState === 'loading') {
