@@ -5,8 +5,15 @@
   const JC = (window.JC = window.JC || {});
   let currentGrupoId = null;
 
+  // Lista base de respaldo inmediato por si la conexión tarda
+  const PAREJAS_BASE = [
+    "Richard y Lucero",
+    "Betty y Jesus",
+    "Ricardo y Yaneli"
+  ];
+
   function getClient() {
-    return window.JC?.supabase || window.sb;
+    return window.JC?.supabase || window.sb || window.supabaseClient;
   }
 
   function getUser() {
@@ -17,38 +24,44 @@
     }
   }
 
-  // Cargar Parejas Guías desde la BD
+  // 1. Cargar Parejas Guías (desde Supabase con fallback local)
   async function cargarParejasGuias() {
-    const client = getClient();
     const select = document.getElementById('selectParejaGuia');
-    if (!client || !select) return;
+    if (!select) return;
 
-    try {
-      const { data: guias, error } = await client
-        .from('catefa_usuarios')
-        .select('nombre')
-        .eq('rol', 'pareja_guia')
-        .order('nombre', { ascending: true });
+    let guiasNombres = [...PAREJAS_BASE];
+    const client = getClient();
 
-      if (error) throw error;
+    if (client) {
+      try {
+        const { data, error } = await client
+          .from('catefa_usuarios')
+          .select('nombre')
+          .eq('rol', 'pareja_guia')
+          .order('nombre', { ascending: true });
 
-      select.innerHTML = '<option value="">-- Selecciona Pareja Guía --</option>';
-      (guias || []).forEach((g) => {
-        const opt = document.createElement('option');
-        opt.value = g.nombre;
-        opt.textContent = g.nombre;
-        select.appendChild(opt);
-      });
-    } catch (e) {
-      console.error('[Catefa] Error cargando parejas guías:', e);
+        if (!error && data && data.length > 0) {
+          guiasNombres = data.map(d => d.nombre);
+        }
+      } catch (err) {
+        console.warn('[Catefa] Usando lista local de parejas guías:', err);
+      }
     }
+
+    select.innerHTML = '<option value="">-- Selecciona Pareja Guía --</option>';
+    guiasNombres.forEach((nombre) => {
+      const opt = document.createElement('option');
+      opt.value = nombre;
+      opt.textContent = nombre;
+      select.appendChild(opt);
+    });
   }
 
-  // Cargar Grupos existentes
+  // 2. Cargar Grupos
   async function cargarGrupos() {
-    const client = getClient();
     const select = document.getElementById('selectGrupo');
-    if (!client || !select) return;
+    const client = getClient();
+    if (!select || !client) return;
 
     try {
       const { data: grupos, error } = await client
@@ -75,7 +88,7 @@
     }
   }
 
-  // Cargar Niños del Grupo Seleccionado
+  // 3. Cargar Niños del Grupo
   async function cargarNinos(grupoId) {
     const list = document.getElementById('listaNinos');
     const client = getClient();
@@ -121,7 +134,11 @@
     }
   }
 
+  // 4. Eventos de la Interfaz
   function bindUI() {
+    if (window.__JC_CATEFA_BOUND__) return;
+    window.__JC_CATEFA_BOUND__ = true;
+
     const select = document.getElementById('selectGrupo');
     const btnNuevoGrupo = document.getElementById('btnNuevoGrupo');
     const formNuevoGrupoWrap = document.getElementById('formNuevoGrupoWrap');
@@ -157,6 +174,11 @@
       const nombreFinal = parejaGuia ? `${nombreBase} (${parejaGuia})` : nombreBase;
       const user = getUser();
       const client = getClient();
+
+      if (!client) {
+        alert('No hay conexión con la base de datos.');
+        return;
+      }
 
       try {
         const { data: nuevo, error } = await client
@@ -202,14 +224,23 @@
     });
   }
 
+  function init() {
+    bindUI();
+    cargarParejasGuias();
+    cargarGrupos();
+  }
+
   JC.catefa = {
-    init: () => {
-      bindUI();
-      cargarGrupos();
-      cargarParejasGuias();
-    },
+    init,
     cargarGrupos,
     cargarNinos,
     cargarParejasGuias
   };
+
+  // Autoarranque si ya cargó el DOM
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();

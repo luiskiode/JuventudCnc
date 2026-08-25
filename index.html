@@ -93,11 +93,14 @@
               <div style="display:grid; gap:8px;">
                 <input id="inputNombreGrupo" type="text" placeholder="Nombre del Grupo (ej: Comunión 1 - Sábados)" />
                   <div>
-                    <label class="small muted" for="selectParejaGuia">Asignar Pareja Guía:</label>
+                     <label class="small muted" for="selectParejaGuia">Asignar Pareja Guía:</label>
                       <select id="selectParejaGuia" style="margin-top:4px;">
-                      <option value="">Cargando parejas guías...</option>
-                      </select>
-                  </div>
+                      <option value="">-- Selecciona Pareja Guía --</option>
+                      <option value="Richard y Lucero">Richard y Lucero</option>
+                      <option value="Betty y Jesus">Betty y Jesus</option>
+                      <option value="Ricardo y Yaneli">Ricardo y Yaneli</option>
+                  </select>
+                </div>
                 <div style="display:flex; gap:8px; margin-top:4px;">
                   <button id="btnGuardarGrupo" class="btn small" type="button">Guardar</button>
                   <button id="btnCancelarGrupo" class="btn small ghost" type="button">Cancelar</button>
