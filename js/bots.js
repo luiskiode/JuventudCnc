@@ -1,16 +1,8 @@
 // js/bots.js
 // Juventud CNC — Bots (Angie / Mia / Ciro / Alma) + Chat controller + Escenas + Rotación 40s
-// ✅ Robusto: no revienta si falta algún ID/CSS/asset
-// ✅ Toggle maestro (btnBots): ON/OFF gobierna TODO (widgets + chat autoplay + rotación + floats)
-// ✅ Autoplay automático de escenas (si está ON) + mezcla global de escenas para tarjetitas
-// ✅ Rotación automática cada 40s (UNA sola tarjetita por tick, 1-slot) + anti-repetición
-// ✅ Bridge compatible: JC.bots.*SetEstado
-//
-// FIXES (2026-02):
-// - ✅ Floats 1-slot: nunca apila, siempre reemplaza (no invade pantalla)
-// - ✅ No inyecta floats “viejos” (se usa #jcFloatLayer del index)
-// - ✅ rotateOnceGlobal usa jcFloatShowCard (1-slot) + fallback real con frases
-// - ✅ setBotState usa manifest para variedad (si existe bots-manifest.json)
+// ✅ Motor robusto fusionado con soporte de avatares en tarjetas flotantes (Floats 1-slot)
+// ✅ Toggle maestro (btnBots): ON/OFF gobierna widgets, chat y rotación automática
+// ✅ Autoplay de escenas + rotación periódica con frases pastorales y de ánimo
 
 (function () {
   "use strict";
@@ -73,10 +65,10 @@
   // Persistencia
   // ---------------------------
   const STORAGE_ENABLED = "jc_botsEnabled";
-  const STORAGE_WIDGETS = "jc_bot_widgets"; // {angie:true,mia:true,ciro:true,alma:true}
-  const STORAGE_LAST = "jc_bot_last_state"; // {angie:{estado},mia:{estado},ciro:{estado},alma:{estado}}
-  const STORAGE_MIA_MODO = "jc_mia_modo"; // casual | elegante
-  const STORAGE_SEEN_SCENES = "jc_scene_seen"; // { [tabOrKey]: true }
+  const STORAGE_WIDGETS = "jc_bot_widgets";
+  const STORAGE_LAST = "jc_bot_last_state";
+  const STORAGE_MIA_MODO = "jc_mia_modo";
+  const STORAGE_SEEN_SCENES = "jc_scene_seen";
 
   function lsGet(key, fallback = null) {
     try {
@@ -130,7 +122,6 @@
   function elChatBody() { return document.getElementById("jcChatBody"); }
   function btnChatCollapse() { return document.getElementById("jcChatToggle"); }
   function btnBotsToggle() { return document.getElementById("btnBots"); }
-  function elBoxMount() { return document.getElementById("boxChatMount"); }
 
   // ---------------------------
   // Normalización
@@ -141,14 +132,13 @@
     if (b === "mia") return "mia";
     if (b === "ciro") return "ciro";
     if (b === "alma") return "alma";
-    if (b === "system" || b === "sistema") return "system";
     return "system";
   }
 
   // ---------------------------
   // Estado interno
   // ---------------------------
-  const ROTATE_MS = 40000; // 40s
+  const ROTATE_MS = 25000;
   const AUTOPLAY_MAX_LINES = 6;
   const RECENT_LIMIT = 12;
 
@@ -187,16 +177,13 @@
     }
   }
 
-  // ---------------------------
-  // Escenas (opcional)
-  // ---------------------------
   function getScenes() {
     const s = window.JC_CHAT_SCENES;
     return s && typeof s === "object" ? s : {};
   }
 
   // ---------------------------
-  // BOT ASSETS: Manifest + pools por emoción (variedad)
+  // BOT ASSETS: Manifest + pools por emoción
   // ---------------------------
   const BOT_MANIFEST_URL = "assets/bots-manifest.json";
   let __jcBotManifest = null;
@@ -210,7 +197,6 @@
       __jcBotManifest = j && typeof j === "object" ? j : null;
       return __jcBotManifest;
     } catch (e) {
-      console.warn("[JC] No se pudo cargar bots-manifest.json", e);
       return null;
     }
   }
@@ -228,86 +214,83 @@
   }
 
   // ---------------------------
-  // Estados (Angie/Mia/Ciro/Alma)
+  // Estados y Frases
   // ---------------------------
   const ANGIE_ESTADOS = (window.ANGIE_ESTADOS = window.ANGIE_ESTADOS || {
     feliz: {
       img: "assets/angie-feliz-saludo.png",
       frases: [
         "¡Holaaa! Qué bueno verte 😄",
-        "Hoy puede ser un buen día 💫",
-        "Mia ya ordenó todo… yo vengo a ponerle brillo 😏✨",
+        "Mia ya ordenó todo… yo vengo a ponerle brillo 😌✨",
         "Ciro dice que hoy toca servir. Yo digo: servir con estilo 💗",
-        "Hoy vengo dulce… pero solo un poquito 😌💗",
-        "Si ves a Ciro muy valiente… no le digas que me derrite 😳",
         "Mia organiza, Ciro actúa… y yo hago que todo se vea bonito ✨",
-        "Yo no me pongo celosa… solo observo. Mucho. 👀",
-        "Ok ok… sí me importan ustedes. Pero shhh 🤫",
+        "Hoy puede ser un gran día para acompañar con el corazón 💫",
       ],
     },
-    saludo: { img: "assets/angie-sonrisa-saludo.png", frases: ["¿Listo para empezar algo épico?", "¡Hey! Pasa, siéntete en casa 😌", "Mia me pidió que te dé la bienvenida… pero yo lo hago mejor 😉"] },
-    rezando: { img: "assets/angie-rezando.png", frases: ["Hagamos una pausa cortita para poner esto en manos de Dios 🙏", "Si el día pesa… respiramos, rezamos, y seguimos.", "Ciro rezó primero. Yo solo… lo seguí (por una vez 😇)"] },
-    traviesa: {
-      img: "assets/angie-traviesa.png",
-      frases: [
-        "Mmm… sé que estás tramando algo, cuéntame 👀",
-        "Yo también tengo ideas locas… tranqui 😏",
-        "Si Ciro se pone serio, yo lo saco a reír. Es mi misión 😌",
-        "¿Ciro? Nooo, yo no lo estaba mirando… para nada 😏",
-        "Si Ciro se pone romántico con Mia… yo le doy ‘feedback’ técnico 😌",
-        "Mia, si él se emociona… yo lo distraigo. (Mentira, me da risa 😅)",
-        "Yo solo quería decir… que Ciro hoy se ve… eh… fuerte 💪 (ya, ya, olvida eso 😳)",
-        "Si Ciro te dice ‘te amo’, tú dile ‘te amordido un perro’ 😂",
-      ],
-    },
-    confundida: {
-      img: "assets/angie-confundida.png",
-      frases: [
-        "No entendí mucho… pero lo resolvemos juntos 🤔",
-        "Pregunta sin miedo: aquí nadie nace sabiendo 💛",
-        "Mia lo explica bonito. Yo lo explico… a mi manera 😅",
-        "¿Entonces… Ciro te dijo eso en serio? 😳",
-        "Estoy confundida… ¿yo debo ayudar o molestar? 😏",
-        "Mia, explícame… ¿por qué él se pone nervioso contigo?",
-        "Ok, no entiendo, pero apoyo… discretamente 😌",
-      ],
-    },
-    enojada: { img: "assets/angie-enojada.png", frases: ["¡Oye! Eso no estuvo bien 😤", "Respira… lo hablamos mejor, ¿sí?", "Ciro ya está por “parar todo”. Mia me dijo: calma."] },
-    sorprendida: { img: "assets/angie-sorprendida.png", frases: ["¿QUÉ? 😳 ok… interesante…", "Eso sí no lo vi venir 👀", "Mia… ¿tú sabías esto? 😅"] },
-    ok: { img: "assets/angie-ok.png", frases: ["Listo ✅", "¡Perfecto! quedó bonito 💗", "Ciro: aprobado. Mia: ordenado. Yo: feliz 😌", "Quedó lindo. Y Ciro… también (ups) 😳✅", "Mia: orden perfecto. Ciro: esfuerzo máximo. Yo: orgullo secreto 😌", "Hoy sí… todo está en paz. (Por favor que no me descubran) ✅"] },
-    vergonzosa: { img: "assets/angie-vergonzosa.png", frases: ["Awww… ok, me da pena 😳", "No me mires así 😅", "Mia dice que sea formal… pero yo soy así 🤭", "¿Yo? ¿Gustarme Ciro? JA… no… (sí) 😳", "No me hagas hablar de Ciro… que me da calor 😵‍💫", "Mia no le digas… me da vergüenza 🫣", "Ok… si él es valiente, yo… soy tímida 😭", "Solo digo: su carita cuando se esfuerza… ya, basta 😳"] },
-    enamorada: { img: "assets/angie-enamorada.png", frases: ["No es que me guste Ciro… solo… me cae bien 😳", "Mia, dile que… no, mejor no 😭", "Ok sí… me pongo nerviosa cuando él sonríe 😵‍💫💗"] },
-    llorando: { img: "assets/angie-llorando.png", frases: ["No estoy llorando… se me metió un bug en el ojo 😭", "Mia… abrázame un ratito 🥺", "Ciro… no me mires así 😭"] },
-    cansada: { img: "assets/angie-cansada.png", frases: ["Estoy cansada… pero sigo aquí 😮‍💨", "Hoy me toca modo suave… sin drama (tal vez) 😌", "Mia… necesito agua. Ciro… no te rías 😩"] },
+    saludo: { img: "assets/angie-sonrisa-saludo.png", frases: ["¿Listo para acompañar a los chicos?", "¡Hey! Pasa, siéntete en casa 😌"] },
+    rezando: { img: "assets/angie-rezando.png", frases: ["Hagamos una pausa cortita para poner esto en manos de Dios 🙏", "Si el día pesa… respiramos, rezamos, y seguimos."] },
+    traviesa: { img: "assets/angie-traviesa.png", frases: ["Mmm… sé que estás tramando una buena dinámica 👀", "Si Ciro se pone serio, yo lo saco a reír 😌"] },
+    ok: { img: "assets/angie-ok.png", frases: ["Listo ✅ Quedó impecable.", "¡Perfecto! Acompañemos con todo el corazón 💗"] },
   });
 
   const MIA_ESTADOS = (window.MIA_ESTADOS = window.MIA_ESTADOS || {
-    guiando: { modo: "casual", imgs: ["assets/mia-casual-wink.png", "assets/mia-casual-surprised.png", "assets/mia-casual-love.png"], frases: ["Te acompaño paso a paso 💗", "Vamos viendo esto juntos 😊", "Estoy aquí para ayudarte", "Ciro, respira… estás haciendo un buen trabajo 😊", "Angie, sé buena… hoy toca ayudar 🙈", "Un pasito a la vez. Yo los acompaño 💗", "Si te pierdes, me llamas. No estás solo 🤍", "Ciro, no tienes que demostrar nada… ya vales mucho."] },
-    apoyo: { modo: "casual", imgs: ["assets/mia-casual-shy.png", "assets/mia-casual-embarrassed.png", "assets/mia-casual-love.png"], frases: ["Bien hecho, sigue así 💪", "Todo suma, no te rindas", "Confío en ti", "Estoy orgullosa de ti, Ciro. De verdad 💗", "Gracias por intentarlo. Eso ya es valentía 💪", "Angie, gracias por ponerle alegría al equipo ✨", "Lo estás haciendo bien. No te castigues.", "Ven, lo revisamos juntos. Sin presión."] },
-    confused: { modo: "casual", imgs: ["assets/mia-casual-confused.png"], frases: ["Revisemos esto con calma 🤍"] },
-    triste: { modo: "casual", imgs: ["assets/mia-casual-sad.png", "assets/mia-casual-cry.png"], frases: ["Está bien sentirse así…", "Aquí no estás solo"] },
-    elegante: { modo: "elegante", imgs: ["assets/mia-elegant-relief.png", "assets/mia-elegant-dreamy.png"], frases: ["Ordenemos esto con calma ✨", "Presentemos algo bonito"] },
-    inspirada: { modo: "elegante", imgs: ["assets/mia-elegant-love.png", "assets/mia-elegant-heart.png"], frases: ["Esto puede inspirar a otros 💫", "Sigamos creando juntos"] },
-    carinosa: { modo: "elegante", imgs: ["assets/mia-elegant-kiss.png", "assets/mia-elegant-shy.png"], frases: ["Me alegra verte aquí 🤍", "Gracias por ser parte", "Ciro, hermanito… no te me aceleres 😅🤍", "Angie, te conozco… sé cuando estás nerviosa 😌", "Me alegra verlos unidos. Eso es lo importante 💗", "Si alguno se siente mal, aquí estoy.", "Respira… todo se acomoda con amor."] },
-    confundida: { modo: "elegante", imgs: ["assets/mia-elegant-confused.png"], frases: ["Algo no encaja… revisemos", "Equipo, enfoque suave. Vamos a dejarlo impecable ✨", "Ciro, tu fuerza se nota cuando eres paciente.", "Angie, tu creatividad es un regalo. Úsala bien 😌", "Orden primero, emoción después… (aunque los entiendo) 🤭"] },
-    llorando: { modo: "elegante", imgs: ["assets/mia-elegant-cry.png"], frases: ["Respira… seguimos juntos"] },
+    guiando: {
+      modo: "casual",
+      imgs: ["assets/mia-casual-wink.png", "assets/mia-casual-love.png"],
+      frases: [
+        "Te acompaño paso a paso 💗",
+        "Vamos viendo esto con calma y paciencia 😊",
+        "Cada niño es un regalo, cuidemos su proceso 🤍",
+        "Si te pierdes en algo del grupo, lo revisamos juntos 💗",
+      ],
+    },
+    apoyo: {
+      modo: "casual",
+      imgs: ["assets/mia-casual-love.png", "assets/mia-casual-shy.png"],
+      frases: ["Bien hecho, el servicio que hacen es hermoso 💪", "Gracias por ponerle corazón al equipo ✨"],
+    },
+    elegante: {
+      modo: "elegante",
+      imgs: ["assets/mia-elegant-relief.png"],
+      frases: ["Ordenemos las actividades con calma ✨", "Presentemos siempre lo mejor para ellos."],
+    },
   });
 
   const CIRO_ESTADOS = (window.CIRO_ESTADOS = window.CIRO_ESTADOS || {
-    feliz: { img: "assets/ciro-happy.png", frases: ["¡Holaaa! ¡Vamos con fuerza! 💪🔥", "Hoy se sirve con alegría 🙌", "Mia organizó… yo ejecuto 😤", "Mia… ¿ya viste? hoy sí me salió 😳💙", "Yo solo… quiero que Mia esté orgullosa 😤", "Angie dice que me distraigo… pero yo estoy enfocado (creo) 😅", "Si Mia sonríe, yo puedo con todo 💪", "Hoy servimos con alegría… y con corazón 🙌"] },
-    excited: { img: "assets/ciro-excited.png", frases: ["¡YA! Dime qué hacemos 😄", "Estoy listo, listo, listo 💥", "Angie, no distraigas… (ok, un poquito sí 😅)", "¡Mia! dime qué hacemos y lo hago YA 😄", "¡Angie, deja de molestar! (ok… un poquito) 😅", "Hoy voy a impresion… digo… a ayudar 😳", "Estoy motivado. MUY motivado. 💥", "¡Listo! ¡Listo! ¡Listo! (Mia, mírame) 😭"] },
-    calm: { img: "assets/ciro-calm.png", frases: ["Estoy concentrado… dame un segundo.", "Paso firme, mente en paz.", "Mia tiene razón: primero orden.", "Mia me dijo: paciencia. Entonces… paciencia 😌", "Respiración… enfoque… servicio.", "Angie, si me fastidias, pierdo concentración 😤 (broma)", "Estoy tranquilo. Todo bien. (Mia, ¿estás bien?)"] },
-    worried: { img: "assets/ciro-worried.png", frases: ["Eh… ¿y si sale mal? 😬", "Ok… lo intentamos de nuevo.", "Angie… no te rías 😅", "¿Y si Mia piensa que soy un desastre? 😭", "Ok… me equivoqué… pero lo arreglo.", "Angie, no te rías… me pongo más nervioso 😬", "No quiero fallar… pero lo intento otra vez."] },
-    pray: { img: "assets/ciro-pray.png", frases: ["Un momento… oración primero 🙏", "Señor, guíanos.", "Mia, gracias por recordarnos lo esencial.", "Señor… cuídalos. A Mia… y a Angie también 🙏", "Orando se me calma el corazón 😇", "Mia dice que Dios guía… yo confío."] },
-    happy_pray: { img: "assets/ciro-happy-pray.png", frases: ["¡Orando y con alegría! 😇", "Dios por delante, siempre.", "Angie, hoy sí te salió bonito 💙"] },
-    stop: { img: "assets/ciro-stop.png", frases: ["¡Alto ahí! Eso no va 😤", "Respeto primero.", "Mia, ¿lo hablamos? Yo me calmo."] },
+    feliz: {
+      img: "assets/ciro-happy.png",
+      frases: [
+        "¡Holaaa! ¡Vamos con fuerza! 💪🔥",
+        "Hoy se sirve con alegría en el corazón 🙌",
+        "¡Con todo el ánimo para la catequesis de hoy! 💥",
+      ],
+    },
+    pray: {
+      img: "assets/ciro-pray.png",
+      frases: ["Un momento… oración primero 🙏", "Señor, guía nuestras palabras y acciones con los niños."],
+    },
+    calm: {
+      img: "assets/ciro-calm.png",
+      frases: ["Paso firme, mente en paz.", "La paciencia es clave para acompañar a cada niño 😌"],
+    },
   });
 
   const ALMA_ESTADOS = (window.ALMA_ESTADOS = window.ALMA_ESTADOS || {
-    enamorada: { img: "assets/alma-enamorada.png", frases: ["Qué bonito es sentir así… guárdalo en el corazón 🤍", "A veces la felicidad llega suave, como esto que sientes ahora", "Si sonríes así, algo bueno está creciendo en ti ✨"] },
-    llorando: { img: "assets/alma-llorando.png", frases: ["Está bien llorar… no tienes que ser fuerte todo el tiempo 😢", "Ven, respira conmigo un momento 🤍", "Incluso las lágrimas riegan lo que un día florecerá 🌱"] },
-    pensativa: { img: "assets/alma-pensativa.png", frases: ["Pensar no es perder tiempo… es cuidar el camino 🤔", "No tienes que decidir todo hoy", "Escucha tu corazón… habla bajito pero dice la verdad 🤍"] },
-    agradecida: { img: "assets/alma-agradecida.png", frases: ["Gracias por seguir aquí… eso ya es valentía ✨", "Hoy hiciste lo mejor que pudiste, y eso basta 🤍", "Hay luz en ti… incluso en los días nublados 🌤️"] },
+    agradecida: {
+      img: "assets/alma-agradecida.png",
+      frases: [
+        "Gracias por seguir aquí… acompañar es un acto de amor ✨",
+        "Hoy hiciste lo mejor que pudiste, y eso basta 🤍",
+        "Acompañemos a los niños con escucha sincera 🕊️",
+      ],
+    },
+    pensativa: {
+      img: "assets/alma-pensativa.png",
+      frases: [
+        "Escuchar al otro es el primer paso para conocerlo 🤍",
+        "No tienes que resolver todo hoy, da un paso a la vez 🌱",
+      ],
+    },
   });
 
   function normEstado(bot, estado) {
@@ -315,114 +298,30 @@
     const e = String(estado || "").trim();
     if (!e) return "";
 
-    if (bot === "angie") {
-      if (ANGIE_ESTADOS[e]) return e;
-      if (e === "triste") return "vergonzosa";
-      if (e === "confused") return "confundida";
-      return "feliz";
-    }
-
-    if (bot === "mia") {
-      if (MIA_ESTADOS[e]) return e;
-      if (e === "saludo") return "guiando";
-      if (e === "confused") return "confused";
-      return st.miaModo === "elegante" ? "elegante" : "guiando";
-    }
-
-    if (bot === "ciro") {
-      if (CIRO_ESTADOS[e]) return e;
-      if (e === "happy") return "feliz";
-      if (e === "worried") return "worried";
-      if (e === "calm") return "calm";
-      if (e === "pray") return "pray";
-      if (e === "happy_pray") return "happy_pray";
-      if (e === "stop") return "stop";
-      if (e === "excited") return "excited";
-      return "feliz";
-    }
-
-    if (bot === "alma") {
-      if (ALMA_ESTADOS[e]) return e;
-      if (e === "feliz") return "agradecida";
-      if (e === "confundida" || e === "confused") return "pensativa";
-      if (e === "triste") return "llorando";
-      return "agradecida";
-    }
-
-    return "";
-  }
-
-  // Normaliza estados “raros” para manifest
-  function jcNormEstadoForManifest(bot, estado) {
-    bot = normBot(bot);
-    const e = String(estado || "").trim();
-
-    if (bot === "angie") {
-      if (ANGIE_ESTADOS[e]) return e;
-      if (e === "triste") return "llorando";
-      return "feliz";
-    }
-
-    if (bot === "mia") {
-      if (e === "elegante" || e === "carinosa" || e === "inspirada" || e === "llorando" || e === "confundida") return "elegante";
-      return "casual";
-    }
-
-    if (bot === "ciro") {
-      if (e === "angry") return "stop";
-      if (CIRO_ESTADOS[e]) return e;
-      return "feliz";
-    }
-
-    if (bot === "alma") {
-      if (ALMA_ESTADOS[e]) return e;
-      if (e === "feliz") return "agradecida";
-      if (e === "confundida" || e === "confused") return "pensativa";
-      if (e === "triste") return "llorando";
-      return "agradecida";
-    }
-
+    if (bot === "angie") return ANGIE_ESTADOS[e] ? e : "feliz";
+    if (bot === "mia") return MIA_ESTADOS[e] ? e : (st.miaModo === "elegante" ? "elegante" : "guiando");
+    if (bot === "ciro") return CIRO_ESTADOS[e] ? e : "feliz";
+    if (bot === "alma") return ALMA_ESTADOS[e] ? e : "agradecida";
     return "";
   }
 
   function pickBotImg(bot, estado, fallback = "") {
     bot = normBot(bot);
-    const m = __jcBotManifest;
-    if (!m) return fallback;
-
-    if (bot === "angie") {
-      const k = jcNormEstadoForManifest("angie", estado);
-      const arr = m?.angie?.[k] || [];
-      return pick(arr, fallback);
-    }
-    if (bot === "mia") {
-      const k = jcNormEstadoForManifest("mia", estado); // casual/elegante
-      const arr = m?.mia?.[k] || [];
-      return pick(arr, fallback);
-    }
-    if (bot === "ciro") {
-      const k = jcNormEstadoForManifest("ciro", estado);
-      const arr = m?.ciro?.[k] || [];
-      return pick(arr, fallback);
-    }
-    if (bot === "alma") {
-      const k = jcNormEstadoForManifest("alma", estado);
-      const arr = m?.alma?.[k] || [];
-      return pick(arr, fallback);
-    }
-
+    if (bot === "angie") return ANGIE_ESTADOS[estado]?.img || "assets/angie-feliz-saludo.png";
+    if (bot === "mia") return pick(MIA_ESTADOS[estado]?.imgs || [], "assets/mia-casual-wink.png");
+    if (bot === "ciro") return CIRO_ESTADOS[estado]?.img || "assets/ciro-happy.png";
+    if (bot === "alma") return ALMA_ESTADOS[estado]?.img || "assets/alma-agradecida.png";
     return fallback;
   }
 
   // ---------------------------
-  // Float cards (1-slot): usa el #jcFloatLayer del index
+  // Float cards (1-slot con avatares reales)
   // ---------------------------
   const JC_FLOAT = {
     layerId: "jcFloatLayer",
     cardClass: "jc-float-card",
     showClass: "is-show",
-    // ⏱️ TIEMPOS
-    visibleMs: 5000, // 5s
+    visibleMs: 5000,
     fadeMs: 220,
     busy: false,
     lastKey: "",
@@ -440,16 +339,26 @@
     JC_FLOAT.currentEl = null;
   }
 
-  function jcFloatBuildCard({ bot = "Angie", emoji = "💬", text = "", key = "" }) {
+  function jcFloatBuildCard({ bot = "Angie", emoji = "💬", avatar = "", text = "", key = "" }) {
     const div = document.createElement("div");
     div.className = JC_FLOAT.cardClass;
     div.dataset.key = key || "";
+
+    const imgTag = avatar
+      ? `<img src="${avatar}" alt="${bot}" style="width:40px; height:40px; border-radius:999px; object-fit:contain; background:rgba(255,255,255,0.1); flex-shrink:0;" onerror="this.style.display='none'" />`
+      : "";
+
     div.innerHTML = `
-      <div class="jc-float-top">
-        <span class="jc-float-pill">${emoji} ${bot}</span>
-        <span class="muted small" style="opacity:.75">Consejo</span>
+      <div style="display:flex; gap:10px; align-items:center;">
+        ${imgTag}
+        <div style="flex:1;">
+          <div class="jc-float-top">
+            <span class="jc-float-pill">${emoji} ${bot}</span>
+            <span class="muted small" style="opacity:.75">Acompañamiento</span>
+          </div>
+          <div class="jc-float-text">${String(text || "")}</div>
+        </div>
       </div>
-      <div class="jc-float-text">${String(text || "")}</div>
     `;
     return div;
   }
@@ -493,7 +402,7 @@
   }
 
   // ---------------------------
-  // Preferencias
+  // Preferencias y Visibilidad
   // ---------------------------
   function loadWidgetsPrefs() {
     const w = safeParse(lsGet(STORAGE_WIDGETS, "")) || null;
@@ -518,7 +427,6 @@
     const seen = safeParse(lsGet(STORAGE_SEEN_SCENES, "")) || null;
     st.seenScenes = seen && typeof seen === "object" ? seen : {};
 
-    // Cargar manifest + precargar
     jcLoadBotManifest().then((m) => {
       if (!m) return;
       const urls = [
@@ -539,95 +447,46 @@
     lsSet(STORAGE_SEEN_SCENES, JSON.stringify(st.seenScenes));
   }
 
-  function setWidgetVisible(bot, visible) {
-    bot = normBot(bot);
-    visible = !!visible;
-    st.widgets[bot] = visible;
-    saveWidgetsPrefs();
-
-    const map = {
-      angie: elAngieWidget(),
-      mia: elMiaWidget(),
-      ciro: elCiroWidget(),
-      alma: elAlmaWidget(),
-    };
-    const el = map[bot];
-    if (!el) return;
-    el.style.display = visible ? "" : "none";
-    el.setAttribute("aria-hidden", visible ? "false" : "true");
-  }
-
   function applyWidgetsVisibility() {
     const enabled = !!JC.state.botsEnabled;
-
-    const wA = elAngieWidget();
-    const wM = elMiaWidget();
-    const wC = elCiroWidget();
-    const wAl = elAlmaWidget();
-
-    if (wA) wA.style.display = enabled && st.widgets.angie ? "" : "none";
-    if (wM) wM.style.display = enabled && st.widgets.mia ? "" : "none";
-    if (wC) wC.style.display = enabled && st.widgets.ciro ? "" : "none";
-    if (wAl) wAl.style.display = enabled && st.widgets.alma ? "" : "none";
-
-    if (wA) wA.setAttribute("aria-hidden", enabled && st.widgets.angie ? "false" : "true");
-    if (wM) wM.setAttribute("aria-hidden", enabled && st.widgets.mia ? "false" : "true");
-    if (wC) wC.setAttribute("aria-hidden", enabled && st.widgets.ciro ? "false" : "true");
-    if (wAl) wAl.setAttribute("aria-hidden", enabled && st.widgets.alma ? "false" : "true");
+    const map = [
+      { el: elAngieWidget(), vis: st.widgets.angie },
+      { el: elMiaWidget(), vis: st.widgets.mia },
+      { el: elCiroWidget(), vis: st.widgets.ciro },
+      { el: elAlmaWidget(), vis: st.widgets.alma },
+    ];
+    map.forEach(({ el, vis }) => {
+      if (el) {
+        el.style.display = enabled && vis ? "" : "none";
+        el.setAttribute("aria-hidden", enabled && vis ? "false" : "true");
+      }
+    });
   }
 
-  // ---------------------------
-  // Chat: show/hide + mount + collapse
-  // ---------------------------
   function applyChatVisibility() {
     const chat = elChat();
     if (!chat) return;
-
     const enabled = !!JC.state.botsEnabled;
-    const inBox = (JC.state.activeTab || "") === "box";
-
-    const show = enabled && inBox;
-    chat.style.display = show ? "flex" : "none";
-    chat.setAttribute("aria-hidden", show ? "false" : "true");
-
-    const btn = btnBotsToggle();
-    if (btn) {
-      btn.setAttribute("aria-pressed", enabled ? "true" : "false");
-      btn.classList.toggle("is-on", enabled);
-      btn.title = enabled ? "Apagar bots" : "Encender bots";
-    }
+    chat.style.display = enabled ? "flex" : "none";
+    chat.setAttribute("aria-hidden", enabled ? "false" : "true");
   }
-
-function placeChatForTab(tab) {
-  // No movemos el chat en el DOM.
-  // El chat vive en la vista "box" (index.html) y solo lo mostramos/ocultamos por CSS/JS.
-  st.mountedInBox = (String(tab || "") === "box");
-  if (st.mountedInBox && JC.state.botsEnabled) setCollapsed(false);
-}
 
   function setCollapsed(collapsed) {
     const chat = elChat();
     const body = elChatBody();
     if (!chat || !body) return;
-
     st.collapsed = !!collapsed;
     body.style.display = st.collapsed ? "none" : "";
     chat.classList.toggle("jc-chat--collapsed", st.collapsed);
-
     const btn = btnChatCollapse();
     if (btn) btn.textContent = st.collapsed ? "⌃" : "⌄";
   }
 
-  // ---------------------------
-  // Chat lines
-  // ---------------------------
   function chatLine(bot, text, meta) {
     const body = elChatBody();
     if (!body) return;
-
     const now = new Date();
     const stamp = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
     const div = document.createElement("div");
     div.className = "jc-chat-line";
     div.innerHTML = `
@@ -635,23 +494,14 @@ function placeChatForTab(tab) {
       <div>${safeText(text)}</div>
     `;
     body.appendChild(div);
-
     try { body.scrollTop = body.scrollHeight; } catch {}
   }
 
-  function seedChatOnce() {
-    const body = elChatBody();
-    if (!body || body.__jcSeeded) return;
-    body.__jcSeeded = true;
-    chatLine("Sistema", "🤖 Bots listos. Usa el botón 🤖 para mostrar/ocultar.", "inicio");
-  }
-
   // ---------------------------
-  // Aplicar estado al DOM
+  // Aplicar estado
   // ---------------------------
   function setBotState(bot, estado, { speak = true, from = "", overrideText = "" } = {}) {
     bot = normBot(bot);
-
     const map = {
       angie: { states: ANGIE_ESTADOS, textEl: elAngieText(), imgEl: elAngieImg(), widgetEl: elAngieWidget() },
       mia: { states: MIA_ESTADOS, textEl: elMiaText(), imgEl: elMiaImg(), widgetEl: elMiaWidget() },
@@ -662,261 +512,79 @@ function placeChatForTab(tab) {
     const cfg = map[bot];
     if (!cfg) return;
 
-    const estadoOk =
-      normEstado(bot, estado) ||
-      (bot === "mia" ? (st.miaModo === "elegante" ? "elegante" : "guiando") : bot === "alma" ? "agradecida" : "feliz");
-
+    const estadoOk = normEstado(bot, estado) || "feliz";
     const s = cfg.states?.[estadoOk] || null;
     const frase = overrideText ? String(overrideText) : s ? pick(s.frases, "") : "";
 
-    // Guardar last
     st.last[bot] = { estado: estadoOk };
     saveWidgetsPrefs();
 
-    // Texto
     if (cfg.textEl && frase) cfg.textEl.textContent = frase;
-
-    // Imagen (manifest si está)
     if (cfg.imgEl) {
-      let src = "";
-      if (bot === "angie") src = pickBotImg("angie", estadoOk, s?.img || "");
-      else if (bot === "mia") src = pickBotImg("mia", estadoOk, pick(s?.imgs || [], ""));
-      else if (bot === "ciro") src = pickBotImg("ciro", estadoOk, s?.img || "");
-      else if (bot === "alma") src = pickBotImg("alma", estadoOk, s?.img || "");
-
-      if (src) {
-        cfg.imgEl.src = src;
-        cfg.imgEl.onerror = () => {
-          cfg.imgEl.onerror = null;
-          try { cfg.imgEl.removeAttribute("src"); } catch {}
-        };
-      }
+      const src = pickBotImg(bot, estadoOk, s?.img || "");
+      if (src) cfg.imgEl.src = src;
     }
 
-    // Fuerza visible (CSS)
-    if (cfg.widgetEl) {
-      const visClass =
-        bot === "angie" ? "angie-widget--visible" :
-        bot === "mia" ? "mia-widget--visible" :
-        bot === "ciro" ? "ciro-widget--visible" :
-        bot === "alma" ? "alma-widget--visible" : "";
-
-      if (visClass) cfg.widgetEl.classList.add(visClass);
-
-      cfg.widgetEl.classList.add("is-speaking");
-      setTimeout(() => cfg.widgetEl && cfg.widgetEl.classList.remove("is-speaking"), 700);
-    }
-
-    // Chat (solo si ON)
     if (speak && frase && JC.state.botsEnabled) {
-      const name = bot === "angie" ? "Angie" : bot === "mia" ? "Mia" : bot === "ciro" ? "Ciro" : "Alma";
+      const name = bot.charAt(0).toUpperCase() + bot.slice(1);
       chatLine(name, frase, from || estadoOk || "");
     }
   }
 
-  // Exports
   function angieSetEstado(estado, opts) { setBotState("angie", estado || "feliz", opts); }
-  function miaSetEstado(estado, opts) { setBotState("mia", estado || (st.miaModo === "elegante" ? "elegante" : "guiando"), opts); }
+  function miaSetEstado(estado, opts) { setBotState("mia", estado || "guiando", opts); }
   function ciroSetEstado(estado, opts) { setBotState("ciro", estado || "feliz", opts); }
   function almaSetEstado(estado, opts) { setBotState("alma", estado || "agradecida", opts); }
 
-  function miaSetModo(modo = "casual") {
-    st.miaModo = modo === "elegante" ? "elegante" : "casual";
-    saveWidgetsPrefs();
-    miaSetEstado(st.miaModo === "elegante" ? "elegante" : "guiando", { speak: false, from: "modo" });
-  }
-
   // ---------------------------
-  // Escenas: pool global + autoplay micro-escenas
+  // Motor de Rotación Global
   // ---------------------------
-  function flattenScenePool() {
-    const scenes = getScenes();
-    const out = [];
-    const keys = Object.keys(scenes || {});
-    for (const k of keys) {
-      const arr = scenes[k];
-      if (!Array.isArray(arr)) continue;
-      for (let i = 0; i < arr.length; i++) {
-        const ln = arr[i] || {};
-        const from = normBot(ln.from);
-        const text = String(ln.text ?? "").trim();
-        if (!text) continue;
-        const estado = String(ln.estado ?? "").trim();
-        const delay = Number(ln.delay ?? 0) || 0;
-        const key = `${k}::${i}::${from}::${estado}::${text.slice(0, 42)}`;
-        out.push({ sceneKey: k, idx: i, from, text, estado, delay, key });
-      }
-    }
-    return out;
-  }
-
-  function pushRecent(key) {
-    if (!key) return;
-    st.recentLineKeys = st.recentLineKeys.filter((k) => k !== key);
-    st.recentLineKeys.unshift(key);
-    if (st.recentLineKeys.length > RECENT_LIMIT) st.recentLineKeys.length = RECENT_LIMIT;
-  }
-  function isRecent(key) { return st.recentLineKeys.includes(key); }
-
-  // Seen scenes helpers
-  function hasSeenScene(k) { return !!st.seenScenes?.[k]; }
-  function markSceneSeen(k) { st.seenScenes[k] = true; saveWidgetsPrefs(); }
-
-  // Heurística: elige una sceneKey por tab (si existen)
-  function pickSceneForTab(tab) {
-    const scenes = getScenes();
-    const keys = Object.keys(scenes || {});
-    if (!keys.length) return "";
-    tab = String(tab || "").trim();
-
-    if (tab === "inicio") return keys.find((k) => k.includes("inicio")) || keys[0];
-    if (tab === "comunidad") return keys.find((k) => k.includes("comu") || k.includes("foro")) || keys[0];
-    if (tab === "judart") return keys.find((k) => k.includes("jud")) || keys[0];
-    if (tab === "recursos") return keys.find((k) => k.includes("cate") || k.includes("rec")) || keys[0];
-    if (tab === "eventos") return keys.find((k) => k.includes("event")) || keys[0];
-    if (tab === "box") return keys.find((k) => k.includes("box")) || keys[0];
-
-    return keys[0];
-  }
-
-  // Helper: texto fallback para floats cuando NO hay escenas
   function getBotFallbackLine(bot, estado) {
     bot = normBot(bot);
-
-    if (bot === "angie") {
-      const s = ANGIE_ESTADOS[normEstado("angie", estado) || "feliz"];
-      return pick(s?.frases || [], "¡Holaaa! Qué bueno verte 😄");
-    }
-    if (bot === "mia") {
-      const s = MIA_ESTADOS[normEstado("mia", estado) || (st.miaModo === "elegante" ? "elegante" : "guiando")];
-      return pick(s?.frases || [], "Te acompaño paso a paso 💗");
-    }
-    if (bot === "ciro") {
-      const s = CIRO_ESTADOS[normEstado("ciro", estado) || "feliz"];
-      return pick(s?.frases || [], "¡Vamos con fuerza! 💪🔥");
-    }
-    if (bot === "alma") {
-      const s = ALMA_ESTADOS[normEstado("alma", estado) || "agradecida"];
-      return pick(s?.frases || [], "Estoy aquí contigo 🤍");
-    }
+    if (bot === "angie") return pick(ANGIE_ESTADOS[estado || "feliz"]?.frases || [], "¡Holaaa! Qué bueno verte 😄");
+    if (bot === "mia") return pick(MIA_ESTADOS[estado || "guiando"]?.frases || [], "Te acompaño paso a paso 💗");
+    if (bot === "ciro") return pick(CIRO_ESTADOS[estado || "feliz"]?.frases || [], "¡Vamos con fuerza! 💪🔥");
+    if (bot === "alma") return pick(ALMA_ESTADOS[estado || "agradecida"]?.frases || [], "Acompañemos con amor 🤍");
     return "";
   }
 
   function prettyBot(bot) {
-    bot = normBot(bot);
-    if (bot === "angie") return "Angie";
-    if (bot === "mia") return "Mia";
-    if (bot === "ciro") return "Ciro";
-    if (bot === "alma") return "Alma";
-    return "Sistema";
+    const b = normBot(bot);
+    return b.charAt(0).toUpperCase() + b.slice(1);
   }
 
   function botEmoji(bot) {
-    bot = normBot(bot);
-    if (bot === "angie") return "💙";
-    if (bot === "mia") return "💗";
-    if (bot === "ciro") return "🔥";
-    if (bot === "alma") return "🤍";
+    const b = normBot(bot);
+    if (b === "angie") return "💙";
+    if (b === "mia") return "💗";
+    if (b === "ciro") return "🔥";
+    if (b === "alma") return "🤍";
     return "💬";
   }
 
   function rotateOnceGlobal() {
     if (!JC.state.botsEnabled) return;
 
-    const anyWidgetOn =
-      (st.widgets.angie && !!elAngieWidget()) ||
-      (st.widgets.mia && !!elMiaWidget()) ||
-      (st.widgets.ciro && !!elCiroWidget()) ||
-      (st.widgets.alma && !!elAlmaWidget());
+    const order = ["angie", "mia", "ciro", "alma"];
+    const next = order[(order.indexOf(st.lastSpeaker) + 1 + order.length) % order.length] || "angie";
+    st.lastSpeaker = next;
 
-    if (!anyWidgetOn) return;
+    let estadoBase = "feliz";
+    if (next === "mia") estadoBase = "guiando";
+    if (next === "alma") estadoBase = "agradecida";
 
-    const pool = flattenScenePool();
+    setBotState(next, estadoBase, { speak: true, from: "rotación" });
 
-    // Caso A: SIN escenas -> rotación simple Angie/Mia/Ciro/Alma
-    if (!pool.length) {
-      const order = ["angie", "mia", "ciro", "alma"];
-      const next = order[(order.indexOf(st.lastSpeaker) + 1 + order.length) % order.length] || "angie";
-      st.lastSpeaker = next;
-
-      let estadoBase = "feliz";
-      if (next === "mia") estadoBase = st.miaModo === "elegante" ? "elegante" : "guiando";
-      if (next === "alma") estadoBase = "agradecida";
-
-      if (next === "angie" && st.widgets.angie) angieSetEstado(estadoBase, { speak: true, from: "rotación" });
-      else if (next === "mia" && st.widgets.mia) miaSetEstado(estadoBase, { speak: true, from: "rotación" });
-      else if (next === "ciro" && st.widgets.ciro) ciroSetEstado(estadoBase, { speak: true, from: "rotación" });
-      else if (next === "alma" && st.widgets.alma) almaSetEstado(estadoBase, { speak: true, from: "rotación" });
-      else {
-        const fallbackOrder = ["angie", "mia", "ciro", "alma"];
-        for (const b of fallbackOrder) {
-          if (b === "angie" && st.widgets.angie) { st.lastSpeaker = "angie"; estadoBase = "feliz"; angieSetEstado("feliz", { speak: true, from: "rotación" }); break; }
-          if (b === "mia" && st.widgets.mia) { st.lastSpeaker = "mia"; estadoBase = st.miaModo === "elegante" ? "elegante" : "guiando"; miaSetEstado(estadoBase, { speak: true, from: "rotación" }); break; }
-          if (b === "ciro" && st.widgets.ciro) { st.lastSpeaker = "ciro"; estadoBase = "feliz"; ciroSetEstado("feliz", { speak: true, from: "rotación" }); break; }
-          if (b === "alma" && st.widgets.alma) { st.lastSpeaker = "alma"; estadoBase = "agradecida"; almaSetEstado("agradecida", { speak: true, from: "rotación" }); break; }
-        }
-      }
-
-      const txt = getBotFallbackLine(st.lastSpeaker, estadoBase);
-
-      jcFloatShowCard({
-        bot: prettyBot(st.lastSpeaker),
-        emoji: botEmoji(st.lastSpeaker),
-        text: txt,
-        key: `fallback:${st.lastSpeaker}:${estadoBase}:${txt.slice(0, 18)}`,
-      });
-
-      return;
-    }
-
-    // Caso B: CON escenas -> elegir UNA línea no reciente
-    const candidates = pool.filter((x) => x.from !== "system" && !isRecent(x.key));
-    const usable = candidates.length ? candidates : pool.filter((x) => x.from !== "system");
-    if (!usable.length) return;
-
-    let pickOne = null;
-    for (let tries = 0; tries < 12; tries++) {
-      const c = usable[Math.floor(Math.random() * usable.length)];
-      if (!c) break;
-      if (c.from === st.lastSpeaker) continue;
-      pickOne = c;
-      break;
-    }
-    if (!pickOne) pickOne = usable[Math.floor(Math.random() * usable.length)] || usable[0];
-
-    pushRecent(pickOne.key);
-    st.lastSpeaker = pickOne.from;
-
-    const safeEstado =
-      pickOne.estado ||
-      (pickOne.from === "mia" ? (st.miaModo === "elegante" ? "elegante" : "guiando") : pickOne.from === "alma" ? "agradecida" : "feliz");
-
-    const safeTextLine = String(pickOne.text || "").trim() || getBotFallbackLine(pickOne.from, safeEstado);
+    const txt = getBotFallbackLine(next, estadoBase);
+    const avatar = pickBotImg(next, estadoBase);
 
     jcFloatShowCard({
-      bot: prettyBot(pickOne.from),
-      emoji: botEmoji(pickOne.from),
-      text: safeTextLine,
-      key: pickOne.key || `scene:${pickOne.from}:${safeEstado}:${safeTextLine.slice(0, 18)}`,
+      bot: prettyBot(next),
+      emoji: botEmoji(next),
+      avatar: avatar,
+      text: txt,
+      key: `rot:${next}:${txt.slice(0, 20)}`,
     });
-
-    if (pickOne.from === "angie" && st.widgets.angie) {
-      setBotState("angie", pickOne.estado || "feliz", { speak: true, from: `mix:${pickOne.sceneKey}`, overrideText: pickOne.text });
-    } else if (pickOne.from === "mia" && st.widgets.mia) {
-      setBotState("mia", pickOne.estado || (st.miaModo === "elegante" ? "elegante" : "guiando"), { speak: true, from: `mix:${pickOne.sceneKey}`, overrideText: pickOne.text });
-    } else if (pickOne.from === "ciro" && st.widgets.ciro) {
-      setBotState("ciro", pickOne.estado || "feliz", { speak: true, from: `mix:${pickOne.sceneKey}`, overrideText: pickOne.text });
-    } else if (pickOne.from === "alma" && st.widgets.alma) {
-      setBotState("alma", pickOne.estado || "agradecida", { speak: true, from: `mix:${pickOne.sceneKey}`, overrideText: pickOne.text });
-    } else {
-      const order = ["angie", "mia", "ciro", "alma"];
-      for (const b of order) {
-        if (b === "angie" && st.widgets.angie) { angieSetEstado("feliz", { speak: true, from: "rotación" }); break; }
-        if (b === "mia" && st.widgets.mia) { miaSetEstado(st.miaModo === "elegante" ? "elegante" : "guiando", { speak: true, from: "rotación" }); break; }
-        if (b === "ciro" && st.widgets.ciro) { ciroSetEstado("feliz", { speak: true, from: "rotación" }); break; }
-        if (b === "alma" && st.widgets.alma) { almaSetEstado("agradecida", { speak: true, from: "rotación" }); break; }
-      }
-    }
   }
 
   function startRotation() {
@@ -927,81 +595,15 @@ function placeChatForTab(tab) {
     }, ROTATE_MS);
   }
 
-  // ---------------------------
-  // “Según pestaña”
-  // ---------------------------
-  function botsSegunVista(tab) {
-    tab = String(tab || "").replace(/^#/, "").trim() || "inicio";
-    JC.state.activeTab = tab;
-
-    placeChatForTab(tab);
-
-    // Si no hay escenas
-    if (!Object.keys(getScenes()).length) {
-      if (tab === "inicio") {
-        angieSetEstado("saludo", { speak: false, from: "tab" });
-        miaSetEstado(st.miaModo === "elegante" ? "elegante" : "guiando", { speak: false, from: "tab" });
-        ciroSetEstado("feliz", { speak: false, from: "tab" });
-        almaSetEstado("agradecida", { speak: false, from: "tab" });
-      } else if (tab === "comunidad") {
-        angieSetEstado("traviesa", { speak: false, from: "tab" });
-        miaSetEstado("apoyo", { speak: false, from: "tab" });
-        ciroSetEstado("calm", { speak: false, from: "tab" });
-        almaSetEstado("pensativa", { speak: false, from: "tab" });
-      } else if (tab === "box") {
-        ciroSetEstado("calm", { speak: false, from: "tab" });
-        almaSetEstado("agradecida", { speak: false, from: "tab" });
-        if (JC.state.botsEnabled) setCollapsed(false);
-      } else {
-        angieSetEstado("feliz", { speak: false, from: "tab" });
-        miaSetEstado(st.miaModo === "elegante" ? "elegante" : "guiando", { speak: false, from: "tab" });
-        ciroSetEstado("feliz", { speak: false, from: "tab" });
-        almaSetEstado("agradecida", { speak: false, from: "tab" });
-      }
-      return;
-    }
-
-    // Autoplay 1 vez por tab/scene
-    if (JC.state.botsEnabled) {
-      const sk = pickSceneForTab(tab);
-      const seenKey = `tab:${tab}::scene:${sk}`;
-      if (sk && !hasSeenScene(seenKey)) {
-        markSceneSeen(seenKey);
-        playScene(sk, { maxLines: AUTOPLAY_MAX_LINES, tag: `auto:${tab}` });
-      }
-    }
-
-    if (tab === "box" && JC.state.botsEnabled) setCollapsed(false);
-  }
-
-  // ---------------------------
-  // Toggle bots
-  // ---------------------------
-  function loadPersistedEnabled() {
-    const v = lsGet(STORAGE_ENABLED, null);
-    if (v === "1") return true;
-    if (v === "0") return false;
-    return null;
-  }
-  function savePersistedEnabled(enabled) {
-    lsSet(STORAGE_ENABLED, enabled ? "1" : "0");
-  }
-
-  function applyAllVisibility() {
-    applyWidgetsVisibility();
-    applyChatVisibility();
-
-    const layer = jcGetFloatLayer();
-    if (layer) {
-      layer.style.display = JC.state.botsEnabled ? "" : "none";
-      layer.setAttribute("aria-hidden", JC.state.botsEnabled ? "false" : "true");
-      if (!JC.state.botsEnabled) jcFloatClear();
-    }
-  }
-
   function toggleBots() {
     JC.state.botsEnabled = !JC.state.botsEnabled;
-    savePersistedEnabled(JC.state.botsEnabled);
+    lsSet(STORAGE_ENABLED, JC.state.botsEnabled ? "1" : "0");
+
+    const btn = btnBotsToggle();
+    if (btn) {
+      btn.classList.toggle("is-on", JC.state.botsEnabled);
+      btn.setAttribute("aria-pressed", JC.state.botsEnabled ? "true" : "false");
+    }
 
     if (!JC.state.botsEnabled) {
       clearSceneTimers();
@@ -1009,94 +611,27 @@ function placeChatForTab(tab) {
       jcFloatClear();
     } else {
       startRotation();
-      try { botsSegunVista(JC.state.activeTab || (location.hash || "#inicio").replace("#", "")); } catch {}
+      setTimeout(rotateOnceGlobal, 400);
     }
 
-    applyAllVisibility();
-    JC.emit("bots:toggled", { enabled: JC.state.botsEnabled });
-
-    if (typeof window.logAviso === "function") {
-      window.logAviso({ title: "Bots", body: JC.state.botsEnabled ? "Bots activados 🤖" : "Bots apagados 📴" });
-    }
-  }
-
-  function showBots() {
-    JC.state.botsEnabled = true;
-    savePersistedEnabled(true);
-    applyAllVisibility();
-    startRotation();
-    JC.emit("bots:toggled", { enabled: true });
-  }
-
-  function hideBots() {
-    JC.state.botsEnabled = false;
-    savePersistedEnabled(false);
-    clearSceneTimers();
-    stopRotation();
-    jcFloatClear();
-    applyAllVisibility();
-    JC.emit("bots:toggled", { enabled: false });
+    applyWidgetsVisibility();
+    applyChatVisibility();
   }
 
   // ---------------------------
-  // Integración con router
+  // Inicialización
   // ---------------------------
-  function handleTabChange(tab) {
-    botsSegunVista(tab);
-    applyAllVisibility();
-  }
+  function init() {
+    loadWidgetsPrefs();
 
-  function hookActivateWhenAvailable() {
-    if (st.wrappedActivate) return;
-
-    const act = window.activate;
-    if (typeof act !== "function") return;
-
-    if (act.__jcBotsWrapped) {
-      st.wrappedActivate = true;
-      return;
-    }
-
-    const wrapped = function (tab, opts) {
-      const res = act.call(this, tab, opts);
-      try {
-        const t = String(tab || "").replace(/^#/, "").trim() || "inicio";
-        handleTabChange(t);
-      } catch {}
-      return res;
-    };
-
-    wrapped.__jcBotsWrapped = true;
-
-    try {
-      window.activate = wrapped;
-      JC.activate = wrapped;
-    } catch {}
-
-    st.wrappedActivate = true;
-  }
-
-  function activateHookRetries() {
-    hookActivateWhenAvailable();
-    if (st.wrappedActivate) return;
-    setTimeout(hookActivateWhenAvailable, 60);
-    setTimeout(hookActivateWhenAvailable, 180);
-    setTimeout(hookActivateWhenAvailable, 420);
-    setTimeout(hookActivateWhenAvailable, 900);
-    setTimeout(hookActivateWhenAvailable, 1500);
-  }
-
-  // ---------------------------
-  // Bind UI
-  // ---------------------------
-  function bindUIOnce() {
-    if (st.bound) return;
-    st.bound = true;
+    const persisted = lsGet(STORAGE_ENABLED, null);
+    JC.state.botsEnabled = persisted !== "0";
 
     const btn = btnBotsToggle();
     if (btn && !btn.__jcBotsBound) {
       btn.__jcBotsBound = true;
       btn.addEventListener("click", toggleBots);
+      btn.classList.toggle("is-on", JC.state.botsEnabled);
     }
 
     const cbtn = btnChatCollapse();
@@ -1105,189 +640,27 @@ function placeChatForTab(tab) {
       cbtn.addEventListener("click", () => setCollapsed(!st.collapsed));
     }
 
-    const aClose = btnAngieClose();
-    if (aClose && !aClose.__jcBound) {
-      aClose.__jcBound = true;
-      aClose.addEventListener("click", () => setWidgetVisible("angie", false));
-    }
-
-    const mClose = btnMiaClose();
-    if (mClose && !mClose.__jcBound) {
-      mClose.__jcBound = true;
-      mClose.addEventListener("click", () => setWidgetVisible("mia", false));
-    }
-
-    const cClose2 = btnCiroClose();
-    if (cClose2 && !cClose2.__jcBound) {
-      cClose2.__jcBound = true;
-      cClose2.addEventListener("click", () => setWidgetVisible("ciro", false));
-    }
-
-    const alClose = btnAlmaClose();
-    if (alClose && !alClose.__jcBound) {
-      alClose.__jcBound = true;
-      alClose.addEventListener("click", () => setWidgetVisible("alma", false));
-    }
-
-    window.addEventListener("hashchange", () => {
-      const tab = (location.hash || "#inicio").replace("#", "").trim() || "inicio";
-      handleTabChange(tab);
-    });
-
-    JC.on("tab:changed", (d) => {
-      const tab = d?.tab;
-      if (tab) handleTabChange(tab);
-    });
-  }
-
-  // ---------------------------
-  // API: mountBox
-  // ---------------------------
-  function mountBox() {
-    placeChatForTab("box");
+    applyWidgetsVisibility();
     applyChatVisibility();
-    if (JC.state.botsEnabled) setCollapsed(false);
-  }
 
-  // ---------------------------
-  // Escenas: autoplay micro-escenas
-  // ---------------------------
-  function playScene(sceneKey, { maxLines = AUTOPLAY_MAX_LINES, tag = "" } = {}) {
-    try {
-      if (!JC.state.botsEnabled) return;
-
-      const scenes = getScenes();
-      const arr = Array.isArray(scenes?.[sceneKey]) ? scenes[sceneKey] : null;
-      if (!arr || !arr.length) return;
-
-      clearSceneTimers();
-
-      const slice = arr.slice(0, Math.max(1, Math.min(maxLines, arr.length)));
-
-      let totalDelay = 0;
-      for (let i = 0; i < slice.length; i++) {
-        const ln = slice[i] || {};
-        const from = normBot(ln.from);
-        const text = String(ln.text ?? "").trim();
-        if (!text) continue;
-
-        const estado = String(ln.estado ?? "").trim();
-        const delay = Number(ln.delay ?? 0) || 0;
-        totalDelay += Math.max(0, delay);
-
-        const t = setTimeout(() => {
-          if (!JC.state.botsEnabled) return;
-
-          if (from === "system") {
-            chatLine("Sistema", text, tag || sceneKey);
-            return;
-          }
-
-          if (from === "angie") setBotState("angie", estado || "feliz", { speak: false, from: tag || sceneKey, overrideText: text });
-          if (from === "mia") setBotState("mia", estado || (st.miaModo === "elegante" ? "elegante" : "guiando"), { speak: false, from: tag || sceneKey, overrideText: text });
-          if (from === "ciro") setBotState("ciro", estado || "feliz", { speak: false, from: tag || sceneKey, overrideText: text });
-          if (from === "alma") setBotState("alma", estado || "agradecida", { speak: false, from: tag || sceneKey, overrideText: text });
-
-          const name = from === "angie" ? "Angie" : from === "mia" ? "Mia" : from === "ciro" ? "Ciro" : "Alma";
-          chatLine(name, text, tag || sceneKey);
-        }, totalDelay);
-
-        st.sceneTimers.push(t);
-      }
-    } catch (e) {
-      console.warn("[JC] playScene failed", e);
-    }
-  }
-
-  // ---------------------------
-  // Init
-  // ---------------------------
-  function init() {
-    loadWidgetsPrefs();
-
-    // Estado inicial bots enabled
-    const persisted = loadPersistedEnabled();
-    if (typeof persisted === "boolean") JC.state.botsEnabled = persisted;
-    else if (typeof JC.state.botsEnabled !== "boolean") JC.state.botsEnabled = true; // ON por defecto
-
-    bindUIOnce();
-    seedChatOnce();
-
-    // Restaura últimos estados (sin spam)
-    try {
-      angieSetEstado(st.last.angie?.estado || "feliz", { speak: false });
-      miaSetEstado(st.last.mia?.estado || (st.miaModo === "elegante" ? "elegante" : "guiando"), { speak: false });
-      ciroSetEstado(st.last.ciro?.estado || "feliz", { speak: false });
-      almaSetEstado(st.last.alma?.estado || "agradecida", { speak: false });
-    } catch {}
-
-    // Tab inicial
-    const tab = (location.hash || "#inicio").replace("#", "").trim() || "inicio";
-    handleTabChange(tab);
-
-    // UI reflect
-    applyAllVisibility();
-    setCollapsed(false);
-
-    // Hook router
-    activateHookRetries();
-
-    // Motor rotación
-    if (JC.state.botsEnabled) startRotation();
-    else {
-      clearSceneTimers();
-      stopRotation();
-      jcFloatClear();
+    if (JC.state.botsEnabled) {
+      startRotation();
+      setTimeout(rotateOnceGlobal, 1200);
     }
 
-    // Primer empujón visual rápido
-    try {
-      if (JC.state.botsEnabled) setTimeout(() => rotateOnceGlobal(), 350);
-    } catch {}
-
-    // Export
     JC.bots = JC.bots || {};
-    JC.bots.__inited = true;
-
     JC.bots.init = init;
     JC.bots.toggle = toggleBots;
-    JC.bots.show = showBots;
-    JC.bots.hide = hideBots;
-
-    JC.bots.mountBox = mountBox;
-    JC.bots.placeForTab = placeChatForTab;
-    JC.bots.setCollapsed = setCollapsed;
-
-    JC.bots.say = (bot, text, meta) => chatLine(bot || "Bot", text || "", meta || "");
-    JC.bots.seed = seedChatOnce;
-
-    JC.bots.botsSegunVista = botsSegunVista;
-
+    JC.bots.showFloatCard = jcFloatShowCard;
     JC.bots.angieSetEstado = angieSetEstado;
     JC.bots.miaSetEstado = miaSetEstado;
     JC.bots.ciroSetEstado = ciroSetEstado;
     JC.bots.almaSetEstado = almaSetEstado;
 
-    JC.bots.miaSetModo = miaSetModo;
-
-    JC.bots.playScene = playScene;
-    JC.bots.startRotation = startRotation;
-    JC.bots.stopRotation = stopRotation;
-
-    // Compat global
     window.angieSetEstado = angieSetEstado;
     window.miaSetEstado = miaSetEstado;
     window.ciroSetEstado = ciroSetEstado;
     window.almaSetEstado = almaSetEstado;
-
-    try {
-      console.log("[JC] bots.js init OK", {
-        enabled: JC.state.botsEnabled,
-        tab: JC.state.activeTab,
-        hasScenes: !!Object.keys(getScenes()).length,
-        rotateMs: ROTATE_MS,
-      });
-    } catch {}
   }
 
   domReady(init);

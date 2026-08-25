@@ -4,61 +4,58 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="dark light" />
-  <meta name="description" content="Juventud CNC — Un espacio para crecer, servir y caminar juntos." />
-  <title>Juventud CNC</title>
+  <title>Juventud CNC · Catefa</title>
 
   <!-- ESTILOS -->
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- SUPABASE SDK Y CONFIG -->
+  <!-- SCRIPTS MODULARES -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="js/bots.js" defer></script>
+  <script src="js/catefa.js" defer></script>
 </head>
 
 <body class="app-shell jc-bg-dynamic" data-view="inicio" data-theme="mix">
 
-    <!-- Capas de fondo -->
+    <!-- Capas de fondo y bots -->
     <div id="jcAppBgLayer"></div>
     <div id="jcAppBgOverlay"></div>
-
-    <!-- Capa de Tarjetas Flotantes (Bots) -->
     <div id="jcFloatLayer" aria-hidden="true"></div>
-
-    <!-- OVERLAY GLOBAL -->
     <div id="overlay" class="overlay" aria-hidden="true"></div>
 
     <!-- TOPBAR -->
     <header class="topbar" role="banner">
       <div class="topbar-inner">
         <h1 class="topbar-title">Juventud CNC · Catefa</h1>
-        <div class="topbar-actions" aria-label="Acciones">
+        <div class="topbar-actions">
           <input type="file" id="bgFileInput" accept="image/*" style="display:none;" />
-          <button id="btnChangeBg" class="icon-btn" type="button" title="Cambiar fondo de pantalla" aria-label="Cambiar fondo">🖼️</button>
-          <button id="btnBots" class="icon-btn is-on" type="button" title="Activar/Desactivar Bots" aria-label="Bots">🤖</button>
-          <button id="btnAngie" class="icon-btn" type="button" title="Diseño Angie" aria-label="Diseño Angie">🎨</button>
-          <button id="btnLogin" class="icon-btn" type="button" title="Iniciar sesión" aria-label="Iniciar sesión">🔑</button>
-          <button id="btnLogoutTop" class="btn small ghost" type="button" style="display:none;" title="Cerrar sesión">Salir 🚪</button>
+          <button id="btnChangeBg" class="icon-btn" type="button" title="Cambiar fondo">🖼️</button>
+          <button id="btnBots" class="icon-btn is-on" type="button" title="Bots">🤖</button>
+          <button id="btnAngie" class="icon-btn" type="button" title="Diseño Angie">🎨</button>
+          <button id="btnLogin" class="icon-btn" type="button" title="Iniciar sesión">🔑</button>
+          <button id="btnLogoutTop" class="btn small ghost" type="button" style="display:none;">Salir 🚪</button>
         </div>
       </div>
     </header>
 
-    <!-- CONTENIDO PRINCIPAL -->
+    <!-- CONTENEDOR PRINCIPAL -->
     <main class="container" id="main">
-      <section class="view active" data-view="inicio" aria-label="Inicio">
+      
+      <!-- PESTAÑA: INICIO -->
+      <section class="view active" id="view-inicio">
         
         <!-- Tarjeta de Bienvenida / Sesión -->
-        <section class="card hero" aria-label="Bienvenida" style="margin-bottom: 1rem;">
-          <div>
-            <h2 id="heroTitulo">Bienvenido a Juventud CNC</h2>
-            <p id="heroSubtitulo">Un espacio para crecer, servir y caminar juntos.</p>
-            <div id="userBadgeWrap" style="margin-top: 10px; display: none;">
-              <span class="badge badge-mix" id="userBadgeRole">Animador</span>
-              <button id="btnLogout" class="btn small ghost" type="button" style="margin-left: 8px;">Cerrar sesión</button>
-            </div>
+        <section class="card hero" style="margin-bottom: 1rem;">
+          <h2 id="heroTitulo">Bienvenido a Juventud CNC</h2>
+          <p id="heroSubtitulo">Un espacio para crecer, servir y caminar juntos.</p>
+          <div id="userBadgeWrap" style="margin-top: 10px; display: none;">
+            <span class="badge badge-mix" id="userBadgeRole">Animador</span>
+            <button id="btnLogout" class="btn small ghost" type="button" style="margin-left: 8px;">Cerrar sesión</button>
           </div>
         </section>
 
-        <!-- Tarjeta Mensaje Semanal (Carga dinámica de Supabase) -->
+        <!-- Mensaje Semanal -->
         <section class="card" id="mensaje-semanal" style="margin-bottom: 1rem;">
           <header class="card-header">
             <h2 class="with-emoji" data-emoji="🕊️">Mensaje semanal</h2>
@@ -71,15 +68,15 @@
           </article>
         </section>
 
-        <!-- MÓDULO CATEFA: GESTIÓN DE GRUPOS Y NIÑOS (Visible al iniciar sesión) -->
+        <!-- MÓDULO CATEFA (Solo visible logueado) -->
         <section class="card" id="catefaModule" style="display:none; margin-bottom: 1rem;">
           <header class="card-header">
             <h2 class="with-emoji" data-emoji="👥">Grupos y Niños</h2>
-            <span class="badge badge-mix" id="grupoStatusBadge">Catefa</span>
+            <span class="badge badge-mix">Catefa</span>
           </header>
           
           <div class="card-body" style="display: flex; flex-direction: column; gap: 14px;">
-            <!-- Selector / Creación de Grupo -->
+            <!-- Selector de Grupo -->
             <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
               <div style="flex:1; min-width:200px;">
                 <label class="small muted" for="selectGrupo">Seleccionar Grupo:</label>
@@ -90,39 +87,44 @@
               <button id="btnNuevoGrupo" class="btn small" type="button" style="margin-top:18px;">+ Crear Grupo</button>
             </div>
 
-            <!-- Formulario Crear Grupo (Oculto por defecto) -->
+            <!-- Formulario Crear Grupo -->
             <div id="formNuevoGrupoWrap" style="display:none; background:rgba(2,6,23,0.4); padding:12px; border-radius:12px; border:1px solid rgba(148,163,184,0.2);">
-              <h4 style="margin:0 0 8px; font-size:14px;">Nuevo Grupo de Catequesis</h4>
-              <div style="display:flex; gap:8px;">
-                <input id="inputNombreGrupo" type="text" placeholder="Ej: Comunión 1 - Sábados" />
-                <button id="btnGuardarGrupo" class="btn small" type="button">Guardar</button>
-                <button id="btnCancelarGrupo" class="btn small ghost" type="button">✕</button>
+              <h4 style="margin:0 0 8px; font-size:14px;">Nuevo Grupo</h4>
+              <div style="display:grid; gap:8px;">
+                <input id="inputNombreGrupo" type="text" placeholder="Nombre del Grupo (ej: Comunión 1 - Sábados)" />
+                <div>
+                  <label class="small muted" for="selectParejaGuia">Asignar Pareja Guía:</label>
+                  <select id="selectParejaGuia" style="margin-top:4px;">
+                    <option value="Richard y Lucero">Richard y Lucero</option>
+                  </select>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:4px;">
+                  <button id="btnGuardarGrupo" class="btn small" type="button">Guardar</button>
+                  <button id="btnCancelarGrupo" class="btn small ghost" type="button">Cancelar</button>
+                </div>
               </div>
             </div>
 
             <hr style="border:0; border-top:1px solid rgba(148,163,184,0.2); margin:4px 0;" />
 
-            <!-- Formulario Registrar Niño -->
-            <div id="formNinoWrap">
-              <h3 style="font-size:15px; margin-bottom:8px;">📝 Agregar Niño al Grupo</h3>
-              <form id="formNino" style="display:grid; gap:10px;">
-                <div>
-                  <label class="small muted" for="ninoNombre">Nombre del Niño:</label>
-                  <input id="ninoNombre" type="text" placeholder="Ej: Mateo Ramos" required style="margin-top:4px;" />
-                </div>
-                <div>
-                  <label class="small muted" for="ninoNotas">Notitas compartidas (Escucha / Pastoral):</label>
-                  <textarea id="ninoNotas" rows="2" placeholder="Ej: Le gusta participar, vive con sus abuelos..." style="margin-top:4px;"></textarea>
-                </div>
-                <button class="btn" type="submit" style="justify-self:start;">+ Guardar Niño</button>
-              </form>
-            </div>
+            <!-- Formulario Niño -->
+            <form id="formNino" style="display:grid; gap:10px;">
+              <div>
+                <label class="small muted" for="ninoNombre">Nombre del Niño:</label>
+                <input id="ninoNombre" type="text" placeholder="Ej: Mateo Ramos" required style="margin-top:4px;" />
+              </div>
+              <div>
+                <label class="small muted" for="ninoNotas">Notitas pastorales compartidas:</label>
+                <textarea id="ninoNotas" rows="2" placeholder="Observaciones de acompañamiento..." style="margin-top:4px;"></textarea>
+              </div>
+              <button class="btn" type="submit" style="justify-self:start;">+ Guardar Niño</button>
+            </form>
 
-            <!-- Lista de Niños Registrados -->
+            <!-- Lista Niños -->
             <div>
               <h3 style="font-size:15px; margin-bottom:8px;">👦 Lista de Acompañamiento</h3>
-              <div id="listaNinos" style="display:grid; gap:8px;">
-                <p class="muted small">Selecciona o crea un grupo para ver los niños registrados.</p>
+              <div id="listaNinos">
+                <p class="muted small">Selecciona un grupo para ver a los niños.</p>
               </div>
             </div>
           </div>
@@ -131,67 +133,46 @@
       </section>
     </main>
 
-    <!-- MODAL DE LOGIN SIMPLIFICADO -->
+    <!-- MODAL DE LOGIN -->
     <div id="loginModal" class="jc-modal" style="display:none">
-      <div class="jc-modal-card" role="dialog" aria-modal="true" aria-label="Iniciar sesión">
+      <div class="jc-modal-card" role="dialog" aria-modal="true">
         <header class="jc-modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px solid rgba(148,163,184,.28);">
-          <div>
-            <h3 style="margin:0; font-size:16px;">🔑 Iniciar sesión</h3>
-            <p class="muted small" style="margin:2px 0 0;">Animadores y Parejas Guías</p>
-          </div>
+          <h3 style="margin:0; font-size:16px;">🔑 Iniciar sesión</h3>
           <button id="loginClose" class="icon-btn" type="button">✕</button>
         </header>
-
         <div class="jc-modal-body" style="padding:16px;">
           <form id="loginForm" class="grid" style="gap:12px;">
             <label style="font-size:13px;">
               Nombre o Nombres de la Pareja
               <input id="loginNombre" type="text" placeholder="Ej: Carlos o Richard y Lucero" required style="margin-top:4px;" />
             </label>
-
             <label style="font-size:13px;">
               Contraseña
               <input id="loginClave" type="password" placeholder="Animadores: animador" style="margin-top:4px;" />
             </label>
-
             <button class="btn" type="submit" style="margin-top:8px;">Ingresar</button>
-            <p id="loginEstado" class="small muted" style="margin:0;" aria-live="polite"></p>
+            <p id="loginEstado" class="small muted" style="margin:0;"></p>
           </form>
-          <div class="muted small" style="margin-top:12px; line-height:1.4;">
-            💡 <strong>Animadores:</strong> si es tu primera vez, ingresa tu nombre y la clave <code>animador</code>.<br />
-            💡 <strong>Parejas Guías:</strong> ingresen sus nombres registrados.
-          </div>
         </div>
       </div>
     </div>
 
     <!-- MODAL DE HERRAMIENTA ANGIE -->
     <div id="angiePaletteModal" class="jc-modal" style="display:none">
-      <div class="jc-modal-card" role="dialog" aria-modal="true" aria-label="Paleta de Angie">
+      <div class="jc-modal-card" role="dialog" aria-modal="true">
         <header class="jc-modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid rgba(148,163,184,.28);">
-          <div>
-            <h3 style="margin:0; font-size:16px;">🎨 Paleta de Angie</h3>
-            <p class="muted small" style="margin:2px 0 0;">Cambia colores y se aplican en vivo.</p>
-          </div>
+          <h3 style="margin:0; font-size:16px;">🎨 Paleta de Angie</h3>
           <button id="angiePaletteClose" class="icon-btn" type="button">✕</button>
         </header>
-
         <div class="jc-modal-body" style="padding:0">
-          <iframe
-            id="angiePaletteFrame"
-            src="./angie-herramienta.html"
-            title="Angie · Herramienta de colores"
-            style="width:100%; height:min(78vh, 720px); border:0; border-radius:0 0 22px 22px; background:#fff;">
-          </iframe>
+          <iframe id="angiePaletteFrame" src="./angie-herramienta.html" title="Angie" style="width:100%; height:min(78vh, 720px); border:0; background:#fff;"></iframe>
         </div>
       </div>
     </div>
 
-    <!-- SCRIPT PRINCIPAL -->
+    <!-- ORQUESTADOR PRINCIPAL -->
     <script>
-      // ==========================================
-      // 1. GESTIÓN DEL FONDO DINÁMICO Y PERSONALIZADO
-      // ==========================================
+      // 1. Fondos y UI
       const btnChangeBg = document.getElementById('btnChangeBg');
       const bgFileInput = document.getElementById('bgFileInput');
       const bgLayer = document.getElementById('jcAppBgLayer');
@@ -200,471 +181,132 @@
       function applyBackground(bgUrl) {
         const finalBg = bgUrl || DEFAULT_BG;
         document.documentElement.style.setProperty('--jc-bg-image', finalBg);
-        if (bgLayer) {
-          bgLayer.style.backgroundImage = finalBg;
-        }
+        if (bgLayer) bgLayer.style.backgroundImage = finalBg;
       }
 
-      const savedBg = localStorage.getItem('jc_custom_bg');
-      applyBackground(savedBg || DEFAULT_BG);
-
-      btnChangeBg.addEventListener('click', () => bgFileInput.click());
-      btnChangeBg.addEventListener('contextmenu', (e) => {
+      applyBackground(localStorage.getItem('jc_custom_bg') || DEFAULT_BG);
+      btnChangeBg?.addEventListener('click', () => bgFileInput?.click());
+      btnChangeBg?.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         localStorage.removeItem('jc_custom_bg');
         applyBackground(DEFAULT_BG);
       });
 
-      bgFileInput.addEventListener('change', (e) => {
+      bgFileInput?.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
-        reader.onload = (event) => {
-          const base64Bg = `url("${event.target.result}")`;
-          try {
-            localStorage.setItem('jc_custom_bg', base64Bg);
-          } catch (err) {
-            console.warn('Imagen grande para localStorage.');
-          }
+        reader.onload = (ev) => {
+          const base64Bg = `url("${ev.target.result}")`;
+          try { localStorage.setItem('jc_custom_bg', base64Bg); } catch {}
           applyBackground(base64Bg);
         };
         reader.readAsDataURL(file);
       });
 
-      // ==========================================
-      // 2. MODALES Y TOKENS CSS (ANGIE)
-      // ==========================================
-      const btnAngie = document.getElementById('btnAngie');
-      const angieModal = document.getElementById('angiePaletteModal');
-      const angieClose = document.getElementById('angiePaletteClose');
+      // 2. Modales
       const overlay = document.getElementById('overlay');
-
-      function toggleModal(modal, show) {
-        if (show) {
-          modal.classList.add('show');
-          modal.style.display = 'flex';
-          overlay.classList.add('show');
-        } else {
-          modal.classList.remove('show');
-          modal.style.display = 'none';
-          overlay.classList.remove('show');
-        }
-      }
-
-      btnAngie.addEventListener('click', () => toggleModal(angieModal, true));
-      angieClose.addEventListener('click', () => toggleModal(angieModal, false));
-
-      function applyCssTokens(tokens) {
-        const root = document.documentElement;
-        for (const [key, value] of Object.entries(tokens)) {
-          root.style.setProperty(`--${key}`, value);
-        }
-      }
-
-      try {
-        const savedTokens = JSON.parse(localStorage.getItem('angie_tokens_ui'));
-        if (savedTokens) applyCssTokens(savedTokens);
-      } catch (e) {}
-
-      window.addEventListener('message', (event) => {
-        if (event.data?.type === 'applyTokens' && event.data.tokens) {
-          applyCssTokens(event.data.tokens);
-        }
-        if (event.data?.type === 'closeAngieModal') {
-          toggleModal(angieModal, false);
-        }
-      });
-
-      // ==========================================
-      // 3. SISTEMA DE BOTS ROTATIVOS (BURBUJITAS)
-      // ==========================================
-      const BOT_MESSAGES = [
-        { bot: "Angie", emoji: "💙", text: "¡Holaaa! Qué bueno verte por aquí 😄" },
-        { bot: "Angie", emoji: "✨", text: "Mia organiza todo… yo vengo a ponerle brillo 😌✨" },
-        { bot: "Mia", emoji: "💗", text: "Te acompaño paso a paso con amor y calma 🤍" },
-        { bot: "Mia", emoji: "📖", text: "Cada niño es único, cuidemos su proceso con paciencia." },
-        { bot: "Ciro", emoji: "🔥", text: "¡Vamos con fuerza y alegría en el servicio! 💪🙌" },
-        { bot: "Ciro", emoji: "🙏", text: "Un momento de oración antes de empezar renueva todo." },
-        { bot: "Alma", emoji: "🤍", text: "Acompañemos a los niños con escucha sincera 🕊️" },
-        { bot: "Alma", emoji: "✨", text: "Hoy hiciste lo mejor que pudiste, y eso basta 🌤️" }
-      ];
-
-      const btnBots = document.getElementById('btnBots');
-      const floatLayer = document.getElementById('jcFloatLayer');
-      let botsEnabled = localStorage.getItem('jc_bots') !== 'off';
-      let botRotationTimer = null;
-      let lastBotIndex = -1;
-
-      function showFloatCard({ bot, emoji, text }) {
-        if (!botsEnabled || !floatLayer) return;
-
-        floatLayer.innerHTML = '';
-        const card = document.createElement('div');
-        card.className = 'jc-float-card';
-        card.innerHTML = `
-          <div class="jc-float-top">
-            <span class="jc-float-pill">${emoji} ${bot}</span>
-            <span class="muted small">Acompañamiento</span>
-          </div>
-          <div class="jc-float-text">${text}</div>
-        `;
-        floatLayer.appendChild(card);
-
-        requestAnimationFrame(() => card.classList.add('is-show'));
-
-        setTimeout(() => {
-          card.classList.remove('is-show');
-          setTimeout(() => {
-            if (card.parentNode === floatLayer) card.remove();
-          }, 300);
-        }, 5000);
-      }
-
-      function rotateBots() {
-        let idx;
-        do {
-          idx = Math.floor(Math.random() * BOT_MESSAGES.length);
-        } while (idx === lastBotIndex && BOT_MESSAGES.length > 1);
-
-        lastBotIndex = idx;
-        showFloatCard(BOT_MESSAGES[idx]);
-      }
-
-      function startBotRotation() {
-        stopBotRotation();
-        if (!botsEnabled) return;
-        rotateBots();
-        botRotationTimer = setInterval(rotateBots, 20000);
-      }
-
-      function stopBotRotation() {
-        if (botRotationTimer) clearInterval(botRotationTimer);
-        if (floatLayer) floatLayer.innerHTML = '';
-      }
-
-      btnBots.addEventListener('click', () => {
-        botsEnabled = !botsEnabled;
-        localStorage.setItem('jc_bots', botsEnabled ? 'on' : 'off');
-        btnBots.classList.toggle('is-on', botsEnabled);
-        if (botsEnabled) startBotRotation();
-        else stopBotRotation();
-      });
-
-      if (botsEnabled) {
-        btnBots.classList.add('is-on');
-        setTimeout(startBotRotation, 1500);
-      }
-
-      // ==========================================
-      // 4. CARGA DEL MENSAJE SEMANAL (SUPABASE)
-      // ==========================================
-      async function cargarMensajeSemanal() {
-        const msgTitle = document.getElementById('msgTitle');
-        const msgBody = document.getElementById('msgBody');
-        const msgMeta = document.getElementById('msgMeta');
-
-        try {
-          const client = window.JC?.supabase || window.sb;
-          if (!client) throw new Error('Cliente Supabase no disponible');
-
-          const { data, error } = await client
-            .from('mensaje_semanal')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (error) throw error;
-
-          if (data) {
-            msgTitle.textContent = data.titulo;
-            msgBody.textContent = data.cuerpo;
-            msgMeta.textContent = `Por: ${data.autor || 'Equipo Pastoral'} · ${new Date(data.created_at).toLocaleDateString()}`;
-          } else {
-            msgTitle.textContent = 'Sin mensaje activo';
-            msgBody.textContent = 'Pronto se publicará el mensaje de esta semana.';
-          }
-        } catch (err) {
-          console.warn('[Mensaje Semanal]', err);
-          msgTitle.textContent = 'Creciendo en comunidad';
-          msgBody.textContent = 'Bienvenidos al espacio digital de Catefa.';
-        }
-      }
-
-      // ==========================================
-      // 5. GESTIÓN DE GRUPOS Y NIÑOS (CATEFA)
-      // ==========================================
-      const catefaModule = document.getElementById('catefaModule');
-      const selectGrupo = document.getElementById('selectGrupo');
-      const btnNuevoGrupo = document.getElementById('btnNuevoGrupo');
-      const formNuevoGrupoWrap = document.getElementById('formNuevoGrupoWrap');
-      const inputNombreGrupo = document.getElementById('inputNombreGrupo');
-      const btnGuardarGrupo = document.getElementById('btnGuardarGrupo');
-      const btnCancelarGrupo = document.getElementById('btnCancelarGrupo');
-      const formNinoWrap = document.getElementById('formNinoWrap');
-      const formNino = document.getElementById('formNino');
-      const ninoNombre = document.getElementById('ninoNombre');
-      const ninoNotas = document.getElementById('ninoNotas');
-      const listaNinos = document.getElementById('listaNinos');
-
-      let currentGrupoId = null;
-
-      async function cargarGrupos() {
-        const client = window.JC?.supabase || window.sb;
-        if (!client) return;
-
-        try {
-          const { data: grupos, error } = await client
-            .from('catefa_grupos')
-            .select('*')
-            .order('nombre', { ascending: true });
-
-          if (error) throw error;
-
-          selectGrupo.innerHTML = '<option value="">-- Elige un grupo --</option>';
-          grupos.forEach(g => {
-            const opt = document.createElement('option');
-            opt.value = g.id;
-            opt.textContent = g.nombre;
-            selectGrupo.appendChild(opt);
-          });
-
-          if (currentGrupoId) {
-            selectGrupo.value = currentGrupoId;
-            cargarNinos(currentGrupoId);
-          }
-        } catch (e) {
-          console.error('[Cargar Grupos]', e);
-        }
-      }
-
-      async function cargarNinos(grupoId) {
-        if (!grupoId) {
-          listaNinos.innerHTML = '<p class="muted small">Selecciona un grupo para ver a los niños.</p>';
-          return;
-        }
-
-        listaNinos.innerHTML = '<p class="muted small">Cargando niños...</p>';
-        const client = window.JC?.supabase || window.sb;
-
-        try {
-          const { data: ninos, error } = await client
-            .from('catefa_ninos')
-            .select('*')
-            .eq('grupo_id', grupoId)
-            .order('nombre', { ascending: true });
-
-          if (error) throw error;
-
-          if (!ninos || ninos.length === 0) {
-            listaNinos.innerHTML = '<p class="muted small">No hay niños registrados en este grupo aún.</p>';
-            return;
-          }
-
-          listaNinos.innerHTML = '';
-          ninos.forEach(n => {
-            const item = document.createElement('div');
-            item.style.cssText = 'background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.15); display:flex; justify-content:space-between; align-items:flex-start; gap:8px;';
-            item.innerHTML = `
-              <div>
-                <strong>${n.nombre}</strong>
-                ${n.notas ? `<p class="muted small" style="margin-top:4px; font-style:italic;">"${n.notas}"</p>` : '<p class="muted small" style="margin-top:4px; opacity:0.6;">Sin notitas</p>'}
-              </div>
-            `;
-            listaNinos.appendChild(item);
-          });
-        } catch (e) {
-          console.error('[Cargar Niños]', e);
-          listaNinos.innerHTML = '<p class="muted small">Error al cargar la lista.</p>';
-        }
-      }
-
-      selectGrupo.addEventListener('change', (e) => {
-        currentGrupoId = e.target.value;
-        cargarNinos(currentGrupoId);
-      });
-
-      btnNuevoGrupo.addEventListener('click', () => {
-        formNuevoGrupoWrap.style.display = 'block';
-        inputNombreGrupo.focus();
-      });
-
-      btnCancelarGrupo.addEventListener('click', () => {
-        formNuevoGrupoWrap.style.display = 'none';
-        inputNombreGrupo.value = '';
-      });
-
-      btnGuardarGrupo.addEventListener('click', async () => {
-        const nombre = inputNombreGrupo.value.trim();
-        if (!nombre) return;
-
-        const user = JSON.parse(localStorage.getItem('jc_user') || '{}');
-        const client = window.JC?.supabase || window.sb;
-
-        try {
-          const { data: nuevo, error } = await client
-            .from('catefa_grupos')
-            .insert([{ nombre, animador_id: user.id || null }])
-            .select()
-            .single();
-
-          if (error) throw error;
-
-          inputNombreGrupo.value = '';
-          formNuevoGrupoWrap.style.display = 'none';
-          currentGrupoId = nuevo.id;
-          await cargarGrupos();
-        } catch (e) {
-          console.error('[Guardar Grupo]', e);
-        }
-      });
-
-      formNino.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!currentGrupoId) {
-          alert('Por favor, selecciona o crea un grupo primero.');
-          return;
-        }
-
-        const nombre = ninoNombre.value.trim();
-        const notas = ninoNotas.value.trim();
-        const client = window.JC?.supabase || window.sb;
-
-        try {
-          const { error } = await client
-            .from('catefa_ninos')
-            .insert([{ grupo_id: currentGrupoId, nombre, notas }]);
-
-          if (error) throw error;
-
-          formNino.reset();
-          cargarNinos(currentGrupoId);
-        } catch (e) {
-          console.error('[Guardar Niño]', e);
-        }
-      });
-
-      // ==========================================
-      // 6. AUTENTICACIÓN SIMPLIFICADA
-      // ==========================================
-      const btnLogin = document.getElementById('btnLogin');
-      const btnLogoutTop = document.getElementById('btnLogoutTop');
+      const angieModal = document.getElementById('angiePaletteModal');
       const loginModal = document.getElementById('loginModal');
-      const loginClose = document.getElementById('loginClose');
-      const loginForm = document.getElementById('loginForm');
-      const loginEstado = document.getElementById('loginEstado');
-      const heroTitulo = document.getElementById('heroTitulo');
-      const heroSubtitulo = document.getElementById('heroSubtitulo');
-      const userBadgeWrap = document.getElementById('userBadgeWrap');
-      const userBadgeRole = document.getElementById('userBadgeRole');
-      const btnLogout = document.getElementById('btnLogout');
 
-      function checkSession() {
-        try {
-          const user = JSON.parse(localStorage.getItem('jc_user'));
-          if (user && user.nombre) {
-            heroTitulo.textContent = `¡Hola, ${user.nombre}!`;
-            heroSubtitulo.textContent = user.rol === 'pareja_guia' 
-              ? 'Panel de Pareja Guía: Acompañamiento general' 
-              : 'Panel de Animador: Acompañando a tu grupo';
-            userBadgeRole.textContent = user.rol === 'pareja_guia' ? 'Pareja Guía ⭐' : 'Animador 💙';
-            userBadgeWrap.style.display = 'block';
-            btnLogin.style.display = 'none';
-            btnLogoutTop.style.display = 'inline-flex';
-            
-            // Mostrar módulo Catefa
-            catefaModule.style.display = 'block';
-            cargarGrupos();
-          } else {
-            heroTitulo.textContent = 'Bienvenido a Juventud CNC';
-            heroSubtitulo.textContent = 'Un espacio para crecer, servir y caminar juntos.';
-            userBadgeWrap.style.display = 'none';
-            btnLogin.style.display = 'inline-flex';
-            btnLogoutTop.style.display = 'none';
-            
-            // Ocultar módulo Catefa
-            catefaModule.style.display = 'none';
-          }
-        } catch (e) {}
+      function toggleModal(m, show) {
+        if (!m) return;
+        m.style.display = show ? 'flex' : 'none';
+        m.classList.toggle('show', show);
+        overlay?.classList.toggle('show', show);
       }
 
-      btnLogin.addEventListener('click', () => toggleModal(loginModal, true));
-      loginClose.addEventListener('click', () => toggleModal(loginModal, false));
-      overlay.addEventListener('click', () => {
+      document.getElementById('btnAngie')?.addEventListener('click', () => toggleModal(angieModal, true));
+      document.getElementById('angiePaletteClose')?.addEventListener('click', () => toggleModal(angieModal, false));
+      document.getElementById('btnLogin')?.addEventListener('click', () => toggleModal(loginModal, true));
+      document.getElementById('loginClose')?.addEventListener('click', () => toggleModal(loginModal, false));
+      overlay?.addEventListener('click', () => {
         toggleModal(angieModal, false);
         toggleModal(loginModal, false);
       });
 
-      loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        loginEstado.textContent = 'Verificando...';
+      window.addEventListener('message', (ev) => {
+        if (ev.data?.type === 'applyTokens') {
+          const root = document.documentElement;
+          Object.entries(ev.data.tokens).forEach(([k, v]) => root.style.setProperty(`--${k}`, v));
+        }
+        if (ev.data?.type === 'closeAngieModal') toggleModal(angieModal, false);
+      });
 
+      // 3. Mensaje Semanal
+      async function cargarMensajeSemanal() {
+        const client = window.JC?.supabase || window.sb;
+        if (!client) return;
+        try {
+          const { data } = await client.from('mensaje_semanal').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle();
+          if (data) {
+            document.getElementById('msgTitle').textContent = data.titulo;
+            document.getElementById('msgBody').textContent = data.cuerpo;
+            document.getElementById('msgMeta').textContent = `Por: ${data.autor || 'Equipo Pastoral'} · ${new Date(data.created_at).toLocaleDateString()}`;
+          }
+        } catch {}
+      }
+
+      // 4. Auth y Control de Vistas
+      function checkSession() {
+        const user = JSON.parse(localStorage.getItem('jc_user') || 'null');
+        const isLogged = !!user?.nombre;
+
+        document.getElementById('heroTitulo').textContent = isLogged ? `¡Hola, ${user.nombre}!` : 'Bienvenido a Juventud CNC';
+        document.getElementById('heroSubtitulo').textContent = isLogged
+          ? (user.rol === 'pareja_guia' ? 'Panel de Pareja Guía: Acompañamiento general' : 'Panel de Animador: Acompañando a tu grupo')
+          : 'Un espacio para crecer, servir y caminar juntos.';
+        
+        document.getElementById('userBadgeRole').textContent = user?.rol === 'pareja_guia' ? 'Pareja Guía ⭐' : 'Animador 💙';
+        document.getElementById('userBadgeWrap').style.display = isLogged ? 'block' : 'none';
+        document.getElementById('btnLogin').style.display = isLogged ? 'none' : 'inline-flex';
+        document.getElementById('btnLogoutTop').style.display = isLogged ? 'inline-flex' : 'none';
+        document.getElementById('catefaModule').style.display = isLogged ? 'block' : 'none';
+
+        if (isLogged) window.JC?.catefa?.init();
+      }
+
+      document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
         const nombre = document.getElementById('loginNombre').value.trim();
         const clave = document.getElementById('loginClave').value.trim();
+        const estado = document.getElementById('loginEstado');
         const client = window.JC?.supabase || window.sb;
 
-        if (!client) {
-          loginEstado.textContent = 'Error de conexión con Supabase.';
-          return;
-        }
-
+        estado.textContent = 'Verificando...';
         try {
-          const { data: usuario } = await client
-            .from('catefa_usuarios')
-            .select('*')
-            .ilike('nombre', nombre)
-            .maybeSingle();
-
-          if (usuario) {
-            if (usuario.rol === 'pareja_guia' || usuario.clave === clave) {
-              localStorage.setItem('jc_user', JSON.stringify(usuario));
-              toggleModal(loginModal, false);
-              loginForm.reset();
-              loginEstado.textContent = '';
-              checkSession();
-              return;
-            } else {
-              loginEstado.textContent = 'Contraseña incorrecta (recuerda: animador).';
-              return;
-            }
-          }
-
-          if (clave.toLowerCase() === 'animador') {
-            const { data: nuevo, error: errInsert } = await client
-              .from('catefa_usuarios')
-              .insert([{ nombre, clave: 'animador', rol: 'animador' }])
-              .select()
-              .single();
-
-            if (errInsert) throw errInsert;
-
-            localStorage.setItem('jc_user', JSON.stringify(nuevo));
+          const { data: usuario } = await client.from('catefa_usuarios').select('*').ilike('nombre', nombre).maybeSingle();
+          if (usuario && (usuario.rol === 'pareja_guia' || usuario.clave === clave)) {
+            localStorage.setItem('jc_user', JSON.stringify(usuario));
             toggleModal(loginModal, false);
-            loginForm.reset();
-            loginEstado.textContent = '';
             checkSession();
             return;
           }
-
-          loginEstado.textContent = 'Usuario no encontrado o contraseña incorrecta.';
-        } catch (err) {
-          console.error(err);
-          loginEstado.textContent = 'Error al procesar el ingreso.';
+          if (clave.toLowerCase() === 'animador') {
+            const { data: nuevo } = await client.from('catefa_usuarios').insert([{ nombre, clave: 'animador', rol: 'animador' }]).select().single();
+            localStorage.setItem('jc_user', JSON.stringify(nuevo));
+            toggleModal(loginModal, false);
+            checkSession();
+            return;
+          }
+          estado.textContent = 'Usuario no encontrado o contraseña incorrecta.';
+        } catch {
+          estado.textContent = 'Error al procesar el ingreso.';
         }
       });
 
-      function logout() {
+      const logout = () => {
         localStorage.removeItem('jc_user');
         checkSession();
-      }
+      };
+      document.getElementById('btnLogout')?.addEventListener('click', logout);
+      document.getElementById('btnLogoutTop')?.addEventListener('click', logout);
 
-      btnLogout.addEventListener('click', logout);
-      btnLogoutTop.addEventListener('click', logout);
-
+      // Inicialización
       document.addEventListener('DOMContentLoaded', () => {
         cargarMensajeSemanal();
         checkSession();
+        window.JC?.bots?.init();
       });
     </script>
 </body>
