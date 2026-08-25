@@ -68,74 +68,99 @@
           </article>
         </section>
 
-        <!-- MÓDULO CATEFA (Solo visible logueado) -->
-        <section class="card" id="catefaModule" style="display:none; margin-bottom: 1rem;">
-          <header class="card-header">
-            <h2 class="with-emoji" data-emoji="👥">Grupos y Niños</h2>
-            <span class="badge badge-mix">Catefa</span>
-          </header>
-          
-          <div class="card-body" style="display: flex; flex-direction: column; gap: 14px;">
-            <!-- Selector de Grupo -->
-            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-              <div style="flex:1; min-width:200px;">
-                <label class="small muted" for="selectGrupo">Seleccionar Grupo:</label>
-                <select id="selectGrupo" style="margin-top:4px;">
-                  <option value="">Cargando grupos...</option>
-                </select>
-              </div>
-              <button id="btnNuevoGrupo" class="btn small" type="button" style="margin-top:18px;">+ Crear Grupo</button>
-            </div>
+       <!-- MÓDULO CATEFA (Visible al iniciar sesión) -->
+<section class="card" id="catefaModule" style="display:none; margin-bottom: 1rem;">
+  <header class="card-header">
+    <h2 class="with-emoji" data-emoji="👥">Gestión Catefa</h2>
+    <div style="display: flex; gap: 6px;">
+      <button id="tabBtnNinos" class="btn small" type="button">Niños & Notas</button>
+      <button id="tabBtnAsistencias" class="btn small ghost" type="button">Asistencias 📋</button>
+    </div>
+  </header>
+  
+  <div class="card-body" style="display: flex; flex-direction: column; gap: 14px;">
+    
+    <!-- Selector de Grupo Común -->
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <div style="flex:1; min-width:200px;">
+        <label class="small muted" for="selectGrupo">Seleccionar Grupo:</label>
+        <select id="selectGrupo" style="margin-top:4px;">
+          <option value="">Cargando grupos...</option>
+        </select>
+      </div>
+      <button id="btnNuevoGrupo" class="btn small" type="button" style="margin-top:18px;">+ Crear Grupo</button>
+    </div>
 
-            <!-- Formulario Crear Grupo -->
-            <div id="formNuevoGrupoWrap" style="display:none; background:rgba(2,6,23,0.4); padding:12px; border-radius:12px; border:1px solid rgba(148,163,184,0.2);">
-              <h4 style="margin:0 0 8px; font-size:14px;">Nuevo Grupo</h4>
-              <div style="display:grid; gap:8px;">
-                <input id="inputNombreGrupo" type="text" placeholder="Nombre del Grupo (ej: Comunión 1 - Sábados)" />
-                  <div>
-                     <label class="small muted" for="selectParejaGuia">Asignar Pareja Guía:</label>
-                      <select id="selectParejaGuia" style="margin-top:4px;">
-                      <option value="">-- Selecciona Pareja Guía --</option>
-                      <option value="Richard y Lucero">Richard y Lucero</option>
-                      <option value="Betty y Jesus">Betty y Jesus</option>
-                      <option value="Ricardo y Yaneli">Ricardo y Yaneli</option>
-                  </select>
-                </div>
-                <div style="display:flex; gap:8px; margin-top:4px;">
-                  <button id="btnGuardarGrupo" class="btn small" type="button">Guardar</button>
-                  <button id="btnCancelarGrupo" class="btn small ghost" type="button">Cancelar</button>
-                </div>
-              </div>
-            </div>
+    <!-- Formulario Crear Grupo -->
+    <div id="formNuevoGrupoWrap" style="display:none; background:rgba(2,6,23,0.4); padding:12px; border-radius:12px; border:1px solid rgba(148,163,184,0.2);">
+      <h4 style="margin:0 0 8px; font-size:14px;">Nuevo Grupo</h4>
+      <div style="display:grid; gap:8px;">
+        <input id="inputNombreGrupo" type="text" placeholder="Nombre del Grupo (ej: Comunión 1 - Sábados)" />
+        <div>
+          <label class="small muted" for="selectParejaGuia">Asignar Pareja Guía:</label>
+          <select id="selectParejaGuia" style="margin-top:4px;">
+            <option value="">-- Selecciona Pareja Guía --</option>
+            <option value="Richard y Lucero">Richard y Lucero</option>
+            <option value="Betty y Jesus">Betty y Jesus</option>
+            <option value="Ricardo y Yaneli">Ricardo y Yaneli</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:4px;">
+          <button id="btnGuardarGrupo" class="btn small" type="button">Guardar</button>
+          <button id="btnCancelarGrupo" class="btn small ghost" type="button">Cancelar</button>
+        </div>
+      </div>
+    </div>
 
-            <hr style="border:0; border-top:1px solid rgba(148,163,184,0.2); margin:4px 0;" />
+    <hr style="border:0; border-top:1px solid rgba(148,163,184,0.2); margin:4px 0;" />
 
-            <!-- Formulario Niño -->
-            <form id="formNino" style="display:grid; gap:10px;">
-              <div>
-                <label class="small muted" for="ninoNombre">Nombre del Niño:</label>
-                <input id="ninoNombre" type="text" placeholder="Ej: Mateo Ramos" required style="margin-top:4px;" />
-              </div>
-              <div>
-                <label class="small muted" for="ninoNotas">Notitas pastorales compartidas:</label>
-                <textarea id="ninoNotas" rows="2" placeholder="Observaciones de acompañamiento..." style="margin-top:4px;"></textarea>
-              </div>
-              <button class="btn" type="submit" style="justify-self:start;">+ Guardar Niño</button>
-            </form>
+    <!-- SUBVISTA 1: NIÑOS Y NOTITAS -->
+    <div id="subvistaNinos">
+      <!-- Formulario Niño -->
+      <form id="formNino" style="display:grid; gap:10px; margin-bottom:14px;">
+        <div>
+          <label class="small muted" for="ninoNombre">Nombre del Niño:</label>
+          <input id="ninoNombre" type="text" placeholder="Ej: Mateo Ramos" required style="margin-top:4px;" />
+        </div>
+        <div>
+          <label class="small muted" for="ninoNotas">Notitas pastorales compartidas:</label>
+          <textarea id="ninoNotas" rows="2" placeholder="Observaciones de escucha y acompañamiento..." style="margin-top:4px;"></textarea>
+        </div>
+        <button class="btn" type="submit" style="justify-self:start;">+ Guardar Niño</button>
+      </form>
 
-            <!-- Lista Niños -->
-            <div>
-              <h3 style="font-size:15px; margin-bottom:8px;">👦 Lista de Acompañamiento</h3>
-              <div id="listaNinos">
-                <p class="muted small">Selecciona un grupo para ver a los niños.</p>
-              </div>
-            </div>
-          </div>
-        </section>
+      <!-- Lista Niños -->
+      <div>
+        <h3 style="font-size:15px; margin-bottom:8px;">👦 Fichas de Acompañamiento</h3>
+        <div id="listaNinos">
+          <p class="muted small">Selecciona un grupo para ver a los niños.</p>
+        </div>
+      </div>
+    </div>
 
-      </section>
-    </main>
+    <!-- SUBVISTA 2: ASISTENCIA Y SESIONES -->
+    <div id="subvistaAsistencias" style="display:none;">
+      <div style="background:rgba(2,6,23,0.4); padding:12px; border-radius:12px; border:1px solid rgba(148,163,184,0.2); margin-bottom:12px;">
+        <h4 style="margin:0 0 8px; font-size:14px;">📅 Sesión de Catequesis</h4>
+        <div style="display:grid; gap:8px;">
+          <input id="inputTemaSesion" type="text" placeholder="Tema de la sesión (ej: La Oración y el Credo)" />
+          <button id="btnIniciarSesion" class="btn small" type="button" style="justify-self:start;">Cargar / Abrir Sesión de Hoy</button>
+        </div>
+      </div>
 
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h3 style="font-size:15px; margin:0;">📋 Lista de Asistencia</h3>
+          <span id="contadorAsistencias" class="badge badge-mix">0 presentes</span>
+        </div>
+        <div id="listaAsistencias">
+          <p class="muted small">Abre una sesión para marcar la asistencia de hoy.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
     <!-- MODAL DE LOGIN -->
     <div id="loginModal" class="jc-modal" style="display:none">
       <div class="jc-modal-card" role="dialog" aria-modal="true">

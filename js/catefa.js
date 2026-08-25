@@ -4,8 +4,8 @@
 
   const JC = (window.JC = window.JC || {});
   let currentGrupoId = null;
+  let currentSesionId = null;
 
-  // Lista base de respaldo inmediato por si la conexión tarda
   const PAREJAS_BASE = [
     "Richard y Lucero",
     "Betty y Jesus",
@@ -24,7 +24,7 @@
     }
   }
 
-  // 1. Cargar Parejas Guías (desde Supabase con fallback local)
+  // 1. Parejas Guías
   async function cargarParejasGuias() {
     const select = document.getElementById('selectParejaGuia');
     if (!select) return;
@@ -41,10 +41,10 @@
           .order('nombre', { ascending: true });
 
         if (!error && data && data.length > 0) {
-          guiasNombres = data.map(d => d.nombre);
+          guiasNombres = data.map((d) => d.nombre);
         }
       } catch (err) {
-        console.warn('[Catefa] Usando lista local de parejas guías:', err);
+        console.warn('[Catefa] Usando lista local:', err);
       }
     }
 
@@ -57,7 +57,7 @@
     });
   }
 
-  // 2. Cargar Grupos
+  // 2. Grupos
   async function cargarGrupos() {
     const select = document.getElementById('selectGrupo');
     const client = getClient();
@@ -88,7 +88,7 @@
     }
   }
 
-  // 3. Cargar Niños del Grupo
+  // 3. Niños y Edición de Notitas
   async function cargarNinos(grupoId) {
     const list = document.getElementById('listaNinos');
     const client = getClient();
@@ -120,21 +120,142 @@
         const item = document.createElement('div');
         item.style.cssText =
           'background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.15); margin-bottom:8px;';
+        
         item.innerHTML = `
-          <div>
-            <strong>${n.nombre}</strong>
-            ${n.notas ? `<p class="muted small" style="margin-top:4px; font-style:italic;">"${n.notas}"</p>` : '<p class="muted small" style="margin-top:4px; opacity:0.6;">Sin notitas</p>'}
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+            <div style="flex:1;">
+              <strong>${n.nombre}</strong>
+              <p id="notaText-${n.id}" class="muted small" style="margin-top:4px; font-style:italic;">
+                ${n.notas ? `"${n.notas}"` : 'Sin notitas'}
+              </p>
+            </div>
+            <button class="btn small ghost btn-edit-nota" data-id="${n.id}" data-notas="${n.notas || ''}" title="Editar nota">✏️</button>
+          </div>
+          <div id="editBox-${n.id}" style="display:none; margin-top:8px;">
+            <textarea id="inputNota-${n.id}" rows="2" style="width:100%; font-size:12px;">${n.notas || ''}</textarea>
+            <div style="display:flex; gap:6px; margin-top:4px;">
+              <button class="btn small btn-save-nota" data-id="${n.id}">Guardar</button>
+              <button class="btn small ghost btn-cancel-nota" data-id="${n.id}">Cancelar</button>
+            </div>
           </div>
         `;
         list.appendChild(item);
       });
+
+      // Handlers para editar notas
+      list.querySelectorAll('.btn-edit-nota').forEach((b) => {
+        b.addEventListener('click', () => {
+          const id = b.dataset.id;
+          document.getElementById(`editBox-${id}`).style.display = 'block';
+        });
+      });
+
+      list.querySelectorAll('.btn-cancel-nota').forEach((b) => {
+        b.addEventListener('click', () => {
+          const id = b.dataset.id;
+          document.getElementById(`editBox-${id}`).style.display = 'none';
+        });
+      });
+
+      list.querySelectorAll('.btn-save-nota').forEach((b) => {
+        b.addEventListener('click', async () => {
+          const id = b.dataset.id;
+          const nuevaNota = document.getElementById(`inputNota-${id}`).value.trim();
+          try {
+            await client.from('catefa_ninos').update({ notas: nuevaNota }).eq('id', id);
+            document.getElementById(`notaText-${id}`).textContent = nuevaNota ? `"${nuevaNota}"` : 'Sin notitas';
+            document.getElementById(`editBox-${id}`).style.display = 'none';
+          } catch (err) {
+            alert('Error al actualizar nota.');
+          }
+        });
+      });
+
     } catch (e) {
       console.error('[Catefa] Error cargando niños:', e);
       list.innerHTML = '<p class="muted small">Error al cargar la lista.</p>';
     }
   }
 
-  // 4. Eventos de la Interfaz
+  // 4. Módulo de Asistencias
+  async function cargarAsistencias(grupoId) {
+    const list = document.getElementById('listaAsistencias');
+    const badgeContador = document.getElementById('contadorAsistencias');
+    const client = getClient();
+    if (!list || !grupoId || !currentSesionId) return;
+
+    list.innerHTML = '<p class="muted small">Cargando lista de asistencia...</p>';
+
+    try {
+      // 1. Obtener todos los niños del grupo
+      const { data: ninos } = await client
+        .from('catefa_ninos')
+        .select('id, nombre')
+        .eq('grupo_id', grupoId)
+        .order('nombre', { ascending: true });
+
+      // 2. Obtener asistencias ya marcadas en esta sesión
+      const { data: asistencias } = await client
+        .from('catefa_asistencias')
+        .select('*')
+        .eq('sesion_id', currentSesionId);
+
+      const asistMap = {};
+      (asistencias || []).forEach((a) => {
+        asistMap[a.nino_id] = a.presente;
+      });
+
+      let presentesCount = 0;
+      list.innerHTML = '';
+
+      (ninos || []).forEach((n) => {
+        const presente = !!asistMap[n.id];
+        if (presente) presentesCount++;
+
+        const row = document.createElement('div');
+        row.style.cssText =
+          'background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.15); display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;';
+
+        row.innerHTML = `
+          <strong>${n.nombre}</strong>
+          <button class="btn small ${presente ? '' : 'ghost'} btn-asistencia" data-nino="${n.id}" data-presente="${presente}">
+            ${presente ? '✅ Presente' : '❌ Falta'}
+          </button>
+        `;
+        list.appendChild(row);
+      });
+
+      badgeContador.textContent = `${presentesCount} presentes de ${ninos?.length || 0}`;
+
+      // Click para cambiar asistencia (Upsert)
+      list.querySelectorAll('.btn-asistencia').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const ninoId = btn.dataset.nino;
+          const nuevoEstado = btn.dataset.presente !== 'true';
+
+          try {
+            await client.from('catefa_asistencias').upsert(
+              {
+                sesion_id: currentSesionId,
+                nino_id: ninoId,
+                presente: nuevoEstado,
+              },
+              { onConflict: 'sesion_id,nino_id' }
+            );
+
+            cargarAsistencias(grupoId);
+          } catch (e) {
+            console.error('[Catefa] Error marcando asistencia:', e);
+          }
+        });
+      });
+
+    } catch (e) {
+      console.error('[Catefa] Error asistencias:', e);
+    }
+  }
+
+  // 5. Inicialización de eventos
   function bindUI() {
     if (window.__JC_CATEFA_BOUND__) return;
     window.__JC_CATEFA_BOUND__ = true;
@@ -150,9 +271,33 @@
     const ninoNombre = document.getElementById('ninoNombre');
     const ninoNotas = document.getElementById('ninoNotas');
 
+    // Pestañas internas
+    const tabBtnNinos = document.getElementById('tabBtnNinos');
+    const tabBtnAsistencias = document.getElementById('tabBtnAsistencias');
+    const subvistaNinos = document.getElementById('subvistaNinos');
+    const subvistaAsistencias = document.getElementById('subvistaAsistencias');
+    const btnIniciarSesion = document.getElementById('btnIniciarSesion');
+    const inputTemaSesion = document.getElementById('inputTemaSesion');
+
+    tabBtnNinos?.addEventListener('click', () => {
+      tabBtnNinos.classList.remove('ghost');
+      tabBtnAsistencias.classList.add('ghost');
+      subvistaNinos.style.display = 'block';
+      subvistaAsistencias.style.display = 'none';
+    });
+
+    tabBtnAsistencias?.addEventListener('click', () => {
+      tabBtnAsistencias.classList.remove('ghost');
+      tabBtnNinos.classList.add('ghost');
+      subvistaNinos.style.display = 'none';
+      subvistaAsistencias.style.display = 'block';
+    });
+
     select?.addEventListener('change', (e) => {
       currentGrupoId = e.target.value;
       cargarNinos(currentGrupoId);
+      currentSesionId = null;
+      document.getElementById('listaAsistencias').innerHTML = '<p class="muted small">Abre una sesión para este grupo.</p>';
     });
 
     btnNuevoGrupo?.addEventListener('click', () => {
@@ -174,11 +319,6 @@
       const nombreFinal = parejaGuia ? `${nombreBase} (${parejaGuia})` : nombreBase;
       const user = getUser();
       const client = getClient();
-
-      if (!client) {
-        alert('No hay conexión con la base de datos.');
-        return;
-      }
 
       try {
         const { data: nuevo, error } = await client
@@ -222,6 +362,45 @@
         console.error('[Catefa] Error al guardar niño:', e);
       }
     });
+
+    // Iniciar/Buscar Sesión del Día
+    btnIniciarSesion?.addEventListener('click', async () => {
+      if (!currentGrupoId) {
+        alert('Selecciona un grupo primero.');
+        return;
+      }
+
+      const tema = inputTemaSesion?.value.trim() || 'Sesión ordinaria';
+      const client = getClient();
+      const hoy = new Date().toISOString().split('T')[0];
+
+      try {
+        // Buscar sesión existente de hoy
+        let { data: sesion } = await client
+          .from('catefa_sesiones')
+          .select('*')
+          .eq('grupo_id', currentGrupoId)
+          .eq('fecha', hoy)
+          .maybeSingle();
+
+        // Si no existe, se crea
+        if (!sesion) {
+          const { data: nueva, error: errS } = await client
+            .from('catefa_sesiones')
+            .insert([{ grupo_id: currentGrupoId, tema, fecha: hoy }])
+            .select()
+            .single();
+
+          if (errS) throw errS;
+          sesion = nueva;
+        }
+
+        currentSesionId = sesion.id;
+        cargarAsistencias(currentGrupoId);
+      } catch (e) {
+        console.error('[Catefa] Error al abrir sesión:', e);
+      }
+    });
   }
 
   function init() {
@@ -234,10 +413,10 @@
     init,
     cargarGrupos,
     cargarNinos,
-    cargarParejasGuias
+    cargarParejasGuias,
+    cargarAsistencias,
   };
 
-  // Autoarranque si ya cargó el DOM
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
