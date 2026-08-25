@@ -129,7 +129,7 @@
                 ${n.notas ? `"${n.notas}"` : 'Sin notitas'}
               </p>
             </div>
-            <button class="btn small ghost btn-edit-nota" data-id="${n.id}" data-notas="${n.notas || ''}" title="Editar nota">✏️</button>
+            <button class="btn small ghost btn-edit-nota" data-id="${n.id}" title="Editar nota">✏️</button>
           </div>
           <div id="editBox-${n.id}" style="display:none; margin-top:8px;">
             <textarea id="inputNota-${n.id}" rows="2" style="width:100%; font-size:12px;">${n.notas || ''}</textarea>
@@ -142,7 +142,6 @@
         list.appendChild(item);
       });
 
-      // Handlers para editar notas
       list.querySelectorAll('.btn-edit-nota').forEach((b) => {
         b.addEventListener('click', () => {
           const id = b.dataset.id;
@@ -166,7 +165,7 @@
             document.getElementById(`notaText-${id}`).textContent = nuevaNota ? `"${nuevaNota}"` : 'Sin notitas';
             document.getElementById(`editBox-${id}`).style.display = 'none';
           } catch (err) {
-            alert('Error al actualizar nota.');
+            alert('Error al actualizar la nota.');
           }
         });
       });
@@ -177,28 +176,42 @@
     }
   }
 
-  // 4. Módulo de Asistencias
+  // 4. Módulo de Asistencias (Robusto)
   async function cargarAsistencias(grupoId) {
     const list = document.getElementById('listaAsistencias');
     const badgeContador = document.getElementById('contadorAsistencias');
     const client = getClient();
-    if (!list || !grupoId || !currentSesionId) return;
+    if (!list || !grupoId) return;
+
+    if (!currentSesionId) {
+      list.innerHTML = '<p class="muted small">Pulsa "Cargar / Abrir Sesión de Hoy" para iniciar el pase de lista.</p>';
+      badgeContador.textContent = '0 presentes';
+      return;
+    }
 
     list.innerHTML = '<p class="muted small">Cargando lista de asistencia...</p>';
 
     try {
-      // 1. Obtener todos los niños del grupo
-      const { data: ninos } = await client
+      const { data: ninos, error: errN } = await client
         .from('catefa_ninos')
         .select('id, nombre')
         .eq('grupo_id', grupoId)
         .order('nombre', { ascending: true });
 
-      // 2. Obtener asistencias ya marcadas en esta sesión
-      const { data: asistencias } = await client
+      if (errN) throw errN;
+
+      if (!ninos || ninos.length === 0) {
+        list.innerHTML = '<p class="muted small">No hay niños en este grupo para tomar asistencia.</p>';
+        badgeContador.textContent = '0 presentes';
+        return;
+      }
+
+      const { data: asistencias, error: errA } = await client
         .from('catefa_asistencias')
-        .select('*')
+        .select('nino_id, presente')
         .eq('sesion_id', currentSesionId);
+
+      if (errA) throw errA;
 
       const asistMap = {};
       (asistencias || []).forEach((a) => {
@@ -208,9 +221,9 @@
       let presentesCount = 0;
       list.innerHTML = '';
 
-      (ninos || []).forEach((n) => {
-        const presente = !!asistMap[n.id];
-        if (presente) presentesCount++;
+      ninos.forEach((n) => {
+        const isPresente = asistMap[n.id] === true;
+        if (isPresente) presentesCount++;
 
         const row = document.createElement('div');
         row.style.cssText =
@@ -218,44 +231,96 @@
 
         row.innerHTML = `
           <strong>${n.nombre}</strong>
-          <button class="btn small ${presente ? '' : 'ghost'} btn-asistencia" data-nino="${n.id}" data-presente="${presente}">
-            ${presente ? '✅ Presente' : '❌ Falta'}
+          <button class="btn small ${isPresente ? '' : 'ghost'} btn-asistencia" data-nino="${n.id}" data-presente="${isPresente}">
+            ${isPresente ? '✅ Presente' : '❌ Falta'}
           </button>
         `;
         list.appendChild(row);
       });
 
-      badgeContador.textContent = `${presentesCount} presentes de ${ninos?.length || 0}`;
+      badgeContador.textContent = `${presentesCount} presentes de ${ninos.length}`;
 
-      // Click para cambiar asistencia (Upsert)
       list.querySelectorAll('.btn-asistencia').forEach((btn) => {
         btn.addEventListener('click', async () => {
           const ninoId = btn.dataset.nino;
           const nuevoEstado = btn.dataset.presente !== 'true';
+          btn.disabled = true;
 
           try {
-            await client.from('catefa_asistencias').upsert(
-              {
-                sesion_id: currentSesionId,
-                nino_id: ninoId,
-                presente: nuevoEstado,
-              },
-              { onConflict: 'sesion_id,nino_id' }
-            );
+            // Verificar si ya existe registro para update o insert seguro
+            const { data: existing } = await client
+              .from('catefa_asistencias')
+              .select('id')
+              .eq('sesion_id', currentSesionId)
+              .eq('nino_id', ninoId)
+              .maybeSingle();
 
-            cargarAsistencias(grupoId);
+            if (existing && existing.id) {
+              await client
+                .from('catefa_asistencias')
+                .update({ presente: nuevoEstado })
+                .eq('id', existing.id);
+            } else {
+              await client
+                .from('catefa_asistencias')
+                .insert([{
+                  sesion_id: currentSesionId,
+                  nino_id: ninoId,
+                  presente: nuevoEstado
+                }]);
+            }
+
+            await cargarAsistencias(grupoId);
           } catch (e) {
-            console.error('[Catefa] Error marcando asistencia:', e);
+            console.error('[Catefa] Error al registrar asistencia:', e);
+            btn.disabled = false;
           }
         });
       });
 
     } catch (e) {
-      console.error('[Catefa] Error asistencias:', e);
+      console.error('[Catefa] Error cargando asistencias:', e);
+      list.innerHTML = '<p class="muted small">Error al cargar la asistencia.</p>';
     }
   }
 
-  // 5. Inicialización de eventos
+  // 5. Iniciar / Detectar Sesión de Hoy
+  async function asegurarSesionHoy(grupoId, forzarTema = '') {
+    if (!grupoId) return;
+    const client = getClient();
+    const hoy = new Date().toISOString().split('T')[0];
+    const tema = forzarTema || document.getElementById('inputTemaSesion')?.value.trim() || 'Sesión ordinaria';
+
+    try {
+      let { data: sesion, error } = await client
+        .from('catefa_sesiones')
+        .select('*')
+        .eq('grupo_id', grupoId)
+        .eq('fecha', hoy)
+        .maybeSingle();
+
+      if (!sesion) {
+        const { data: nueva, error: errInsert } = await client
+          .from('catefa_sesiones')
+          .insert([{ grupo_id: grupoId, tema, fecha: hoy }])
+          .select()
+          .single();
+
+        if (errInsert) throw errInsert;
+        sesion = nueva;
+      }
+
+      currentSesionId = sesion.id;
+      if (document.getElementById('inputTemaSesion')) {
+        document.getElementById('inputTemaSesion').value = sesion.tema || '';
+      }
+      await cargarAsistencias(grupoId);
+    } catch (err) {
+      console.error('[Catefa] Error gestionando sesión:', err);
+    }
+  }
+
+  // 6. Enlace de Eventos
   function bindUI() {
     if (window.__JC_CATEFA_BOUND__) return;
     window.__JC_CATEFA_BOUND__ = true;
@@ -271,7 +336,6 @@
     const ninoNombre = document.getElementById('ninoNombre');
     const ninoNotas = document.getElementById('ninoNotas');
 
-    // Pestañas internas
     const tabBtnNinos = document.getElementById('tabBtnNinos');
     const tabBtnAsistencias = document.getElementById('tabBtnAsistencias');
     const subvistaNinos = document.getElementById('subvistaNinos');
@@ -284,6 +348,7 @@
       tabBtnAsistencias.classList.add('ghost');
       subvistaNinos.style.display = 'block';
       subvistaAsistencias.style.display = 'none';
+      if (currentGrupoId) cargarNinos(currentGrupoId);
     });
 
     tabBtnAsistencias?.addEventListener('click', () => {
@@ -291,13 +356,16 @@
       tabBtnNinos.classList.add('ghost');
       subvistaNinos.style.display = 'none';
       subvistaAsistencias.style.display = 'block';
+      if (currentGrupoId) asegurarSesionHoy(currentGrupoId);
     });
 
     select?.addEventListener('change', (e) => {
       currentGrupoId = e.target.value;
-      cargarNinos(currentGrupoId);
       currentSesionId = null;
-      document.getElementById('listaAsistencias').innerHTML = '<p class="muted small">Abre una sesión para este grupo.</p>';
+      cargarNinos(currentGrupoId);
+      if (subvistaAsistencias && subvistaAsistencias.style.display !== 'none') {
+        asegurarSesionHoy(currentGrupoId);
+      }
     });
 
     btnNuevoGrupo?.addEventListener('click', () => {
@@ -363,43 +431,13 @@
       }
     });
 
-    // Iniciar/Buscar Sesión del Día
     btnIniciarSesion?.addEventListener('click', async () => {
       if (!currentGrupoId) {
         alert('Selecciona un grupo primero.');
         return;
       }
-
-      const tema = inputTemaSesion?.value.trim() || 'Sesión ordinaria';
-      const client = getClient();
-      const hoy = new Date().toISOString().split('T')[0];
-
-      try {
-        // Buscar sesión existente de hoy
-        let { data: sesion } = await client
-          .from('catefa_sesiones')
-          .select('*')
-          .eq('grupo_id', currentGrupoId)
-          .eq('fecha', hoy)
-          .maybeSingle();
-
-        // Si no existe, se crea
-        if (!sesion) {
-          const { data: nueva, error: errS } = await client
-            .from('catefa_sesiones')
-            .insert([{ grupo_id: currentGrupoId, tema, fecha: hoy }])
-            .select()
-            .single();
-
-          if (errS) throw errS;
-          sesion = nueva;
-        }
-
-        currentSesionId = sesion.id;
-        cargarAsistencias(currentGrupoId);
-      } catch (e) {
-        console.error('[Catefa] Error al abrir sesión:', e);
-      }
+      const tema = inputTemaSesion?.value.trim();
+      await asegurarSesionHoy(currentGrupoId, tema);
     });
   }
 
@@ -415,6 +453,7 @@
     cargarNinos,
     cargarParejasGuias,
     cargarAsistencias,
+    asegurarSesionHoy
   };
 
   if (document.readyState === 'loading') {
