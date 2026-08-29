@@ -84,6 +84,17 @@ p { margin: 0; }
 .with-emoji[data-emoji]::before { content: attr(data-emoji) " "; margin-right: 6px; }
 
 /* ==========================================================
+   VISTAS Y NAVEGACIÓN SPA
+   ========================================================== */
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+}
+
+/* ==========================================================
    CAPAS DE FONDO
    ========================================================== */
 #jcAppBgLayer, #jcAppBgOverlay {
