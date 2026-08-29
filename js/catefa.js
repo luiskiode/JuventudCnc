@@ -27,6 +27,15 @@
     }
   }
 
+  function safe(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   // 1. Cargar lista de Parejas Guías en el selector
   async function cargarParejasGuias() {
     const select = document.getElementById('selectParejaGuia');
@@ -60,64 +69,69 @@
     });
   }
 
-  // 2. Cargar Grupos de la BD con Fallback
+  // 2. Cargar Grupos de la BD con Fallback Ultra Seguro
   async function cargarGrupos() {
     const select = document.getElementById('selectGrupo');
-    const client = getClient();
-    const user = getUser();
     if (!select) return;
 
+    const client = getClient();
+    const user = getUser();
     let grupos = [];
 
-    // Intento 1: Supabase
+    select.innerHTML = '<option value="">Cargando grupos...</option>';
+
     if (client) {
       try {
-        let query = client.from('catefa_grupos').select('*').order('nombre', { ascending: true });
+        let { data, error } = await client
+          .from('catefa_grupos')
+          .select('*')
+          .order('nombre', { ascending: true });
 
-        if (user.rol === 'pareja_guia') {
-          query = query.ilike('pareja_guia', `%${user.nombre}%`);
-        }
-
-        const { data, error } = await query;
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
+          if (user.rol === 'pareja_guia' && user.nombre) {
+            data = data.filter(g => 
+              (g.pareja_guia || '').toLowerCase().includes(user.nombre.toLowerCase())
+            );
+          }
           grupos = data;
         }
       } catch (e) {
-        console.warn('[Catefa] Error al consultar Supabase, buscando respaldos locales:', e);
+        console.warn('[Catefa] Fallo al consultar Supabase:', e);
       }
     }
 
-    // Intento 2: LocalStorage respaldo
-    if (grupos.length === 0) {
-      const gruposLocales = JSON.parse(localStorage.getItem('jc_catefa_grupos') || '[]');
-      if (user.rol === 'pareja_guia') {
-        grupos = gruposLocales.filter(g => (g.pareja_guia || '').toLowerCase().includes((user.nombre || '').toLowerCase()));
+    if (!grupos || grupos.length === 0) {
+      const locales = JSON.parse(localStorage.getItem('jc_catefa_grupos') || '[]');
+      if (user.rol === 'pareja_guia' && user.nombre) {
+        grupos = locales.filter(g => (g.pareja_guia || '').toLowerCase().includes(user.nombre.toLowerCase()));
       } else {
-        grupos = gruposLocales;
+        grupos = locales;
       }
     }
 
-    JC.gruposCargados = grupos;
-    select.innerHTML = '<option value="">-- Selecciona tu grupo --</option>';
+    JC.gruposCargados = grupos || [];
+    select.innerHTML = '';
 
-    if (!JC.gruposCargados.length) {
+    if (JC.gruposCargados.length === 0) {
       select.innerHTML = '<option value="">-- No hay grupos registrados --</option>';
       renderBloqueResumen(null);
-    } else {
-      JC.gruposCargados.forEach((g) => {
-        const opt = document.createElement('option');
-        opt.value = g.id;
-        opt.textContent = `${g.nombre} ${g.pareja_guia ? '· [' + g.pareja_guia + ']' : ''}`;
-        select.appendChild(opt);
-      });
-
-      if (!currentGrupoId || !JC.gruposCargados.some(g => String(g.id) === String(currentGrupoId))) {
-        currentGrupoId = JC.gruposCargados[0].id;
-      }
-      
-      select.value = currentGrupoId;
-      actualizarVistaGrupo(currentGrupoId);
+      return;
     }
+
+    select.innerHTML = '<option value="">-- Selecciona tu grupo --</option>';
+    JC.gruposCargados.forEach((g) => {
+      const opt = document.createElement('option');
+      opt.value = g.id;
+      opt.textContent = `${g.nombre} ${g.pareja_guia ? '· [' + g.pareja_guia + ']' : ''}`;
+      select.appendChild(opt);
+    });
+
+    if (!currentGrupoId || !JC.gruposCargados.some(g => String(g.id) === String(currentGrupoId))) {
+      currentGrupoId = JC.gruposCargados[0].id;
+    }
+
+    select.value = currentGrupoId;
+    actualizarVistaGrupo(currentGrupoId);
   }
 
   function actualizarVistaGrupo(grupoId) {
@@ -142,9 +156,9 @@
       <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; margin-bottom: 16px;">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <div>
-            <h4 style="margin:0 0 4px 0;">📖 ${JC.safeText ? JC.safeText(grupo.nombre) : grupo.nombre}</h4>
+            <h4 style="margin:0 0 4px 0;">📖 ${safe(grupo.nombre)}</h4>
             <p class="muted small" style="margin:0;">
-              <strong>Pareja Guía:</strong> ${JC.safeText ? JC.safeText(grupo.pareja_guia || 'Sin asignar') : (grupo.pareja_guia || 'Sin asignar')}
+              <strong>Pareja Guía:</strong> ${safe(grupo.pareja_guia || 'Sin asignar')}
             </p>
           </div>
           <span style="font-size:12px; background:rgba(59,130,246,0.2); color:#93c5fd; padding:4px 10px; border-radius:20px;">
@@ -155,7 +169,7 @@
     `;
   }
 
-  // 3. Crear Grupo con persistencia doble
+  // 3. Crear Grupo
   async function crearGrupo() {
     const client = getClient();
     const nombre = document.getElementById('inputNombreGrupo')?.value.trim();
@@ -174,11 +188,9 @@
           .select()
           .single();
 
-        if (!error && data) {
-          nuevoGrupo.id = data.id;
-        }
+        if (!error && data) nuevoGrupo.id = data.id;
       } catch (e) {
-        console.warn('[Catefa] Error guardando grupo en Supabase:', e);
+        console.warn('[Catefa] Error guardando grupo:', e);
       }
     }
 
@@ -188,7 +200,8 @@
 
     alert('¡Grupo registrado correctamente!');
     document.getElementById('inputNombreGrupo').value = '';
-    document.getElementById('formNuevoGrupoWrap').style.display = 'none';
+    const wrap = document.getElementById('formNuevoGrupoWrap');
+    if (wrap) wrap.style.display = 'none';
 
     currentGrupoId = nuevoGrupo.id;
     await cargarGrupos();
@@ -213,11 +226,10 @@
         });
         return mapaFaltas;
       } catch (e) {
-        console.warn('[Catefa] Error obteniendo faltas de Supabase:', e);
+        console.warn('[Catefa] Error en conteo de faltas:', e);
       }
     }
 
-    // Fallback local para faltas
     const asistenciasLocales = JSON.parse(localStorage.getItem('jc_catefa_asistencias') || '[]');
     asistenciasLocales.forEach(a => {
       if (a.presente === false) {
@@ -251,13 +263,13 @@
 
         if (data && data.length > 0) ninos = data;
       } catch (e) {
-        console.warn('[Catefa] Error cargando niños de Supabase:', e);
+        console.warn('[Catefa] Error cargando niños:', e);
       }
     }
 
     if (ninos.length === 0) {
-      const todosNinosLocales = JSON.parse(localStorage.getItem('jc_catefa_ninos') || '[]');
-      ninos = todosNinosLocales.filter(n => String(n.grupo_id) === String(grupoId));
+      const todos = JSON.parse(localStorage.getItem('jc_catefa_ninos') || '[]');
+      ninos = todos.filter(n => String(n.grupo_id) === String(grupoId));
     }
 
     const mapaFaltas = await obtenerConteoFaltas(grupoId);
@@ -276,18 +288,18 @@
       item.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
           <div style="flex:1;">
-            <strong>${JC.safeText ? JC.safeText(n.nombre) : n.nombre}</strong>
+            <strong>${safe(n.nombre)}</strong>
             <span style="font-size:11px; margin-left:8px; padding:2px 8px; border-radius:10px; background:${totalFaltas > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)'}; color:${totalFaltas > 0 ? '#fca5a5' : '#86efac'};">
               ${totalFaltas} falta(s) acumulada(s)
             </span>
             <p id="notaText-${n.id}" class="muted small" style="margin-top:4px; font-style:italic;">
-              ${n.notas ? `"${JC.safeText ? JC.safeText(n.notas) : n.notas}"` : 'Sin notitas'}
+              ${n.notas ? `"${safe(n.notas)}"` : 'Sin notitas'}
             </p>
           </div>
           <button class="btn small ghost btn-edit-nota" data-id="${n.id}">✏️</button>
         </div>
         <div id="editBox-${n.id}" style="display:none; margin-top:8px;">
-          <textarea id="inputNota-${n.id}" rows="2" style="width:100%; font-size:12px;">${JC.safeText ? JC.safeText(n.notas || '') : (n.notas || '')}</textarea>
+          <textarea id="inputNota-${n.id}" rows="2" style="width:100%; font-size:12px;">${safe(n.notas || '')}</textarea>
           <div style="display:flex; gap:6px; margin-top:4px;">
             <button class="btn small btn-save-nota" data-id="${n.id}">Guardar</button>
             <button class="btn small ghost btn-cancel-nota" data-id="${n.id}">Cancelar</button>
@@ -311,15 +323,15 @@
         try {
           await client.from('catefa_ninos').update({ notas: nuevaNota }).eq('id', id);
         } catch (e) {
-          console.warn('[Catefa] Error actualizando nota en Supabase:', e);
+          console.warn('[Catefa] Error editando nota:', e);
         }
       }
 
-      const todosNinos = JSON.parse(localStorage.getItem('jc_catefa_ninos') || '[]');
-      const idx = todosNinos.findIndex(n => String(n.id) === String(id));
+      const todos = JSON.parse(localStorage.getItem('jc_catefa_ninos') || '[]');
+      const idx = todos.findIndex(n => String(n.id) === String(id));
       if (idx !== -1) {
-        todosNinos[idx].notas = nuevaNota;
-        localStorage.setItem('jc_catefa_ninos', JSON.stringify(todosNinos));
+        todos[idx].notas = nuevaNota;
+        localStorage.setItem('jc_catefa_ninos', JSON.stringify(todos));
       }
 
       cargarNinos(grupoId);
@@ -349,13 +361,13 @@
         if (nData) ninos = nData;
         if (aData) asistencias = aData;
       } catch (e) {
-        console.warn('[Catefa] Error cargando asistencias de Supabase:', e);
+        console.warn('[Catefa] Error al cargar asistencias:', e);
       }
     }
 
     if (ninos.length === 0) {
-      const todosNinos = JSON.parse(localStorage.getItem('jc_catefa_ninos') || '[]');
-      ninos = todosNinos.filter(n => String(n.grupo_id) === String(grupoId));
+      const todos = JSON.parse(localStorage.getItem('jc_catefa_ninos') || '[]');
+      ninos = todos.filter(n => String(n.grupo_id) === String(grupoId));
     }
 
     if (asistencias.length === 0) {
@@ -379,7 +391,7 @@
       row.style.cssText = 'background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.15); display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;';
       row.innerHTML = `
         <div>
-          <strong>${JC.safeText ? JC.safeText(n.nombre) : n.nombre}</strong>
+          <strong>${safe(n.nombre)}</strong>
           <p class="muted small" style="margin:2px 0 0 0;">Faltas totales: <strong>${faltasAcumuladas}</strong></p>
         </div>
         <button class="btn small ${isPresente ? '' : 'ghost'} btn-asistencia" data-nino="${n.id}" data-presente="${isPresente}">
@@ -406,7 +418,7 @@
               await client.from('catefa_asistencias').insert([{ sesion_id: currentSesionId, nino_id: ninoId, presente: nuevoEstado }]);
             }
           } catch (e) {
-            console.warn('[Catefa] Error guardando asistencia en Supabase:', e);
+            console.warn('[Catefa] Error guardando asistencia:', e);
           }
         }
 
@@ -444,13 +456,13 @@
 
         if (!error && data) sesiones = data;
       } catch (e) {
-        console.warn('[Catefa] Error cargando historial de Supabase:', e);
+        console.warn('[Catefa] Error cargando historial:', e);
       }
     }
 
     if (sesiones.length === 0) {
-      const todasSesiones = JSON.parse(localStorage.getItem('jc_catefa_sesiones') || '[]');
-      sesiones = todasSesiones.filter(s => String(s.grupo_id) === String(grupoId));
+      const todas = JSON.parse(localStorage.getItem('jc_catefa_sesiones') || '[]');
+      sesiones = todas.filter(s => String(s.grupo_id) === String(grupoId));
     }
 
     if (sesiones.length === 0) {
@@ -464,10 +476,10 @@
       item.style.cssText = 'background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:10px 12px; border-radius:8px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;';
       item.innerHTML = `
         <div>
-          <strong>📅 ${JC.safeText ? JC.safeText(s.fecha) : s.fecha}</strong>
-          <p class="muted small" style="margin:2px 0 0 0;">Tema: <strong>${JC.safeText ? JC.safeText(s.tema || 'Formación') : (s.tema || 'Formación')}</strong></p>
+          <strong>📅 ${safe(s.fecha)}</strong>
+          <p class="muted small" style="margin:2px 0 0 0;">Tema: <strong>${safe(s.tema || 'Formación')}</strong></p>
         </div>
-        <button class="btn small ghost btn-ver-sesion" data-id="${s.id}" data-fecha="${s.fecha}" data-tema="${JC.safeText ? JC.safeText(s.tema || '') : (s.tema || '')}">👁️ Ver Detalle</button>
+        <button class="btn small ghost btn-ver-sesion" data-id="${s.id}" data-fecha="${s.fecha}" data-tema="${safe(s.tema || '')}">👁️ Ver Detalle</button>
       `;
       container.appendChild(item);
     });
@@ -477,7 +489,7 @@
     });
   }
 
-  // Modal para revisar detalle de asistencia pasada
+  // Modal para revisar detalle
   async function abrirModalRevisarSesion(sesionId, fecha, tema) {
     const client = getClient();
     let asistencias = [];
@@ -491,7 +503,7 @@
 
         if (data) asistencias = data;
       } catch (e) {
-        console.warn('[Catefa] Error al revisar sesión remota:', e);
+        console.warn('[Catefa] Error al ver detalle:', e);
       }
     }
 
@@ -542,18 +554,18 @@
           sesionObj = sesion;
         }
       } catch (err) {
-        console.warn('[Catefa] Error gestionando sesión en Supabase:', err);
+        console.warn('[Catefa] Error creando sesión:', err);
       }
     }
 
-    const todasSesiones = JSON.parse(localStorage.getItem('jc_catefa_sesiones') || '[]');
-    const idx = todasSesiones.findIndex(s => String(s.id) === String(sesionObj.id));
+    const todas = JSON.parse(localStorage.getItem('jc_catefa_sesiones') || '[]');
+    const idx = todas.findIndex(s => String(s.id) === String(sesionObj.id));
     if (idx !== -1) {
-      todasSesiones[idx].tema = temaIngresado;
+      todas[idx].tema = temaIngresado;
     } else {
-      todasSesiones.unshift(sesionObj);
+      todas.unshift(sesionObj);
     }
-    localStorage.setItem('jc_catefa_sesiones', JSON.stringify(todasSesiones));
+    localStorage.setItem('jc_catefa_sesiones', JSON.stringify(todas));
 
     currentSesionId = sesionObj.id;
     await cargarAsistencias(grupoId);
@@ -561,7 +573,7 @@
     alert('¡Tema registrado correctamente en el historial!');
   }
 
-  // 9. Vincular Formulario de Registro de Niños
+  // 9. Formulario Niño
   function bindFormNino() {
     const formNino = document.getElementById('formNino');
     if (!formNino || formNino.dataset.bound) return;
@@ -589,13 +601,13 @@
 
           if (!error && data) nuevoNino.id = data.id;
         } catch (e) {
-          console.warn('[Catefa] Error guardando niño en Supabase:', e);
+          console.warn('[Catefa] Error creando niño:', e);
         }
       }
 
-      const todosNinos = JSON.parse(localStorage.getItem('jc_catefa_ninos') || '[]');
-      todosNinos.push(nuevoNino);
-      localStorage.setItem('jc_catefa_ninos', JSON.stringify(todosNinos));
+      const todos = JSON.parse(localStorage.getItem('jc_catefa_ninos') || '[]');
+      todos.push(nuevoNino);
+      localStorage.setItem('jc_catefa_ninos', JSON.stringify(todos));
 
       document.getElementById('ninoNombre').value = '';
       document.getElementById('ninoNotas').value = '';
