@@ -1,378 +1,83 @@
-/* ==========================================================
-   JUVENTUD CNC — styles.css
-   ========================================================== */
-
-:root {
-  --neutral-900: #020617;
-  --neutral-800: #020617;
-  --neutral-700: #0b1120;
-  --neutral-600: #111827;
-  --neutral-400: #9ca3af;
-  --neutral-200: #e5e7eb;
-  --neutral-100: #f3f4f6;
-
-  --text-main: #e5e7eb;
-  --text-muted: #9ca3af;
-
-  --brand: #2563eb;
-  --brand-2: #1d4ed8;
-  --accent: #ec4899;
-  --accent-2: #f97316;
-
-  --guy-main: #38bdf8;
-  --guy-soft: rgba(56, 189, 248, 0.18);
-  --girl-main: #f472b6;
-  --girl-soft: rgba(244, 114, 182, 0.22);
-
-  --card-bg: rgba(15, 23, 42, 0.90);
-  --card-border: rgba(148, 163, 184, 0.26);
-  --card-soft: rgba(15, 23, 42, 0.45);
-
-  --btn-radius: 999px;
-  --btn-px: 14px;
-  --btn-py: 8px;
-  --btn-fw: 500;
-  --radius-lg: 18px;
-  --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.55);
-
-  --topbar-bg: #0f172a;
-  --overlay-bg: #000000;
-  --icon-glow: #ec4899;
-
-  /* Fondo Floral por Defecto */
-  --jc-bg-default: url("assets/bg-floral.webp");
-  --jc-bg-image: var(--jc-bg-default);
-
-  /* Gradiente Dinámico Flow */
-  --bg-a: #38bdf8;
-  --bg-b: #f472b6;
-  --bg-c: #3b82f6;
-  --bg-base-1: #020617;
-  --bg-base-2: #000000;
-  --veil-a: rgba(15, 23, 42, 0.75);
-  --veil-b: rgba(11, 17, 32, 0.90);
-
-  --jc-maxw: 960px;
-  --jc-safe-pad: 14px;
-  --jc-float-bottom: 24px;
-}
-
-*, *::before, *::after { box-sizing: border-box; }
-
-html, body {
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  min-height: 100%;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-}
-
-html { overflow-y: scroll; }
-
-body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: var(--text-main);
-  background-color: #020617;
-  position: relative;
-}
-
-h1, h2, h3 { font-weight: 600; margin: 0; }
-p { margin: 0; }
-.small { font-size: 12px; }
-.muted { color: var(--text-muted); }
-.with-emoji[data-emoji]::before { content: attr(data-emoji) " "; margin-right: 6px; }
-
-/* ==========================================================
-   VISTAS Y NAVEGACIÓN SPA
-   ========================================================== */
-.view {
-  display: none;
-}
-
-.view.active {
-  display: block;
-}
-
-/* ==========================================================
-   CAPAS DE FONDO
-   ========================================================== */
-#jcAppBgLayer, #jcAppBgOverlay {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-}
-
-/* Capa 1: Imagen fija visible */
-#jcAppBgLayer {
-  z-index: -3 !important;
-  background-image: var(--jc-bg-image, url("assets/bg-floral.webp"));
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: 0.85;
-}
-
-/* Capa 2: Efecto dinámico Flow semitransparente */
-body.jc-bg-dynamic::before,
-body.jc-bg-dynamic::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-}
-
-body.jc-bg-dynamic::before {
-  inset: -20px;
-  z-index: -2;
-  opacity: 0.35;
-  background:
-    radial-gradient(circle at 0% 0%, var(--bg-a), transparent 55%),
-    radial-gradient(circle at 100% 0%, var(--bg-b), transparent 55%),
-    radial-gradient(circle at 0% 100%, var(--bg-c), transparent 55%),
-    linear-gradient(135deg, rgba(2, 6, 23, 0.4), rgba(0, 0, 0, 0.6));
-  animation: bg-flow 22s ease-in-out infinite alternate;
-  filter: saturate(1.15);
-}
-
-body.jc-bg-dynamic::after {
-  z-index: -2;
-  opacity: 0.4;
-  background: radial-gradient(circle at top, var(--veil-a), var(--veil-b));
-}
-
-@keyframes bg-flow {
-  0% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(-20px, 10px, 0) scale(1.03); }
-  100% { transform: translate3d(25px, -10px, 0) scale(1.04); }
-}
-
-/* Capa 3: Overlay para contraste */
-#jcAppBgOverlay {
-  z-index: -1 !important;
-  background: rgba(2, 6, 23, 0.45);
-  transition: opacity 0.18s ease;
-}
-
-/* ==========================================================
-   LAYOUT
-   ========================================================== */
-.container {
-  width: 100%;
-  max-width: var(--jc-maxw);
-  margin: 0 auto;
-  padding: 18px var(--jc-safe-pad) 90px;
-}
-
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 90;
-  width: 100%;
-  background: var(--topbar-bg);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
-}
-
-.topbar-inner {
-  width: 100%;
-  max-width: var(--jc-maxw);
-  margin: 0 auto;
-  padding: 10px var(--jc-safe-pad);
+/* NAVEGACIÓN PRIVADA TOPBAR */
+.topbar-nav {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 6px;
 }
-
-.topbar-title { font-size: 17px; letter-spacing: 0.02em; }
-.topbar-actions { display: flex; align-items: center; gap: 8px; }
-
-.icon-btn {
-  border: none;
-  background: radial-gradient(circle at 20% 20%, var(--icon-glow), transparent);
-  padding: 8px;
-  border-radius: 999px;
-  cursor: pointer;
-  color: var(--text-main);
-  font-size: 18px;
-  transition: transform 0.14s ease, filter 0.14s ease;
-}
-.icon-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
-.icon-btn:active { transform: translateY(0); }
-#btnBots.is-on { box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.35); }
-
-/* CARDS */
-.card {
-  background: linear-gradient(to bottom right, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.85));
-  border-radius: var(--radius-lg);
-  padding: 16px 14px;
-  border: 1px solid var(--card-border);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(10px);
-}
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-.card-body { font-size: 14px; }
-
-.hero {
-  background: linear-gradient(135deg, var(--brand), var(--accent));
-  border-radius: var(--radius-lg);
-  padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-/* BOTONES E INPUTS */
-.btn {
-  border: none;
-  border-radius: var(--btn-radius);
-  padding: var(--btn-py) var(--btn-px);
-  background: linear-gradient(135deg, var(--guy-main), var(--girl-main));
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: var(--btn-fw);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.btn.small { padding: 6px 10px; font-size: 11px; }
-.btn.ghost {
+.nav-tab {
   background: transparent;
-  border: 1px solid rgba(148, 163, 184, 0.35);
+  border: none;
+  color: var(--text-muted);
+  padding: 6px 12px;
+  border-radius: var(--btn-radius);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.nav-tab.active, .nav-tab:hover {
   color: var(--text-main);
-}
-
-input, select, textarea {
-  width: 100%;
-  padding: 9px 12px;
-  background: rgba(15, 23, 42, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  border-radius: 10px;
-  color: var(--text-main);
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(2, 6, 23, 0.3);
-  color: #fff;
-}
-.badge-mix {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(244, 114, 182, 0.25));
-  border-color: rgba(148, 163, 184, 0.22);
-}
-
-/* FLOATER (Burbuja Flotante de Bots) */
-#jcFloatLayer {
-  position: fixed;
-  left: 14px;
-  right: 14px;
-  bottom: var(--jc-float-bottom);
-  z-index: 220;
-  pointer-events: none;
-  display: flex;
-  justify-content: center;
-}
-
-.jc-float-card {
-  pointer-events: none;
-  width: min(480px, calc(100vw - 28px));
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.88);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
-  transform: translateY(18px);
-  opacity: 0;
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.jc-float-card.is-show {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.jc-float-card .jc-float-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
-
-.jc-float-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
-  font-size: 12px;
-  font-weight: 700;
 }
 
-.jc-float-text {
-  font-size: 13.5px;
-  line-height: 1.35;
-  opacity: 0.98;
-}
-
-/* MODALES */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  z-index: 100;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.18s ease;
-}
-.overlay.show { opacity: 1; visibility: visible; pointer-events: auto; }
-
-.jc-modal {
-  position: fixed;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 18px 14px;
-  z-index: 130;
-}
-.jc-modal.show { display: flex; }
-.jc-modal-card {
-  width: min(500px, 100%);
-  max-height: calc(100vh - 80px);
-  overflow: hidden;
-  border-radius: 22px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(2, 6, 23, 0.92);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7);
+/* DRAG AND DROP BLOQUES PÚBLICOS */
+.draggable-container {
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
 
-#angiePaletteModal .jc-modal-card { width: min(980px, 100%); }
-#angiePaletteModal .jc-modal-body { padding: 0; background: rgba(2, 6, 23, 0.55); }
-#angiePaletteFrame {
-  display: block;
+.draggable-block {
+  cursor: grab;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.draggable-block.dragging {
+  opacity: 0.4;
+  transform: scale(0.98);
+  border: 2px dashed var(--brand);
+}
+
+.drag-handle {
+  cursor: grab;
+  user-select: none;
+}
+
+.drag-icon {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+/* FEED SOCIAL Y REACCIONES */
+.judart-card {
+  background: rgba(2, 6, 23, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.judart-img {
   width: 100%;
-  height: min(78vh, 720px);
-  border: 0;
-  border-radius: 0 0 22px 22px;
-  background: #fff;
+  max-height: 380px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.judart-actions {
+  display: flex;
+  gap: 12px;
+  margin: 8px 0;
+}
+
+.btn-reaction {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn-reaction:hover {
+  color: var(--accent);
 }
