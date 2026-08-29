@@ -6,17 +6,18 @@
   <meta name="color-scheme" content="dark light" />
   <title>Juventud CNC · Catefa & Judart</title>
 
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=3.0" />
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script src="js/bots.js" defer></script>
-  <script src="js/catefa.js" defer></script>
+  <script src="bots.js" defer></script>
+  <script src="catefa.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 
 <body class="app-shell jc-bg-dynamic" data-theme="mix">
 
+    <!-- CAPAS DE FONDO FLORAL Y DEGRADADO -->
     <div id="jcAppBgLayer"></div>
     <div id="jcAppBgOverlay"></div>
     <div id="jcFloatLayer" aria-hidden="true"></div>
@@ -27,7 +28,7 @@
       <div class="topbar-inner">
         <h1 class="topbar-title">Juventud CNC</h1>
         
-        <!-- NAVEGACIÓN PRIVADA (Solo visible al iniciar sesión) -->
+        <!-- NAVEGACIÓN PRIVADA -->
         <nav id="navPrivada" class="topbar-nav" style="display:none;">
           <button class="nav-tab active" data-tab="catefa" type="button">👥 Catefa</button>
           <button class="nav-tab" data-tab="eventos" type="button">📅 Eventos</button>
@@ -58,12 +59,8 @@
         </div>
       </section>
 
-      <!-- ========================================== -->
       <!-- VISTA PÚBLICA (MODO LECTURA + REORDENABLE) -->
-      <!-- ========================================== -->
       <section id="vistaPublica" class="draggable-container">
-        
-        <!-- BLOQUE 1: MURAZO JUDART (Publicaciones recientes) -->
         <article class="card draggable-block" id="block-judart" draggable="true">
           <header class="card-header drag-handle">
             <h2 class="with-emoji" data-emoji="🖼️">Últimas Publicaciones · Judart</h2>
@@ -76,8 +73,7 @@
           </div>
         </article>
 
-        <!-- BLOQUE 2: CALENDARIO COMUNITARIO (Solo Lectura) -->
-        <article class="card draggable-block" id="block-calendario" draggable="true" style="margin-top: 1rem;">
+        <article class="card draggable-block" id="block-calendario" draggable="true">
           <header class="card-header drag-handle">
             <h2 class="with-emoji" data-emoji="📅">Calendario de Actividades</h2>
             <span class="drag-icon" title="Arrastra para reordenar">☰ Arrastrar</span>
@@ -88,12 +84,9 @@
             </div>
           </div>
         </article>
-
       </section>
 
-      <!-- ========================================== -->
-      <!-- VISTA PRIVADA (SESIÓN INICIADA)            -->
-      <!-- ========================================== -->
+      <!-- VISTA PRIVADA (SESIÓN INICIADA) -->
       <section id="vistaPrivada" style="display:none;">
         
         <!-- PESTAÑA 1: CATEFA -->
@@ -143,7 +136,7 @@
           </section>
         </div>
 
-        <!-- PESTAÑA 2: EVENTOS & CALENDARIO INTERACTIVO -->
+        <!-- PESTAÑA 2: EVENTOS -->
         <div id="tab-eventos" class="tab-content" style="display:none;">
           <section class="card">
             <header class="card-header">
@@ -164,21 +157,18 @@
           </section>
         </div>
 
-        <!-- PESTAÑA 3: JUDART SOCIAL (PUBLICAR, COMENTAR, REACCIONAR) -->
+        <!-- PESTAÑA 3: JUDART SOCIAL -->
         <div id="tab-judart" class="tab-content" style="display:none;">
           <section class="card">
             <header class="card-header">
               <h2 class="with-emoji" data-emoji="📸">Muro Social Judart</h2>
             </header>
             <div class="card-body">
-              <!-- Formulario de nueva publicación -->
               <form id="formNuevoJudart" style="display:grid; gap:10px; margin-bottom:16px; background:rgba(2,6,23,0.4); padding:12px; border-radius:12px;">
                 <input id="judartFotoUrl" type="url" placeholder="URL de la imagen (o subir foto)" />
                 <textarea id="judartLeyenda" rows="2" placeholder="Escribe un pie de foto o reflexión..." required></textarea>
                 <button class="btn" type="submit" style="justify-self:start;">🚀 Publicar en Judart</button>
               </form>
-              
-              <!-- Feed interactivo -->
               <div id="judartFeedInteractive" style="display:grid; gap:16px;">
                 <p class="muted small">Cargando publicaciones sociales...</p>
               </div>
@@ -189,7 +179,7 @@
       </section>
     </main>
 
-    <!-- MODAL DE LOGIN -->
+    <!-- MODAL LOGIN -->
     <div id="loginModal" class="jc-modal" style="display:none">
       <div class="jc-modal-card" role="dialog" aria-modal="true">
         <header class="jc-modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px solid rgba(148,163,184,.28);">
@@ -216,7 +206,7 @@
     <!-- MODAL ANGIE -->
     <div id="angiePaletteModal" class="jc-modal" style="display:none">
       <div class="jc-modal-card">
-        <header class="jc-modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px;">
+        <header class="jc-modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid rgba(148,163,184,.28);">
           <h3 style="margin:0; font-size:16px;">🎨 Paleta de Angie</h3>
           <button id="angiePaletteClose" class="icon-btn" type="button">✕</button>
         </header>
