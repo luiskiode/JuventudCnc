@@ -72,9 +72,10 @@
         <section class="card" id="catefaModule" style="display:none; margin-bottom: 1rem;">
           <header class="card-header">
             <h2 class="with-emoji" data-emoji="👥">Gestión Catefa</h2>
-            <div style="display: flex; gap: 6px;">
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
               <button id="tabBtnNinos" class="btn small" type="button">Niños & Notas</button>
-              <button id="tabBtnAsistencias" class="btn small ghost" type="button">Asistencias 📋</button>
+              <button id="tabBtnAsistencias" class="btn small ghost" type="button">Asistencia 📋</button>
+              <button id="tabBtnHistorial" class="btn small ghost" type="button">Historial 📅</button>
             </div>
           </header>
           
@@ -91,6 +92,9 @@
               <button id="btnNuevoGrupo" class="btn small" type="button" style="margin-top:18px;">+ Crear Grupo</button>
             </div>
 
+            <!-- BLOQUE DINÁMICO DE RESUMEN DEL GRUPO (Pareja Guía / Animador) -->
+            <div id="bloqueResumenGrupo"></div>
+
             <!-- Formulario Crear Grupo -->
             <div id="formNuevoGrupoWrap" style="display:none; background:rgba(2,6,23,0.4); padding:12px; border-radius:12px; border:1px solid rgba(148,163,184,0.2);">
               <h4 style="margin:0 0 8px; font-size:14px;">Nuevo Grupo</h4>
@@ -100,9 +104,6 @@
                   <label class="small muted" for="selectParejaGuia">Asignar Pareja Guía:</label>
                   <select id="selectParejaGuia" style="margin-top:4px;">
                     <option value="">-- Selecciona Pareja Guía --</option>
-                    <option value="Richard y Lucero">Richard y Lucero</option>
-                    <option value="Betty y Jesus">Betty y Jesus</option>
-                    <option value="Ricardo y Yaneli">Ricardo y Yaneli</option>
                   </select>
                 </div>
                 <div style="display:flex; gap:8px; margin-top:4px;">
@@ -144,7 +145,6 @@
                   <input id="inputTemaSesion" type="text" placeholder="Tema de la sesión (ej: La Oración y el Credo)" />
                   <div style="display:flex; gap:8px; flex-wrap:wrap;">
                     <button id="btnIniciarSesion" class="btn small" type="button">Cargar / Guardar Sesión</button>
-                    <button id="btnDescargarExcel" class="btn small ghost" type="button">📥 Descargar Excel</button>
                   </div>
                 </div>
               </div>
@@ -157,6 +157,14 @@
                 <div id="listaAsistencias">
                   <p class="muted small">Abre una sesión para marcar la asistencia de hoy.</p>
                 </div>
+              </div>
+            </div>
+
+            <!-- SUBVISTA 3: HISTORIAL DE SESIONES -->
+            <div id="subvistaHistorial" style="display:none;">
+              <h3 style="font-size:15px; margin-bottom:8px;">📅 Historial de Temas y Sesiones Pasadas</h3>
+              <div id="historialSesiones">
+                <p class="muted small">Selecciona un grupo para cargar el historial de clases.</p>
               </div>
             </div>
 
@@ -255,6 +263,28 @@
         toggleModal(angieModal, false);
         toggleModal(loginModal, false);
       });
+
+      // Manejo de pestañas del Módulo Catefa (Niños / Asistencias / Historial)
+      const tabBtnNinos = document.getElementById('tabBtnNinos');
+      const tabBtnAsistencias = document.getElementById('tabBtnAsistencias');
+      const tabBtnHistorial = document.getElementById('tabBtnHistorial');
+      const subvistaNinos = document.getElementById('subvistaNinos');
+      const subvistaAsistencias = document.getElementById('subvistaAsistencias');
+      const subvistaHistorial = document.getElementById('subvistaHistorial');
+
+      function setSubvista(activa) {
+        if (subvistaNinos) subvistaNinos.style.display = activa === 'ninos' ? 'block' : 'none';
+        if (subvistaAsistencias) subvistaAsistencias.style.display = activa === 'asistencias' ? 'block' : 'none';
+        if (subvistaHistorial) subvistaHistorial.style.display = activa === 'historial' ? 'block' : 'none';
+
+        tabBtnNinos?.classList.toggle('ghost', activa !== 'ninos');
+        tabBtnAsistencias?.classList.toggle('ghost', activa !== 'asistencias');
+        tabBtnHistorial?.classList.toggle('ghost', activa !== 'historial');
+      }
+
+      tabBtnNinos?.addEventListener('click', () => setSubvista('ninos'));
+      tabBtnAsistencias?.addEventListener('click', () => setSubvista('asistencias'));
+      tabBtnHistorial?.addEventListener('click', () => setSubvista('historial'));
 
       window.addEventListener('message', (ev) => {
         if (ev.data?.type === 'applyTokens') {
