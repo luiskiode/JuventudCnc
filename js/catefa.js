@@ -77,32 +77,40 @@
       const { data: grupos, error } = await query;
       if (error) throw error;
 
+      JC.gruposCargados = grupos || [];
       select.innerHTML = '<option value="">-- Selecciona tu grupo --</option>';
 
-      if (!grupos || grupos.length === 0) {
+      if (!JC.gruposCargados.length) {
         select.innerHTML = '<option value="">-- No hay grupos registrados --</option>';
         renderBloqueResumen(null);
       } else {
-        grupos.forEach((g) => {
+        JC.gruposCargados.forEach((g) => {
           const opt = document.createElement('option');
           opt.value = g.id;
           opt.textContent = `${g.nombre} ${g.pareja_guia ? '· [' + g.pareja_guia + ']' : ''}`;
           select.appendChild(opt);
         });
 
-        if (!currentGrupoId || !grupos.some(g => g.id === currentGrupoId)) {
-          currentGrupoId = grupos[0].id;
+        if (!currentGrupoId || !JC.gruposCargados.some(g => g.id === currentGrupoId)) {
+          currentGrupoId = JC.gruposCargados[0].id;
         }
-        select.value = currentGrupoId;
-        const grupoActual = grupos.find(g => g.id === currentGrupoId) || grupos[0];
         
-        renderBloqueResumen(grupoActual);
-        cargarNinos(currentGrupoId);
-        cargarHistorialSesiones(currentGrupoId);
+        select.value = currentGrupoId;
+        actualizarVistaGrupo(currentGrupoId);
       }
     } catch (e) {
       console.error('[Catefa] Error al cargar grupos:', e);
     }
+  }
+
+  // Función auxiliar para actualizar los datos según el grupo seleccionado
+  function actualizarVistaGrupo(grupoId) {
+    if (!JC.gruposCargados) return;
+    const grupoActual = JC.gruposCargados.find(g => String(g.id) === String(grupoId));
+    
+    renderBloqueResumen(grupoActual);
+    cargarNinos(grupoId);
+    cargarHistorialSesiones(grupoId);
   }
 
   // Renderizar la tarjeta informativa de la Pareja Guía / Grupo
@@ -478,7 +486,7 @@
     document.getElementById('selectGrupo')?.addEventListener('change', (e) => {
       currentGrupoId = e.target.value;
       currentSesionId = null;
-      cargarGrupos();
+      actualizarVistaGrupo(currentGrupoId);
     });
 
     // Botones de Crear Grupo
