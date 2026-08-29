@@ -1,5 +1,5 @@
 /* ============================================================
-   app.js — Juventud CNC
+   app.js — Juventud CNC (Restaurado e Integral)
    ============================================================ */
 
 (function () {
@@ -35,15 +35,24 @@
     }
   }
 
-  // 2. MODALES & RECEPTOR DE MENSAJES DE ANGIE
+  // 2. MODALES, LOGIN Y RECEPTOR DE MENSAJES DE ANGIE
   function initModals() {
     const btnLogin = document.getElementById("btnLogin");
     const loginModal = document.getElementById("loginModal");
     const loginClose = document.getElementById("loginClose");
     const loginForm = document.getElementById("loginForm");
 
-    if (btnLogin && loginModal) btnLogin.addEventListener("click", () => loginModal.style.display = "flex");
-    if (loginClose && loginModal) loginClose.addEventListener("click", () => loginModal.style.display = "none");
+    if (btnLogin && loginModal) {
+      btnLogin.addEventListener("click", () => {
+        loginModal.style.display = "flex";
+      });
+    }
+
+    if (loginClose && loginModal) {
+      loginClose.addEventListener("click", () => {
+        loginModal.style.display = "none";
+      });
+    }
 
     if (loginForm) {
       loginForm.addEventListener("submit", (e) => {
@@ -52,7 +61,7 @@
         const clave = document.getElementById("loginClave")?.value.trim() || "";
         if (!nombre) return;
 
-        const rol = clave === "animador" ? "animador" : "pareja_guia";
+        const rol = clave.toLowerCase() === "animador" ? "animador" : "pareja_guia";
         localStorage.setItem("jc_user", JSON.stringify({ nombre, rol }));
 
         if (loginModal) loginModal.style.display = "none";
@@ -60,15 +69,24 @@
       });
     }
 
-    // Modal Angie
+    // Modal Angie y Comunicación PostMessage
     const btnAngie = document.getElementById("btnAngie");
     const angieModal = document.getElementById("angiePaletteModal");
     const angieClose = document.getElementById("angiePaletteClose");
 
-    if (btnAngie && angieModal) btnAngie.addEventListener("click", () => angieModal.style.display = "flex");
-    if (angieClose && angieModal) angieClose.addEventListener("click", () => angieModal.style.display = "none");
+    if (btnAngie && angieModal) {
+      btnAngie.addEventListener("click", () => {
+        angieModal.style.display = "flex";
+      });
+    }
 
-    // FIX EXPLICITO: Cierre automático al pulsar "Aplicar cambios" en Angie
+    if (angieClose && angieModal) {
+      angieClose.addEventListener("click", () => {
+        angieModal.style.display = "none";
+      });
+    }
+
+    // Cierre automático y aplicación de tokens enviado desde Angie
     window.addEventListener("message", (event) => {
       const data = event.data;
       if (!data) return;
@@ -78,13 +96,27 @@
       }
 
       if (data.type === "applyTokens" && data.tokens) {
-        // Aplicar tokens dinámicos al CSS raíz
         for (const [key, val] of Object.entries(data.tokens)) {
           document.documentElement.style.setProperty(`--${key}`, val);
         }
+        localStorage.setItem("angie_tokens_ui", JSON.stringify(data.tokens));
       }
     });
 
+    // Cargar tokens guardados de Angie al iniciar
+    const savedTokens = localStorage.getItem("angie_tokens_ui");
+    if (savedTokens) {
+      try {
+        const tokens = JSON.parse(savedTokens);
+        for (const [key, val] of Object.entries(tokens)) {
+          document.documentElement.style.setProperty(`--${key}`, val);
+        }
+      } catch (err) {
+        console.error("Error al cargar tokens de Angie", err);
+      }
+    }
+
+    // Cierre de Sesión
     const handleLogout = () => {
       localStorage.removeItem("jc_user");
       updateStateUI();
@@ -96,7 +128,7 @@
     if (btnLogoutTop) btnLogoutTop.addEventListener("click", handleLogout);
   }
 
-  // 3. CONMUTADOR DE VISTAS (Pública / Privada)
+  // 3. CONMUTADOR DE VISTAS Y NAVEGACIÓN
   function updateStateUI() {
     const user = JSON.parse(localStorage.getItem("jc_user") || "null");
     const isLogged = !!user?.nombre;
@@ -129,17 +161,23 @@
       if (vistaPrivada) vistaPrivada.style.display = "block";
       if (navPrivada) navPrivada.style.display = "flex";
       
+      // Inicializar submódulo Catefa
       if (window.JC?.catefa?.init) {
         window.JC.catefa.init();
       }
+
+      // Cargar listas de Eventos y Judart
+      renderEventosList();
+      renderJudartList();
     } else {
-      if (vistaPublica) vistaPublica.style.display = "flex";
+      if (vistaPublica) vistaPublica.style.display = "grid";
       if (vistaPrivada) vistaPrivada.style.display = "none";
       if (navPrivada) navPrivada.style.display = "none";
+
+      renderPublicView();
     }
   }
 
-  // 4. NAVEGACIÓN DE PESTAÑAS PRIVADAS
   function initPrivatedTabs() {
     const tabs = document.querySelectorAll(".nav-tab");
     tabs.forEach((tab) => {
@@ -155,11 +193,189 @@
     });
   }
 
-  // ARRANQUE
+  // 4. MÓDULO DE EVENTOS
+  function initEventos() {
+    const form = document.getElementById("formNuevoEvento");
+    if (!form) return;
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const titulo = document.getElementById("eventTitulo")?.value.trim();
+      const fecha = document.getElementById("eventFecha")?.value;
+      const nota = document.getElementById("eventNota")?.value.trim();
+
+      if (!titulo || !fecha) return;
+
+      const eventos = JSON.parse(localStorage.getItem("jc_eventos") || "[]");
+      eventos.push({ id: Date.now(), titulo, fecha, nota });
+      localStorage.setItem("jc_eventos", JSON.stringify(eventos));
+
+      form.reset();
+      renderEventosList();
+      renderPublicView();
+    });
+  }
+
+  function renderEventosList() {
+    const container = document.getElementById("listaEventosAgendados");
+    if (!container) return;
+
+    const eventos = JSON.parse(localStorage.getItem("jc_eventos") || "[]");
+    if (eventos.length === 0) {
+      container.innerHTML = '<p class="muted small">No hay eventos agendados aún.</p>';
+      return;
+    }
+
+    container.innerHTML = eventos.map((ev) => `
+      <div style="background: rgba(255,255,255,0.04); padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--card-border);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong>${ev.titulo}</strong>
+          <span class="badge badge-mix">${ev.fecha}</span>
+        </div>
+        ${ev.nota ? `<p class="small muted" style="margin-top: 4px;">${ev.nota}</p>` : ''}
+      </div>
+    `).join("");
+  }
+
+  // 5. MÓDULO DE JUDART
+  function initJudart() {
+    const form = document.getElementById("formNuevoJudart");
+    if (!form) return;
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fotoUrl = document.getElementById("judartFotoUrl")?.value.trim();
+      const leyenda = document.getElementById("judartLeyenda")?.value.trim();
+
+      if (!leyenda) return;
+
+      const posts = JSON.parse(localStorage.getItem("jc_judart") || "[]");
+      posts.unshift({
+        id: Date.now(),
+        fotoUrl: fotoUrl || 'https://via.placeholder.com/400x250/0f172a/f8fafc?text=Juventud+CNC',
+        leyenda,
+        fecha: new Date().toLocaleDateString()
+      });
+
+      localStorage.setItem("jc_judart", JSON.stringify(posts));
+      form.reset();
+      renderJudartList();
+      renderPublicView();
+    });
+  }
+
+  function renderJudartList() {
+    const container = document.getElementById("judartFeedInteractive");
+    if (!container) return;
+
+    const posts = JSON.parse(localStorage.getItem("jc_judart") || "[]");
+    if (posts.length === 0) {
+      container.innerHTML = '<p class="muted small">No hay publicaciones activas.</p>';
+      return;
+    }
+
+    container.innerHTML = `<div class="judart-grid">` + posts.map((post) => `
+      <div class="judart-card">
+        <img src="${post.fotoUrl}" alt="Judart" onerror="this.src='https://via.placeholder.com/400x250/0f172a/f8fafc?text=Juventud+CNC'" />
+        <p>${post.leyenda}</p>
+        <div style="padding: 0 10px 8px 10px;" class="small muted">${post.fecha}</div>
+      </div>
+    `).join("") + `</div>`;
+  }
+
+  // 6. CENDERIZADO DE LA VISTA PÚBLICA (Feed y Calendario)
+  function renderPublicView() {
+    const feedPublico = document.getElementById("judartFeedPublico");
+    const calPublico = document.getElementById("calendarioPublico");
+
+    const posts = JSON.parse(localStorage.getItem("jc_judart") || "[]");
+    const eventos = JSON.parse(localStorage.getItem("jc_eventos") || "[]");
+
+    if (feedPublico) {
+      if (posts.length === 0) {
+        feedPublico.innerHTML = '<p class="muted small">No hay publicaciones en el muro comunitario.</p>';
+      } else {
+        feedPublico.innerHTML = posts.slice(0, 4).map((post) => `
+          <div class="judart-card">
+            <img src="${post.fotoUrl}" alt="Judart" />
+            <p>${post.leyenda}</p>
+          </div>
+        `).join("");
+      }
+    }
+
+    if (calPublico) {
+      if (eventos.length === 0) {
+        calPublico.innerHTML = '<p class="muted small">No hay actividades agendadas próximamente.</p>';
+      } else {
+        calPublico.innerHTML = eventos.slice(0, 3).map((ev) => `
+          <div style="background: rgba(255,255,255,0.04); padding: 8px; border-radius: 6px; margin-bottom: 6px;">
+            <strong class="small">${ev.titulo}</strong>
+            <div class="small muted">${ev.fecha}</div>
+          </div>
+        `).join("");
+      }
+    }
+  }
+
+  // 7. SOPORTE DE DRAG & DROP EN VISTA PÚBLICA
+  function initDragAndDrop() {
+    const container = document.getElementById("vistaPublica");
+    if (!container) return;
+
+    let draggedItem = null;
+
+    container.addEventListener("dragstart", (e) => {
+      if (e.target.classList.contains("draggable-block")) {
+        draggedItem = e.target;
+        e.target.style.opacity = "0.5";
+      }
+    });
+
+    container.addEventListener("dragend", (e) => {
+      if (e.target.classList.contains("draggable-block")) {
+        e.target.style.opacity = "1";
+        draggedItem = null;
+      }
+    });
+
+    container.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      const afterElement = getDragAfterElement(container, e.clientY);
+      if (draggedItem) {
+        if (afterElement == null) {
+          container.appendChild(draggedItem);
+        } else {
+          container.insertBefore(draggedItem, afterElement);
+        }
+      }
+    });
+  }
+
+  function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll(".draggable-block:not(.dragging)")];
+    return draggableElements.reduce(
+      (closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
+      },
+      { offset: Number.NEGATIVE_INFINITY }
+    ).element;
+  }
+
+  // ARRANQUE CENTRAL
   document.addEventListener("DOMContentLoaded", () => {
     initBackground();
     initModals();
     initPrivatedTabs();
+    initEventos();
+    initJudart();
+    initDragAndDrop();
     updateStateUI();
   });
 
