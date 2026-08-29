@@ -1,10 +1,9 @@
 :root {
   --bg-main: #090d16;
-  --card-bg: rgba(15, 23, 42, 0.75);
+  --card-bg: rgba(15, 23, 42, 0.72);
   --card-border: rgba(148, 163, 184, 0.22);
   --brand: #3b82f6;
   --brand-hover: #2563eb;
-  --accent: #f59e0b;
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --radius: 16px;
@@ -12,11 +11,7 @@
   --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -27,7 +22,7 @@ body {
   position: relative;
 }
 
-/* CAPAS DE FONDO FLORAL Y OVERLAY TRANSPARENTE */
+/* FIX CAPAS DE FONDO FLORAL */
 #jcAppBgLayer {
   position: fixed;
   inset: 0;
@@ -35,7 +30,7 @@ body {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-image: url('./assets/fondo-floral.jpg'); 
+  background-image: url('./assets/fondo-floral.jpg');
   transition: background-image 0.3s ease;
 }
 
@@ -43,8 +38,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: -1;
-  /* Overlay suavizado para permitir visibilidad de la imagen floral */
-  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.45) 0%, rgba(9, 13, 22, 0.75) 100%);
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.35) 0%, rgba(9, 13, 22, 0.65) 100%);
   backdrop-filter: blur(2px);
 }
 
@@ -56,14 +50,15 @@ body {
   z-index: 1;
 }
 
+/* TOPBAR RESPONSIVA PARA MÓVILES */
 .topbar {
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(15, 23, 42, 0.88);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--card-border);
   position: sticky;
   top: 0;
   z-index: 100;
-  padding: 10px 16px;
+  padding: 8px 12px;
 }
 
 .topbar-inner {
@@ -73,21 +68,23 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
 .topbar-title {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
   background: linear-gradient(to right, #60a5fa, #a78bfa);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  white-space: nowrap;
 }
 
 .topbar-nav {
   display: flex;
   gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
 .nav-tab {
@@ -99,6 +96,7 @@ body {
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .nav-tab.active, .nav-tab:hover {
@@ -110,7 +108,7 @@ body {
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .card {
@@ -129,16 +127,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.card-header h2 { 
-  font-size: 1rem; 
-  font-weight: 600; 
-}
-
-.card-body { 
-  padding: 14px 16px; 
-}
+.card-header h2 { font-size: 1rem; font-weight: 600; }
+.card-body { padding: 14px 16px; }
 
 .btn {
   background: var(--brand);
@@ -167,36 +161,8 @@ body {
   font-size: 14px;
 }
 
-.icon-btn:hover { background: rgba(255, 255, 255, 0.18); }
-
-.draggable-container { display: flex; flex-direction: column; gap: 14px; }
-.draggable-block { cursor: grab; }
-.drag-icon { font-size: 11px; color: var(--text-muted); background: rgba(255, 255, 255, 0.08); padding: 3px 8px; border-radius: 6px; }
-
-.muted { color: var(--text-muted); }
-.small { font-size: 12px; }
-
-.badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-}
-.badge-mix {
-  background: rgba(59, 130, 246, 0.2);
-  color: #60a5fa;
-  border: 1px solid rgba(96, 165, 250, 0.3);
-}
-
-.grid {
-  display: grid;
-}
-
-.judart-grid, .calendar-preview {
-  display: grid;
-  gap: 12px;
-}
+.form-grid { display: grid; gap: 10px; margin-bottom: 12px; }
+.group-select-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
 
 input, select, textarea {
   width: 100%;
@@ -209,10 +175,6 @@ input, select, textarea {
   outline: none;
 }
 
-input:focus, select:focus, textarea:focus {
-  border-color: var(--brand);
-}
-
 .jc-modal {
   position: fixed;
   inset: 0;
@@ -222,7 +184,7 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   justify-content: center;
   z-index: 200;
-  padding: 16px;
+  padding: 12px;
 }
 
 .jc-modal-card {
@@ -232,5 +194,23 @@ input:focus, select:focus, textarea:focus {
   width: 100%;
   max-width: 420px;
   overflow: hidden;
-  box-shadow: var(--shadow);
+}
+
+.jc-modal-card.iframe-card { max-width: 720px; }
+.jc-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--card-border); }
+.jc-modal-body { padding: 16px; }
+.jc-modal-body.iframe-body { padding: 0; }
+.jc-modal-body iframe { width: 100%; height: min(75vh, 600px); border: 0; background: #fff; }
+
+.muted { color: var(--text-muted); }
+.small { font-size: 12px; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.badge-mix { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.3); }
+
+/* REGLAS PARA MÓVILES */
+@media (max-width: 640px) {
+  .topbar-inner { flex-wrap: wrap; }
+  .topbar-nav { order: 3; width: 100%; justify-content: flex-start; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px; margin-top: 4px; }
+  .topbar-actions { order: 2; }
+  .card-header { flex-direction: column; align-items: flex-start; }
 }
