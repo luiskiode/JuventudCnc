@@ -27,7 +27,7 @@
     }
   }
 
-  // 1. Cargar Parejas Guías
+  // 1. Cargar lista de Parejas Guías en el selector
   async function cargarParejasGuias() {
     const select = document.getElementById('selectParejaGuia');
     if (!select) return;
@@ -47,7 +47,7 @@
           guiasNombres = data.map((d) => d.nombre);
         }
       } catch (err) {
-        console.warn('[Catefa] Usando lista local:', err);
+        console.warn('[Catefa] Usando lista base de parejas:', err);
       }
     }
 
@@ -60,7 +60,7 @@
     });
   }
 
-  // 2. Cargar Grupos y Renderizar Resumen
+  // 2. Cargar Grupos de la BD
   async function cargarGrupos() {
     const select = document.getElementById('selectGrupo');
     const client = getClient();
@@ -80,7 +80,7 @@
       select.innerHTML = '<option value="">-- Selecciona tu grupo --</option>';
 
       if (!grupos || grupos.length === 0) {
-        select.innerHTML = '<option value="">-- No hay grupos asignados --</option>';
+        select.innerHTML = '<option value="">-- No hay grupos registrados --</option>';
         renderBloqueResumen(null);
       } else {
         grupos.forEach((g) => {
@@ -90,20 +90,22 @@
           select.appendChild(opt);
         });
 
-        if (!currentGrupoId) {
+        if (!currentGrupoId || !grupos.some(g => g.id === currentGrupoId)) {
           currentGrupoId = grupos[0].id;
         }
         select.value = currentGrupoId;
         const grupoActual = grupos.find(g => g.id === currentGrupoId) || grupos[0];
+        
         renderBloqueResumen(grupoActual);
         cargarNinos(currentGrupoId);
         cargarHistorialSesiones(currentGrupoId);
       }
     } catch (e) {
-      console.error('[Catefa] Error cargando grupos:', e);
+      console.error('[Catefa] Error al cargar grupos:', e);
     }
   }
 
+  // Renderizar la tarjeta informativa de la Pareja Guía / Grupo
   function renderBloqueResumen(grupo) {
     const container = document.getElementById('bloqueResumenGrupo');
     if (!container) return;
@@ -130,7 +132,37 @@
     `;
   }
 
-  // 3. Obtener Conteo Total de Faltas por Niño
+  // 3. Guardar Nuevo Grupo
+  async function crearGrupo() {
+    const client = getClient();
+    const nombre = document.getElementById('inputNombreGrupo')?.value.trim();
+    const parejaGuia = document.getElementById('selectParejaGuia')?.value;
+
+    if (!nombre) return alert('Por favor ingresa un nombre para el grupo.');
+    if (!parejaGuia) return alert('Por favor selecciona la Pareja Guía asignada.');
+
+    try {
+      const { data, error } = await client
+        .from('catefa_grupos')
+        .insert([{ nombre, pareja_guia: parejaGuia }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      alert('¡Grupo creado correctamente!');
+      document.getElementById('inputNombreGrupo').value = '';
+      document.getElementById('formNuevoGrupoWrap').style.display = 'none';
+
+      currentGrupoId = data.id;
+      await cargarGrupos();
+    } catch (e) {
+      console.error('[Catefa] Error al crear grupo:', e);
+      alert('Error al guardar el grupo en la base de datos.');
+    }
+  }
+
+  // 4. Obtener Faltas Totales por Niño
   async function obtenerConteoFaltas(grupoId) {
     const client = getClient();
     const mapaFaltas = {};
@@ -147,19 +179,19 @@
         mapaFaltas[a.nino_id] = (mapaFaltas[a.nino_id] || 0) + 1;
       });
     } catch (e) {
-      console.warn('[Catefa] Error obteniendo faltas:', e);
+      console.warn('[Catefa] Error obteniendo conteo de faltas:', e);
     }
     return mapaFaltas;
   }
 
-  // 4. Niños y Notitas (Con Faltas Totales)
+  // 5. Cargar Niños del Grupo y Notitas
   async function cargarNinos(grupoId) {
     const list = document.getElementById('listaNinos');
     const client = getClient();
     if (!list) return;
 
     if (!grupoId) {
-      list.innerHTML = '<p class="muted small">Selecciona un grupo para ver los niños.</p>';
+      list.innerHTML = '<p class="muted small">Selecciona un grupo para ver a los niños.</p>';
       return;
     }
 
@@ -227,7 +259,7 @@
     }
   }
 
-  // 5. Cargar y Tomar Asistencias por Tema
+  // 6. Tomar Asistencias
   async function cargarAsistencias(grupoId) {
     const list = document.getElementById('listaAsistencias');
     const badgeContador = document.getElementById('contadorAsistencias');
@@ -235,7 +267,7 @@
     if (!list || !grupoId) return;
 
     if (!currentSesionId) {
-      list.innerHTML = '<p class="muted small">Guarda o inicia el tema del lunes para tomar asistencia.</p>';
+      list.innerHTML = '<p class="muted small">Ingresa el tema y haz clic en "Cargar / Guardar Sesión" para tomar asistencia.</p>';
       if (badgeContador) badgeContador.textContent = '0 presentes';
       return;
     }
@@ -293,7 +325,7 @@
     }
   }
 
-  // 6. Historial de Sesiones Registradas
+  // 7. Historial de Sesiones Registradas
   async function cargarHistorialSesiones(grupoId) {
     const container = document.getElementById('historialSesiones');
     const client = getClient();
@@ -311,7 +343,7 @@
       if (error) throw error;
 
       if (!sesiones || sesiones.length === 0) {
-        container.innerHTML = '<p class="muted small">No hay temas/sesiones registrados en el historial de este grupo.</p>';
+        container.innerHTML = '<p class="muted small">No hay sesiones registradas en el historial de este grupo.</p>';
         return;
       }
 
@@ -338,7 +370,7 @@
     }
   }
 
-  // Modal para revisar asistencia de una sesión específica
+  // Modal para revisar detalle de asistencia pasada
   async function abrirModalRevisarSesion(sesionId, fecha, tema) {
     const client = getClient();
     try {
@@ -347,9 +379,9 @@
         .select('presente, catefa_ninos(nombre)')
         .eq('sesion_id', sesionId);
 
-      let mensaje = `--- ASISTENCIA DEL DÍA ---\nFecha: ${fecha}\nTema: ${tema}\n\n`;
+      let mensaje = `--- DETALLE DE SESIÓN ---\nFecha: ${fecha}\nTema: ${tema}\n\n`;
       if (!asistencias || asistencias.length === 0) {
-        mensaje += "No se registraron asistencias para este tema.";
+        mensaje += "No se registraron datos para este tema.";
       } else {
         asistencias.forEach(a => {
           const estado = a.presente ? '✅ Presente' : '❌ Falta';
@@ -362,7 +394,7 @@
     }
   }
 
-  // 7. Crear / Asegurar Sesión con el Tema del Lunes
+  // 8. Crear / Asegurar Sesión con el Tema
   async function asegurarSesionHoy(grupoId) {
     if (!grupoId) return;
     const client = getClient();
@@ -370,7 +402,7 @@
     const temaIngresado = document.getElementById('inputTemaSesion')?.value.trim();
 
     if (!temaIngresado) {
-      alert('Ingresa el tema del lunes de formación para poder iniciar la toma de asistencia.');
+      alert('Ingresa el tema de formación antes de cargar la sesión.');
       return;
     }
 
@@ -403,21 +435,72 @@
     }
   }
 
-  // 8. Eventos UI
+  // 9. Vincular Formulario de Registro de Niños
+  function bindFormNino() {
+    const formNino = document.getElementById('formNino');
+    if (!formNino || formNino.dataset.bound) return;
+    formNino.dataset.bound = "true";
+
+    formNino.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const client = getClient();
+      const nombre = document.getElementById('ninoNombre')?.value.trim();
+      const notas = document.getElementById('ninoNotas')?.value.trim();
+
+      if (!nombre || !currentGrupoId) {
+        return alert('Ingresa un nombre y selecciona un grupo activo.');
+      }
+
+      try {
+        const { error } = await client.from('catefa_ninos').insert([{
+          nombre,
+          notas,
+          grupo_id: currentGrupoId
+        }]);
+
+        if (error) throw error;
+
+        document.getElementById('ninoNombre').value = '';
+        document.getElementById('ninoNotas').value = '';
+        await cargarNinos(currentGrupoId);
+      } catch (e) {
+        console.error('[Catefa] Error guardando niño:', e);
+      }
+    });
+  }
+
+  // 10. Eventos de la UI
   function bindUI() {
     if (window.__JC_CATEFA_BOUND__) return;
     window.__JC_CATEFA_BOUND__ = true;
 
+    // Selector de Grupos
     document.getElementById('selectGrupo')?.addEventListener('change', (e) => {
       currentGrupoId = e.target.value;
       currentSesionId = null;
       cargarGrupos();
     });
 
+    // Botones de Crear Grupo
+    document.getElementById('btnNuevoGrupo')?.addEventListener('click', () => {
+      const wrap = document.getElementById('formNuevoGrupoWrap');
+      if (wrap) wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.getElementById('btnCancelarGrupo')?.addEventListener('click', () => {
+      const wrap = document.getElementById('formNuevoGrupoWrap');
+      if (wrap) wrap.style.display = 'none';
+    });
+
+    document.getElementById('btnGuardarGrupo')?.addEventListener('click', crearGrupo);
+
+    // Botón Iniciar / Cargar Sesión
     document.getElementById('btnIniciarSesion')?.addEventListener('click', async () => {
       if (!currentGrupoId) return alert('Selecciona un grupo primero.');
       await asegurarSesionHoy(currentGrupoId);
     });
+
+    bindFormNino();
   }
 
   function init() {
