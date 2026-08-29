@@ -1,3 +1,18 @@
+.drag-icon {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.muted { color: var(--text-muted); }
+.small { font-size: 12px; }
+
+/* ==========================================
+   FORMULARIOS E INPUTS
+   ========================================== */
+in
 /* ==========================================
    VARIABLES Y ESTILOS GLOBALES
    ========================================== */
@@ -27,16 +42,36 @@ body {
   color: var(--text-main);
   min-height: 100vh;
   line-height: 1.5;
+  position: relative;
 }
 
-.jc-bg-dynamic {
-  background: radial-gradient(circle at top, #1e1b4b 0%, #090d16 100%);
+/* ==========================================
+   CAPA DE FONDO DINÁMICO / FLORAL
+   ========================================== */
+#jcAppBgLayer {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background-image 0.4s ease;
+}
+
+#jcAppBgOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.75) 0%, rgba(9, 13, 22, 0.92) 100%);
+  backdrop-filter: blur(4px);
 }
 
 .container {
   max-width: 900px;
   margin: 0 auto;
-  padding: 20px 16px;
+  padding: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 /* ==========================================
@@ -49,7 +84,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  padding: 12px 16px;
+  padding: 10px 16px;
 }
 
 .topbar-inner {
@@ -58,11 +93,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .topbar-title {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 700;
   background: linear-gradient(to right, #60a5fa, #a78bfa);
   -webkit-background-clip: text;
@@ -71,31 +107,35 @@ body {
 
 .topbar-nav {
   display: flex;
-  gap: 6px;
+  gap: 4px;
+  overflow-x: auto;
+  max-width: 100%;
+  padding-bottom: 2px;
 }
 
 .nav-tab {
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-muted);
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: var(--btn-radius);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
 .nav-tab.active, .nav-tab:hover {
   color: var(--text-main);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.12);
   border-color: var(--card-border);
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 /* ==========================================
@@ -106,34 +146,36 @@ body {
   border: 1px solid var(--card-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
   overflow: hidden;
   margin-bottom: 16px;
 }
 
 .card-header {
-  padding: 14px 18px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--card-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .card-header h2 {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
 }
 
 .card-body {
-  padding: 18px;
+  padding: 14px 16px;
 }
 
 .btn {
   background: var(--brand);
   color: #fff;
   border: none;
-  padding: 8px 16px;
+  padding: 8px 14px;
   border-radius: var(--btn-radius);
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   display: inline-flex;
@@ -147,7 +189,7 @@ body {
 }
 
 .btn.small {
-  padding: 4px 10px;
+  padding: 4px 8px;
   font-size: 12px;
 }
 
@@ -158,7 +200,7 @@ body {
 }
 
 .btn.ghost:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
   color: var(--text-main);
 }
 
@@ -166,13 +208,14 @@ body {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--card-border);
   border-radius: var(--btn-radius);
-  padding: 6px 10px;
+  padding: 6px 8px;
   cursor: pointer;
   font-size: 14px;
+  line-height: 1;
 }
 
 .icon-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 /* ==========================================
@@ -181,7 +224,7 @@ body {
 .draggable-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .draggable-block {
@@ -207,16 +250,11 @@ body {
   border-radius: 6px;
 }
 
-.muted {
-  color: var(--text-muted);
-}
-
-.small {
-  font-size: 13px;
-}
+.muted { color: var(--text-muted); }
+.small { font-size: 12px; }
 
 /* ==========================================
-   FORMULARIO E INPUTS
+   FORMULARIOS E INPUTS
    ========================================== */
 input, select, textarea {
   width: 100%;
@@ -225,6 +263,7 @@ input, select, textarea {
   color: var(--text-main);
   padding: 8px 12px;
   border-radius: var(--btn-radius);
+  font-size: 13px;
   outline: none;
 }
 
@@ -239,7 +278,7 @@ input:focus, select:focus, textarea:focus {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -255,4 +294,20 @@ input:focus, select:focus, textarea:focus {
   max-width: 420px;
   overflow: hidden;
   box-shadow: var(--shadow);
+}
+
+/* ==========================================
+   RESPONSIVO CELULAR (AJUSTES PANTALLA CHICA)
+   ========================================== */
+@media (max-width: 600px) {
+  .topbar-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .topbar-actions {
+    justify-content: space-between;
+  }
+  .topbar-nav {
+    justify-content: space-around;
+  }
 }
