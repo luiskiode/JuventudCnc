@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="dark light" />
-  <title>Juventud CNC · Catefa & Judart</title>
+  <title>Juventud CNC · Catefa, Eventos & Judart</title>
 
-  <link rel="stylesheet" href="styles.css?v=3.2" />
+  <link rel="stylesheet" href="styles.css?v=3.3" />
 
-  <!-- SDK Supabase sincrónico -->
+  <!-- Supabase SDK sincrónico -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   
-  <!-- Configuración de Supabase e inicializador -->
+  <!-- Configuración de Scripts -->
   <script src="supabase-config.js"></script>
   <script src="bots.js" defer></script>
   <script src="catefa.js" defer></script>
@@ -60,11 +60,11 @@
         </div>
       </section>
 
-      <!-- VISTA PÚBLICA -->
+      <!-- VISTA PÚBLICA (Drag & Drop) -->
       <section id="vistaPublica" class="draggable-container">
         <article class="card draggable-block" id="block-judart" draggable="true">
           <header class="card-header drag-handle">
-            <h2 class="with-emoji" data-emoji="🖼️">Últimas Publicaciones · Judart</h2>
+            <h2>🖼️ Últimas Publicaciones · Judart</h2>
             <span class="drag-icon">☰ Arrastrar</span>
           </header>
           <div class="card-body">
@@ -76,7 +76,7 @@
 
         <article class="card draggable-block" id="block-calendario" draggable="true">
           <header class="card-header drag-handle">
-            <h2 class="with-emoji" data-emoji="📅">Calendario de Actividades</h2>
+            <h2>📅 Calendario de Actividades</h2>
             <span class="drag-icon">☰ Arrastrar</span>
           </header>
           <div class="card-body">
@@ -89,15 +89,12 @@
 
       <!-- VISTA PRIVADA -->
       <section id="vistaPrivada" style="display:none;">
+        
+        <!-- PESTAÑA CATEFA -->
         <div id="tab-catefa" class="tab-content active">
           <section class="card">
             <header class="card-header">
-              <h2 class="with-emoji" data-emoji="👥">Gestión Catefa</h2>
-              <div class="tab-controls">
-                <button id="tabBtnNinos" class="btn small" type="button">Niños</button>
-                <button id="tabBtnAsistencias" class="btn small ghost" type="button">Asistencia 📋</button>
-                <button id="tabBtnHistorial" class="btn small ghost" type="button">Historial 📅</button>
-              </div>
+              <h2>👥 Gestión Catefa</h2>
             </header>
             <div class="card-body">
               <div class="group-select-row">
@@ -106,8 +103,26 @@
                 </select>
                 <button id="btnNuevoGrupo" class="btn small" type="button">+ Crear Grupo</button>
               </div>
+
+              <!-- FORMULARIO CREAR GRUPO RESTAURADO -->
+              <div id="formNuevoGrupoWrap" style="display:none; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 14px;">
+                <h4 style="margin-bottom: 8px;">Nuevo Grupo</h4>
+                <div class="form-grid">
+                  <input id="inputNombreGrupo" type="text" placeholder="Nombre del grupo (Ej: Confirmación 1)" />
+                  <select id="selectParejaGuia">
+                    <option value="">-- Selecciona Pareja Guía --</option>
+                  </select>
+                  <div style="display:flex; gap: 8px;">
+                    <button id="btnGuardarGrupo" class="btn small" type="button">Guardar Grupo</button>
+                    <button id="btnCancelarGrupo" class="btn small ghost" type="button">Cancelar</button>
+                  </div>
+                </div>
+              </div>
+
               <div id="bloqueResumenGrupo"></div>
-              <div id="subvistaNinos">
+
+              <!-- GESTIÓN DE NIÑOS -->
+              <div id="subvistaNinos" style="margin-top: 14px;">
                 <form id="formNino" class="form-grid">
                   <input id="ninoNombre" type="text" placeholder="Nombre del Niño" required />
                   <textarea id="ninoNotas" rows="2" placeholder="Observaciones pastorales..."></textarea>
@@ -115,50 +130,62 @@
                 </form>
                 <div id="listaNinos"><p class="muted small">Selecciona un grupo para ver a los niños.</p></div>
               </div>
-              <div id="subvistaAsistencias" style="display:none;">
-                <input id="inputTemaSesion" type="text" placeholder="Tema de la sesión" />
-                <button id="btnIniciarSesion" class="btn small" type="button" style="margin-top:6px;">Cargar / Guardar Sesión</button>
+
+              <!-- REGISTRO DE ASISTENCIA -->
+              <div id="subvistaAsistencias" style="margin-top: 16px; border-top: 1px solid var(--card-border); padding-top: 14px;">
+                <h4>📋 Registrar Asistencia</h4>
+                <div style="display:flex; gap: 8px; margin-top: 8px;">
+                  <input id="inputTemaSesion" type="text" placeholder="Tema de la sesión de hoy" />
+                  <button id="btnIniciarSesion" class="btn small" type="button">Cargar / Guardar</button>
+                </div>
+                <div id="contadorAsistencias" class="small muted" style="margin-top:6px;"></div>
                 <div id="listaAsistencias" style="margin-top:10px;"></div>
               </div>
-              <div id="subvistaHistorial" style="display:none;">
-                <div id="historialSesiones"></div>
+
+              <!-- HISTORIAL DE SESIONES -->
+              <div id="subvistaHistorial" style="margin-top: 16px; border-top: 1px solid var(--card-border); padding-top: 14px;">
+                <h4>📅 Historial de Sesiones</h4>
+                <div id="historialSesiones" style="margin-top: 8px;"></div>
               </div>
             </div>
           </section>
         </div>
 
+        <!-- PESTAÑA EVENTOS -->
         <div id="tab-eventos" class="tab-content" style="display:none;">
           <section class="card">
-            <header class="card-header"><h2 class="with-emoji" data-emoji="📌">Agenda</h2></header>
+            <header class="card-header"><h2>📅 Agenda de Eventos</h2></header>
             <div class="card-body">
               <form id="formNuevoEvento" class="form-grid">
-                <input id="eventTitulo" type="text" placeholder="Título" required />
+                <input id="eventTitulo" type="text" placeholder="Título del evento" required />
                 <input id="eventFecha" type="date" required />
-                <textarea id="eventNota" rows="2" placeholder="Detalles..."></textarea>
-                <button class="btn" type="submit">+ Agendar</button>
+                <textarea id="eventNota" rows="2" placeholder="Detalles del evento..."></textarea>
+                <button class="btn" type="submit">+ Agendar Evento</button>
               </form>
-              <div id="listaEventosAgendados" style="margin-top:12px;"><p class="muted small">Cargando...</p></div>
+              <div id="listaEventosAgendados" style="margin-top:12px;"><p class="muted small">Cargando eventos...</p></div>
             </div>
           </section>
         </div>
 
+        <!-- PESTAÑA JUDART -->
         <div id="tab-judart" class="tab-content" style="display:none;">
           <section class="card">
-            <header class="card-header"><h2 class="with-emoji" data-emoji="📸">Judart Social</h2></header>
+            <header class="card-header"><h2>🎨 Publicaciones Judart</h2></header>
             <div class="card-body">
               <form id="formNuevoJudart" class="form-grid">
                 <input id="judartFotoUrl" type="url" placeholder="URL de la imagen" />
                 <textarea id="judartLeyenda" rows="2" placeholder="Pie de foto..." required></textarea>
-                <button class="btn" type="submit">Publicar</button>
+                <button class="btn" type="submit">Publicar en Judart</button>
               </form>
-              <div id="judartFeedInteractive" style="margin-top:12px;"><p class="muted small">Cargando...</p></div>
+              <div id="judartFeedInteractive" style="margin-top:12px;"><p class="muted small">Cargando feed de Judart...</p></div>
             </div>
           </section>
         </div>
+
       </section>
     </main>
 
-    <!-- MODAL LOGIN -->
+    <!-- MODALES -->
     <div id="loginModal" class="jc-modal" style="display:none">
       <div class="jc-modal-card">
         <header class="jc-modal-header">
@@ -180,7 +207,6 @@
       </div>
     </div>
 
-    <!-- MODAL ANGIE -->
     <div id="angiePaletteModal" class="jc-modal" style="display:none">
       <div class="jc-modal-card iframe-card">
         <header class="jc-modal-header">

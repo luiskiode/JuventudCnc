@@ -1,4 +1,3 @@
-JavaScript
 /* ============================================================
    app.js — Juventud CNC
    ============================================================ */
@@ -8,7 +7,7 @@ JavaScript
 
   const JC = (window.JC = window.JC || {});
 
-  // 1. MANEJO DEL FONDO
+  // 1. MANEJO DEL FONDO FLORAL Y PERSONALIZADO
   function initBackground() {
     const bgLayer = document.getElementById("jcAppBgLayer");
     const btnChangeBg = document.getElementById("btnChangeBg");
@@ -36,7 +35,7 @@ JavaScript
     }
   }
 
-  // 2. MODALES Y CIERRE AUTOMÁTICO DE ANGIE
+  // 2. MODALES & RECEPTOR DE MENSAJES DE ANGIE
   function initModals() {
     const btnLogin = document.getElementById("btnLogin");
     const loginModal = document.getElementById("loginModal");
@@ -69,10 +68,20 @@ JavaScript
     if (btnAngie && angieModal) btnAngie.addEventListener("click", () => angieModal.style.display = "flex");
     if (angieClose && angieModal) angieClose.addEventListener("click", () => angieModal.style.display = "none");
 
-    // CIERRE AUTOMÁTICO ANGIE DESDE IFRAME (postMessage)
+    // FIX EXPLICITO: Cierre automático al pulsar "Aplicar cambios" en Angie
     window.addEventListener("message", (event) => {
-      if (event.data === "closeAngieModal" || event.data?.action === "closeAngieModal") {
+      const data = event.data;
+      if (!data) return;
+
+      if (data.type === "closeAngieModal" || data === "closeAngieModal") {
         if (angieModal) angieModal.style.display = "none";
+      }
+
+      if (data.type === "applyTokens" && data.tokens) {
+        // Aplicar tokens dinámicos al CSS raíz
+        for (const [key, val] of Object.entries(data.tokens)) {
+          document.documentElement.style.setProperty(`--${key}`, val);
+        }
       }
     });
 
@@ -87,7 +96,7 @@ JavaScript
     if (btnLogoutTop) btnLogoutTop.addEventListener("click", handleLogout);
   }
 
-  // 3. NAVEGACIÓN Y VISTAS
+  // 3. CONMUTADOR DE VISTAS (Pública / Privada)
   function updateStateUI() {
     const user = JSON.parse(localStorage.getItem("jc_user") || "null");
     const isLogged = !!user?.nombre;
@@ -120,9 +129,8 @@ JavaScript
       if (vistaPrivada) vistaPrivada.style.display = "block";
       if (navPrivada) navPrivada.style.display = "flex";
       
-      // Conexión garantizada a Catefa con la instancia global de Supabase
       if (window.JC?.catefa?.init) {
-        window.JC.catefa.init(window.JC.supabase || window.sb);
+        window.JC.catefa.init();
       }
     } else {
       if (vistaPublica) vistaPublica.style.display = "flex";
@@ -131,6 +139,7 @@ JavaScript
     }
   }
 
+  // 4. NAVEGACIÓN DE PESTAÑAS PRIVADAS
   function initPrivatedTabs() {
     const tabs = document.querySelectorAll(".nav-tab");
     tabs.forEach((tab) => {
@@ -146,6 +155,7 @@ JavaScript
     });
   }
 
+  // ARRANQUE
   document.addEventListener("DOMContentLoaded", () => {
     initBackground();
     initModals();
