@@ -1,5 +1,5 @@
 /* ============================================================
-   app.js — Juventud CNC (Public/Private Switch + Drag & Drop)
+   app.js — Juventud CNC (Public/Private Switch, Modales & Drag & Drop)
    ============================================================ */
 
 (function () {
@@ -8,13 +8,123 @@
   const JC = (window.JC = window.JC || {});
 
   // ------------------------------------------------------------
-  // 1. CONTROL DE DRAG & DROP (Vista Pública)
+  // 1. MANEJO DEL FONDO DINÁMICO
+  // ------------------------------------------------------------
+  function initBackground() {
+    const bgLayer = document.getElementById("jcAppBgLayer");
+    const btnChangeBg = document.getElementById("btnChangeBg");
+    const bgFileInput = document.getElementById("bgFileInput");
+
+    // Cargar fondo personalizado si existe en localStorage
+    const customBg = localStorage.getItem("jc_custom_bg");
+    if (customBg && bgLayer) {
+      bgLayer.style.backgroundImage = `url('${customBg}')`;
+    }
+
+    if (btnChangeBg && bgFileInput) {
+      btnChangeBg.addEventListener("click", () => bgFileInput.click());
+
+      bgFileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            const bgData = event.target.result;
+            if (bgLayer) bgLayer.style.backgroundImage = `url('${bgData}')`;
+            localStorage.setItem("jc_custom_bg", bgData);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+  }
+
+  // ------------------------------------------------------------
+  // 2. MODALES (LOGIN Y ANGIE)
+  // ------------------------------------------------------------
+  function initModals() {
+    // Modal Login
+    const btnLogin = document.getElementById("btnLogin");
+    const loginModal = document.getElementById("loginModal");
+    const loginClose = document.getElementById("loginClose");
+    const loginForm = document.getElementById("loginForm");
+    const loginEstado = document.getElementById("loginEstado");
+
+    if (btnLogin && loginModal) {
+      btnLogin.addEventListener("click", () => {
+        loginModal.style.display = "flex";
+      });
+    }
+
+    if (loginClose && loginModal) {
+      loginClose.addEventListener("click", () => {
+        loginModal.style.display = "none";
+      });
+    }
+
+    if (loginForm) {
+      loginForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const nombreInput = document.getElementById("loginNombre");
+        const claveInput = document.getElementById("loginClave");
+
+        const nombre = nombreInput ? nombreInput.value.trim() : "";
+        const clave = claveInput ? claveInput.value.trim() : "";
+
+        if (!nombre) return;
+
+        // Autenticación básica simulada
+        const rol = clave === "animador" ? "animador" : "pareja_guia";
+        const user = { nombre: nombre, rol: rol };
+
+        localStorage.setItem("jc_user", JSON.stringify(user));
+        if (loginEstado) loginEstado.textContent = "¡Sesión iniciada!";
+
+        setTimeout(() => {
+          if (loginModal) loginModal.style.display = "none";
+          if (loginEstado) loginEstado.textContent = "";
+          updateStateUI();
+        }, 500);
+      });
+    }
+
+    // Modal Angie
+    const btnAngie = document.getElementById("btnAngie");
+    const angieModal = document.getElementById("angiePaletteModal");
+    const angieClose = document.getElementById("angiePaletteClose");
+
+    if (btnAngie && angieModal) {
+      btnAngie.addEventListener("click", () => {
+        angieModal.style.display = "flex";
+      });
+    }
+
+    if (angieClose && angieModal) {
+      angieClose.addEventListener("click", () => {
+        angieModal.style.display = "none";
+      });
+    }
+
+    // Eventos de Cierre de Sesión (Logout)
+    const handleLogout = () => {
+      localStorage.removeItem("jc_user");
+      updateStateUI();
+    };
+
+    const btnLogout = document.getElementById("btnLogout");
+    const btnLogoutTop = document.getElementById("btnLogoutTop");
+
+    if (btnLogout) btnLogout.addEventListener("click", handleLogout);
+    if (btnLogoutTop) btnLogoutTop.addEventListener("click", handleLogout);
+  }
+
+  // ------------------------------------------------------------
+  // 3. CONTROL DE DRAG & DROP (Vista Pública)
   // ------------------------------------------------------------
   function initDragAndDrop() {
     const container = document.getElementById("vistaPublica");
     if (!container) return;
 
-    // Cargar orden guardado
     const savedOrder = JSON.parse(localStorage.getItem("jc_blocks_order") || "[]");
     if (savedOrder.length > 0) {
       savedOrder.forEach((id) => {
@@ -36,7 +146,6 @@
       const target = e.target.closest(".draggable-block");
       if (target) target.classList.remove("dragging");
       
-      // Guardar nuevo orden en localStorage
       const currentOrder = Array.from(container.querySelectorAll(".draggable-block")).map(el => el.id);
       localStorage.setItem("jc_blocks_order", JSON.stringify(currentOrder));
     });
@@ -67,7 +176,7 @@
   }
 
   // ------------------------------------------------------------
-  // 2. CONMUTADOR DE VISTAS (PÚBLICA vs PRIVADA)
+  // 4. CONMUTADOR DE VISTAS (PÚBLICA vs PRIVADA)
   // ------------------------------------------------------------
   function updateStateUI() {
     const user = JSON.parse(localStorage.getItem("jc_user") || "null");
@@ -76,15 +185,31 @@
     const vistaPublica = document.getElementById("vistaPublica");
     const vistaPrivada = document.getElementById("vistaPrivada");
     const navPrivada = document.getElementById("navPrivada");
-    
-    document.getElementById("heroTitulo").textContent = isLogged ? `¡Hola, ${user.nombre}!` : "Bienvenido a Juventud CNC";
-    document.getElementById("heroSubtitulo").textContent = isLogged
-      ? (user.rol === "pareja_guia" ? "Panel de Pareja Guía" : "Panel de Animador")
-      : "Un espacio para crecer, servir y caminar juntos.";
 
-    document.getElementById("userBadgeWrap").style.display = isLogged ? "block" : "none";
-    document.getElementById("btnLogin").style.display = isLogged ? "none" : "inline-flex";
-    document.getElementById("btnLogoutTop").style.display = isLogged ? "inline-flex" : "none";
+    const heroTitulo = document.getElementById("heroTitulo");
+    const heroSubtitulo = document.getElementById("heroSubtitulo");
+    const userBadgeWrap = document.getElementById("userBadgeWrap");
+    const userBadgeRole = document.getElementById("userBadgeRole");
+    const btnLogin = document.getElementById("btnLogin");
+    const btnLogoutTop = document.getElementById("btnLogoutTop");
+
+    if (heroTitulo) {
+      heroTitulo.textContent = isLogged ? `¡Hola, ${user.nombre}!` : "Bienvenido a Juventud CNC";
+    }
+
+    if (heroSubtitulo) {
+      heroSubtitulo.textContent = isLogged
+        ? (user.rol === "pareja_guia" ? "Panel de Pareja Guía" : "Panel de Animador")
+        : "Un espacio para crecer, servir y caminar juntos.";
+    }
+
+    if (userBadgeRole && isLogged) {
+      userBadgeRole.textContent = user.rol === "pareja_guia" ? "Pareja Guía" : "Animador";
+    }
+
+    if (userBadgeWrap) userBadgeWrap.style.display = isLogged ? "block" : "none";
+    if (btnLogin) btnLogin.style.display = isLogged ? "none" : "inline-flex";
+    if (btnLogoutTop) btnLogoutTop.style.display = isLogged ? "inline-flex" : "none";
 
     if (isLogged) {
       if (vistaPublica) vistaPublica.style.display = "none";
@@ -100,7 +225,7 @@
   }
 
   // ------------------------------------------------------------
-  // 3. NAVEGACIÓN PESTAÑAS PRIVADAS
+  // 5. NAVEGACIÓN PESTAÑAS PRIVADAS
   // ------------------------------------------------------------
   function initPrivatedTabs() {
     const tabs = document.querySelectorAll(".nav-tab");
@@ -121,6 +246,8 @@
   // ARRANQUE
   // ------------------------------------------------------------
   document.addEventListener("DOMContentLoaded", () => {
+    initBackground();
+    initModals();
     initDragAndDrop();
     initPrivatedTabs();
     updateStateUI();

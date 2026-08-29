@@ -6,10 +6,14 @@
   <meta name="color-scheme" content="dark light" />
   <title>Juventud CNC · Catefa & Judart</title>
 
-  <link rel="stylesheet" href="styles.css?v=3.0" />
+  <!-- Estilos principales -->
+  <link rel="stylesheet" href="styles.css?v=3.1" />
 
+  <!-- SDK Supabase (Carga sincrónica previa a la app) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js"></script>
+  
+  <!-- Configuración y scripts locales diferidos -->
+  <script src="supabase-config.js" defer></script>
   <script src="bots.js" defer></script>
   <script src="catefa.js" defer></script>
   <script src="app.js" defer></script>
