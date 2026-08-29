@@ -166,9 +166,10 @@
         window.JC.catefa.init();
       }
 
-      // Cargar listas de Eventos y Judart
+      // Cargar listas
       renderEventosList();
       renderJudartList();
+      renderMensajesData();
     } else {
       if (vistaPublica) vistaPublica.style.display = "grid";
       if (vistaPrivada) vistaPrivada.style.display = "none";
@@ -193,7 +194,34 @@
     });
   }
 
-  // 4. MÓDULO DE EVENTOS
+  // 4. MÓDULO DE MENSAJES (BIENVENIDA Y SEMANAL)
+  function initMensajes() {
+    const formMsg = document.getElementById("formMensajeSemanal");
+    if (formMsg) {
+      formMsg.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const inputMsg = document.getElementById("inputMensajeSemanal")?.value.trim();
+        if (inputMsg) {
+          localStorage.setItem("jc_mensaje_semanal", inputMsg);
+          formMsg.reset();
+          renderMensajesData();
+          renderPublicView();
+        }
+      });
+    }
+  }
+
+  function renderMensajesData() {
+    const defaultMsg = "Esta semana estamos llamados a vivir la fe con alegría y compartirla con los demás.";
+    const currentMsg = localStorage.getItem("jc_mensaje_semanal") || defaultMsg;
+    
+    const adminMsgView = document.getElementById("adminVistaMensajeSemanal");
+    if (adminMsgView) {
+      adminMsgView.textContent = currentMsg;
+    }
+  }
+
+  // 5. MÓDULO DE EVENTOS
   function initEventos() {
     const form = document.getElementById("formNuevoEvento");
     if (!form) return;
@@ -237,7 +265,7 @@
     `).join("");
   }
 
-  // 5. MÓDULO DE JUDART
+  // 6. MÓDULO DE JUDART
   function initJudart() {
     const form = document.getElementById("formNuevoJudart");
     if (!form) return;
@@ -283,14 +311,26 @@
     `).join("") + `</div>`;
   }
 
-  // 6. CENDERIZADO DE LA VISTA PÚBLICA (Feed y Calendario)
+  // 7. RENDERIZADO DE LA VISTA PÚBLICA (Feed, Calendario y Mensajes)
   function renderPublicView() {
     const feedPublico = document.getElementById("judartFeedPublico");
     const calPublico = document.getElementById("calendarioPublico");
+    const vistaBienvenida = document.getElementById("textoBienvenida");
+    const vistaMensajeSemanal = document.getElementById("textoMensajeSemanal");
+
+    // Renderizar Mensajes
+    if (vistaBienvenida) {
+      vistaBienvenida.textContent = "¡Bienvenidos a la plataforma interactiva de Juventud CNC!";
+    }
+    if (vistaMensajeSemanal) {
+      const defaultMsg = "Esta semana estamos llamados a vivir la fe con alegría y compartirla con los demás.";
+      vistaMensajeSemanal.textContent = localStorage.getItem("jc_mensaje_semanal") || defaultMsg;
+    }
 
     const posts = JSON.parse(localStorage.getItem("jc_judart") || "[]");
     const eventos = JSON.parse(localStorage.getItem("jc_eventos") || "[]");
 
+    // Renderizar Judart
     if (feedPublico) {
       if (posts.length === 0) {
         feedPublico.innerHTML = '<p class="muted small">No hay publicaciones en el muro comunitario.</p>';
@@ -304,6 +344,7 @@
       }
     }
 
+    // Renderizar Eventos
     if (calPublico) {
       if (eventos.length === 0) {
         calPublico.innerHTML = '<p class="muted small">No hay actividades agendadas próximamente.</p>';
@@ -318,7 +359,7 @@
     }
   }
 
-  // 7. SOPORTE DE DRAG & DROP EN VISTA PÚBLICA
+  // 8. SOPORTE DE DRAG & DROP EN VISTA PÚBLICA
   function initDragAndDrop() {
     const container = document.getElementById("vistaPublica");
     if (!container) return;
@@ -368,14 +409,31 @@
     ).element;
   }
 
+  // 9. BOTS Y AUTOMATIZACIÓN
+  function initBots() {
+    const btnBotAsistente = document.getElementById("btnBotAsistente");
+    if (btnBotAsistente) {
+      btnBotAsistente.addEventListener("click", () => {
+        // Lógica de enganche para el script externo bots.js o lógica nativa de automatización
+        if (typeof window.initBotSystem === "function") {
+          window.initBotSystem();
+        } else {
+          alert("🤖 Bot Asistente CNC: Los módulos de automatización rápida están listos. (Asegúrate de que bots.js esté cargado).");
+        }
+      });
+    }
+  }
+
   // ARRANQUE CENTRAL
   document.addEventListener("DOMContentLoaded", () => {
     initBackground();
     initModals();
     initPrivatedTabs();
+    initMensajes();
     initEventos();
     initJudart();
     initDragAndDrop();
+    initBots();
     updateStateUI();
   });
 

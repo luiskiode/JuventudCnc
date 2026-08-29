@@ -49,10 +49,12 @@ body {
   position: fixed;
   inset: 0;
   z-index: -2;
+  background-color: var(--bg-main);
+  /* Degradado de respaldo integrado en caso de que fondo-floral.jpg no exista en la ruta local */
+  background-image: linear-gradient(to bottom right, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 1)), url('./assets/fondo-floral.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-image: url('./assets/fondo-floral.jpg');
   transition: background-image 0.4s ease, filter 0.3s ease;
 }
 
