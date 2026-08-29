@@ -14,8 +14,11 @@
     const bgFileInput = document.getElementById("bgFileInput");
 
     const customBg = localStorage.getItem("jc_custom_bg");
-    if (customBg && bgLayer) {
+    // Corrección: Forzamos la carga del fondo floral si no hay custom o si hubo un error en caché
+    if (customBg && customBg !== "null" && customBg.trim() !== "" && bgLayer) {
       bgLayer.style.backgroundImage = `url('${customBg}')`;
+    } else if (bgLayer) {
+      bgLayer.style.backgroundImage = `linear-gradient(to bottom right, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 1)), url('./assets/fondo-floral.jpg')`;
     }
 
     if (btnChangeBg && bgFileInput) {
@@ -61,7 +64,8 @@
         const clave = document.getElementById("loginClave")?.value.trim() || "";
         if (!nombre) return;
 
-        const rol = clave.toLowerCase() === "animador" ? "animador" : "pareja_guia";
+        // Corrección: Rol por defecto es Animador, a menos que la clave indique explícitamente "guia"
+        const rol = clave.toLowerCase().includes("guia") ? "pareja_guia" : "animador";
         localStorage.setItem("jc_user", JSON.stringify({ nombre, rol }));
 
         if (loginModal) loginModal.style.display = "none";
@@ -86,7 +90,6 @@
       });
     }
 
-    // Cierre automático y aplicación de tokens enviado desde Angie
     window.addEventListener("message", (event) => {
       const data = event.data;
       if (!data) return;
@@ -103,7 +106,6 @@
       }
     });
 
-    // Cargar tokens guardados de Angie al iniciar
     const savedTokens = localStorage.getItem("angie_tokens_ui");
     if (savedTokens) {
       try {
@@ -116,7 +118,6 @@
       }
     }
 
-    // Cierre de Sesión
     const handleLogout = () => {
       localStorage.removeItem("jc_user");
       updateStateUI();
@@ -161,12 +162,10 @@
       if (vistaPrivada) vistaPrivada.style.display = "block";
       if (navPrivada) navPrivada.style.display = "flex";
       
-      // Inicializar submódulo Catefa
       if (window.JC?.catefa?.init) {
         window.JC.catefa.init();
       }
 
-      // Cargar listas
       renderEventosList();
       renderJudartList();
       renderMensajesData();
@@ -194,7 +193,7 @@
     });
   }
 
-  // 4. MÓDULO DE MENSAJES (BIENVENIDA Y SEMANAL)
+  // 4. MÓDULO DE MENSAJES
   function initMensajes() {
     const formMsg = document.getElementById("formMensajeSemanal");
     if (formMsg) {
@@ -311,14 +310,13 @@
     `).join("") + `</div>`;
   }
 
-  // 7. RENDERIZADO DE LA VISTA PÚBLICA (Feed, Calendario y Mensajes)
+  // 7. RENDERIZADO DE LA VISTA PÚBLICA
   function renderPublicView() {
     const feedPublico = document.getElementById("judartFeedPublico");
     const calPublico = document.getElementById("calendarioPublico");
     const vistaBienvenida = document.getElementById("textoBienvenida");
     const vistaMensajeSemanal = document.getElementById("textoMensajeSemanal");
 
-    // Renderizar Mensajes
     if (vistaBienvenida) {
       vistaBienvenida.textContent = "¡Bienvenidos a la plataforma interactiva de Juventud CNC!";
     }
@@ -330,7 +328,6 @@
     const posts = JSON.parse(localStorage.getItem("jc_judart") || "[]");
     const eventos = JSON.parse(localStorage.getItem("jc_eventos") || "[]");
 
-    // Renderizar Judart
     if (feedPublico) {
       if (posts.length === 0) {
         feedPublico.innerHTML = '<p class="muted small">No hay publicaciones en el muro comunitario.</p>';
@@ -344,7 +341,6 @@
       }
     }
 
-    // Renderizar Eventos
     if (calPublico) {
       if (eventos.length === 0) {
         calPublico.innerHTML = '<p class="muted small">No hay actividades agendadas próximamente.</p>';
@@ -359,7 +355,7 @@
     }
   }
 
-  // 8. SOPORTE DE DRAG & DROP EN VISTA PÚBLICA
+  // 8. SOPORTE DE DRAG & DROP
   function initDragAndDrop() {
     const container = document.getElementById("vistaPublica");
     if (!container) return;
@@ -409,12 +405,10 @@
     ).element;
   }
 
-  // 9. BOTS Y AUTOMATIZACIÓN
   function initBots() {
     const btnBotAsistente = document.getElementById("btnBotAsistente");
     if (btnBotAsistente) {
       btnBotAsistente.addEventListener("click", () => {
-        // Lógica de enganche para el script externo bots.js o lógica nativa de automatización
         if (typeof window.initBotSystem === "function") {
           window.initBotSystem();
         } else {
@@ -424,7 +418,6 @@
     }
   }
 
-  // ARRANQUE CENTRAL
   document.addEventListener("DOMContentLoaded", () => {
     initBackground();
     initModals();

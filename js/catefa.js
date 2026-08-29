@@ -15,8 +15,9 @@
     "Ricardo y Yaneli"
   ];
 
+  // Corrección: Expandir búsqueda de la instancia del cliente para evitar nulos
   function getClient() {
-    return window.JC?.supabase || window.sb || window.supabaseClient;
+    return window.JC?.supabase || window.sb || window.supabaseClient || window.supabase;
   }
 
   function getUser() {
@@ -36,7 +37,6 @@
       .replace(/"/g, '&quot;');
   }
 
-  // 1. Cargar lista de Parejas Guías en el selector
   async function cargarParejasGuias() {
     const select = document.getElementById('selectParejaGuia');
     if (!select) return;
@@ -69,7 +69,6 @@
     });
   }
 
-  // 2. Cargar Grupos de la BD con Fallback Ultra Seguro
   async function cargarGrupos() {
     const select = document.getElementById('selectGrupo');
     if (!select) return;
@@ -88,6 +87,7 @@
           .order('nombre', { ascending: true });
 
         if (!error && data) {
+          // Filtrado reparado. Solo filtra si es explícitamente pareja guía
           if (user.rol === 'pareja_guia' && user.nombre) {
             data = data.filter(g => 
               (g.pareja_guia || '').toLowerCase().includes(user.nombre.toLowerCase())
@@ -169,7 +169,6 @@
     `;
   }
 
-  // 3. Crear Grupo
   async function crearGrupo() {
     const client = getClient();
     const nombre = document.getElementById('inputNombreGrupo')?.value.trim();
@@ -207,7 +206,6 @@
     await cargarGrupos();
   }
 
-  // 4. Obtener Faltas Totales
   async function obtenerConteoFaltas(grupoId) {
     const client = getClient();
     const mapaFaltas = {};
@@ -240,7 +238,6 @@
     return mapaFaltas;
   }
 
-  // 5. Cargar Niños del Grupo y Notitas
   async function cargarNinos(grupoId) {
     const list = document.getElementById('listaNinos');
     const client = getClient();
@@ -338,7 +335,6 @@
     }));
   }
 
-  // 6. Tomar Asistencias
   async function cargarAsistencias(grupoId) {
     const list = document.getElementById('listaAsistencias');
     const badgeContador = document.getElementById('contadorAsistencias');
@@ -438,7 +434,6 @@
     });
   }
 
-  // 7. Historial de Sesiones Registradas
   async function cargarHistorialSesiones(grupoId) {
     const container = document.getElementById('historialSesiones');
     const client = getClient();
@@ -489,7 +484,6 @@
     });
   }
 
-  // Modal para revisar detalle
   async function abrirModalRevisarSesion(sesionId, fecha, tema) {
     const client = getClient();
     let asistencias = [];
@@ -519,7 +513,6 @@
     alert(mensaje);
   }
 
-  // 8. Crear / Asegurar Sesión
   async function asegurarSesionHoy(grupoId) {
     if (!grupoId) return;
     const client = getClient();
@@ -573,7 +566,6 @@
     alert('¡Tema registrado correctamente en el historial!');
   }
 
-  // 9. Formulario Niño
   function bindFormNino() {
     const formNino = document.getElementById('formNino');
     if (!formNino || formNino.dataset.bound) return;
@@ -615,7 +607,6 @@
     });
   }
 
-  // 10. Eventos de la UI
   function bindUI() {
     if (window.__JC_CATEFA_BOUND__) return;
     window.__JC_CATEFA_BOUND__ = true;
