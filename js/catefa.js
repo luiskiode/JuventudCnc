@@ -1,5 +1,5 @@
 /* ============================================================
-   js/catefa.js — Gestión de Grupos, Asistencia e Historial
+   js/catefa.js — Gestión de Grupos, Asistencia e Historial Central
    ============================================================ */
 
 (function () {
@@ -60,7 +60,7 @@
     });
   }
 
-  // 2. Cargar Grupos y Renderizar Bloque de Resumen (Pareja Guía / Animador)
+  // 2. Cargar Grupos y Renderizar Resumen
   async function cargarGrupos() {
     const select = document.getElementById('selectGrupo');
     const client = getClient();
@@ -104,7 +104,6 @@
     }
   }
 
-  // Renderiza el bloque superior informativo
   function renderBloqueResumen(grupo) {
     const container = document.getElementById('bloqueResumenGrupo');
     if (!container) return;
@@ -116,23 +115,44 @@
 
     container.innerHTML = `
       <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; margin-bottom: 16px;">
-        <div style="display:flex; justify-width:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <div>
             <h4 style="margin:0 0 4px 0;">📖 ${JC.safeText(grupo.nombre)}</h4>
             <p class="muted small" style="margin:0;">
-              <strong>Pareja Guía:</strong> ${JC.safeText(grupo.pareja_guia || 'Sin asignar')} | 
-              <strong>Animador:</strong> ${JC.safeText(grupo.animador_nombre || 'Asignado')}
+              <strong>Pareja Guía:</strong> ${JC.safeText(grupo.pareja_guia || 'Sin asignar')}
             </p>
           </div>
           <span style="font-size:12px; background:rgba(59,130,246,0.2); color:#93c5fd; padding:4px 10px; border-radius:20px;">
-            Bloque Activo
+            Grupo Activo
           </span>
         </div>
       </div>
     `;
   }
 
-  // 3. Niños y Notitas
+  // 3. Obtener Conteo Total de Faltas por Niño
+  async function obtenerConteoFaltas(grupoId) {
+    const client = getClient();
+    const mapaFaltas = {};
+    if (!client || !grupoId) return mapaFaltas;
+
+    try {
+      const { data: asistencias } = await client
+        .from('catefa_asistencias')
+        .select('nino_id, presente, catefa_sesiones!inner(grupo_id)')
+        .eq('catefa_sesiones.grupo_id', grupoId)
+        .eq('presente', false);
+
+      (asistencias || []).forEach(a => {
+        mapaFaltas[a.nino_id] = (mapaFaltas[a.nino_id] || 0) + 1;
+      });
+    } catch (e) {
+      console.warn('[Catefa] Error obteniendo faltas:', e);
+    }
+    return mapaFaltas;
+  }
+
+  // 4. Niños y Notitas (Con Faltas Totales)
   async function cargarNinos(grupoId) {
     const list = document.getElementById('listaNinos');
     const client = getClient();
@@ -146,13 +166,13 @@
     list.innerHTML = '<p class="muted small">Cargando niños...</p>';
 
     try {
-      const { data: ninos, error } = await client
+      const { data: ninos } = await client
         .from('catefa_ninos')
         .select('*')
         .eq('grupo_id', grupoId)
         .order('nombre', { ascending: true });
 
-      if (error) throw error;
+      const mapaFaltas = await obtenerConteoFaltas(grupoId);
 
       if (!ninos || ninos.length === 0) {
         list.innerHTML = '<p class="muted small">No hay niños registrados en este grupo.</p>';
@@ -161,6 +181,7 @@
 
       list.innerHTML = '';
       ninos.forEach((n) => {
+        const totalFaltas = mapaFaltas[n.id] || 0;
         const item = document.createElement('div');
         item.style.cssText = 'background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.15); margin-bottom:8px;';
         
@@ -168,6 +189,9 @@
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
             <div style="flex:1;">
               <strong>${JC.safeText(n.nombre)}</strong>
+              <span style="font-size:11px; margin-left:8px; padding:2px 8px; border-radius:10px; background:${totalFaltas > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)'}; color:${totalFaltas > 0 ? '#fca5a5' : '#86efac'};">
+                ${totalFaltas} falta(s) acumulada(s)
+              </span>
               <p id="notaText-${n.id}" class="muted small" style="margin-top:4px; font-style:italic;">
                 ${n.notas ? `"${JC.safeText(n.notas)}"` : 'Sin notitas'}
               </p>
@@ -203,43 +227,7 @@
     }
   }
 
-  // 4. Inasistencias Previas (Alertas)
-  async function calcularInasistenciasPrevias(grupoId) {
-    const client = getClient();
-    const mapaAlertas = {};
-    if (!client || !grupoId) return mapaAlertas;
-
-    try {
-      const { data: sesiones } = await client
-        .from('catefa_sesiones')
-        .select('id')
-        .eq('grupo_id', grupoId)
-        .neq('id', currentSesionId || '00000000-0000-0000-0000-000000000000')
-        .order('fecha', { ascending: false })
-        .limit(2);
-
-      if (!sesiones || sesiones.length < 2) return mapaAlertas;
-
-      const { data: asistencias } = await client
-        .from('catefa_asistencias')
-        .select('nino_id, presente')
-        .in('sesion_id', sesiones.map(s => s.id));
-
-      const conteoFaltas = {};
-      (asistencias || []).forEach(a => {
-        if (!a.presente) conteoFaltas[a.nino_id] = (conteoFaltas[a.nino_id] || 0) + 1;
-      });
-
-      Object.entries(conteoFaltas).forEach(([ninoId, faltas]) => {
-        if (faltas >= 2) mapaAlertas[ninoId] = true;
-      });
-    } catch (e) {
-      console.warn('[Catefa] Error en alertas de inasistencias:', e);
-    }
-    return mapaAlertas;
-  }
-
-  // 5. Cargar Asistencias Actuales
+  // 5. Cargar y Tomar Asistencias por Tema
   async function cargarAsistencias(grupoId) {
     const list = document.getElementById('listaAsistencias');
     const badgeContador = document.getElementById('contadorAsistencias');
@@ -247,7 +235,7 @@
     if (!list || !grupoId) return;
 
     if (!currentSesionId) {
-      list.innerHTML = '<p class="muted small">Inicia o carga una sesión para tomar asistencia.</p>';
+      list.innerHTML = '<p class="muted small">Guarda o inicia el tema del lunes para tomar asistencia.</p>';
       if (badgeContador) badgeContador.textContent = '0 presentes';
       return;
     }
@@ -255,7 +243,7 @@
     try {
       const { data: ninos } = await client.from('catefa_ninos').select('id, nombre').eq('grupo_id', grupoId).order('nombre', { ascending: true });
       const { data: asistencias } = await client.from('catefa_asistencias').select('nino_id, presente').eq('sesion_id', currentSesionId);
-      const alertasFaltas = await calcularInasistenciasPrevias(grupoId);
+      const mapaFaltas = await obtenerConteoFaltas(grupoId);
 
       const asistMap = {};
       (asistencias || []).forEach(a => asistMap[a.nino_id] = a.presente);
@@ -266,13 +254,14 @@
       (ninos || []).forEach((n) => {
         const isPresente = asistMap[n.id] === true;
         if (isPresente) presentesCount++;
+        const faltasAcumuladas = mapaFaltas[n.id] || 0;
 
         const row = document.createElement('div');
         row.style.cssText = 'background:rgba(255,255,255,0.05); padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.15); display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;';
         row.innerHTML = `
           <div>
             <strong>${JC.safeText(n.nombre)}</strong>
-            ${alertasFaltas[n.id] ? '<span style="font-size:11px; background:rgba(239,68,68,0.2); color:#fca5a5; padding:2px 6px; border-radius:10px; margin-left:6px;">⚠️ 2+ Faltas</span>' : ''}
+            <p class="muted small" style="margin:2px 0 0 0;">Faltas totales: <strong>${faltasAcumuladas}</strong></p>
           </div>
           <button class="btn small ${isPresente ? '' : 'ghost'} btn-asistencia" data-nino="${n.id}" data-presente="${isPresente}">
             ${isPresente ? '✅ Presente' : '❌ Falta'}
@@ -296,6 +285,7 @@
             await client.from('catefa_asistencias').insert([{ sesion_id: currentSesionId, nino_id: ninoId, presente: nuevoEstado }]);
           }
           await cargarAsistencias(grupoId);
+          await cargarNinos(grupoId);
         });
       });
     } catch (e) {
@@ -303,7 +293,7 @@
     }
   }
 
-  // 6. Historial de Sesiones y Temas Ordenados
+  // 6. Historial de Sesiones Registradas
   async function cargarHistorialSesiones(grupoId) {
     const container = document.getElementById('historialSesiones');
     const client = getClient();
@@ -321,20 +311,20 @@
       if (error) throw error;
 
       if (!sesiones || sesiones.length === 0) {
-        container.innerHTML = '<p class="muted small">No hay sesiones pasadas registradas.</p>';
+        container.innerHTML = '<p class="muted small">No hay temas/sesiones registrados en el historial de este grupo.</p>';
         return;
       }
 
       container.innerHTML = '';
       sesiones.forEach((s) => {
         const item = document.createElement('div');
-        item.style.cssText = 'background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:10px; border-radius:8px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;';
+        item.style.cssText = 'background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:10px 12px; border-radius:8px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;';
         item.innerHTML = `
           <div>
             <strong>📅 ${JC.safeText(s.fecha)}</strong>
-            <p class="muted small" style="margin:2px 0 0 0;">${JC.safeText(s.tema || 'Sesión ordinaria')}</p>
+            <p class="muted small" style="margin:2px 0 0 0;">Tema: <strong>${JC.safeText(s.tema || 'Formación del Lunes')}</strong></p>
           </div>
-          <button class="btn small ghost btn-ver-sesion" data-id="${s.id}" data-fecha="${s.fecha}" data-tema="${JC.safeText(s.tema || '')}">👁️ Revisar</button>
+          <button class="btn small ghost btn-ver-sesion" data-id="${s.id}" data-fecha="${s.fecha}" data-tema="${JC.safeText(s.tema || '')}">👁️ Ver Detalle</button>
         `;
         container.appendChild(item);
       });
@@ -348,7 +338,7 @@
     }
   }
 
-  // Modal de revisión de sesiones pasadas (Solo lectura)
+  // Modal para revisar asistencia de una sesión específica
   async function abrirModalRevisarSesion(sesionId, fecha, tema) {
     const client = getClient();
     try {
@@ -357,49 +347,57 @@
         .select('presente, catefa_ninos(nombre)')
         .eq('sesion_id', sesionId);
 
-      let detalleHtml = `<p><strong>Fecha:</strong> ${fecha}</p><p><strong>Tema:</strong> ${tema}</p><hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:10px 0;"/>`;
-      
+      let mensaje = `--- ASISTENCIA DEL DÍA ---\nFecha: ${fecha}\nTema: ${tema}\n\n`;
       if (!asistencias || asistencias.length === 0) {
-        detalleHtml += '<p class="muted small">No hay datos de asistencia para esta fecha.</p>';
+        mensaje += "No se registraron asistencias para este tema.";
       } else {
-        detalleHtml += '<ul style="list-style:none; padding:0; font-size:13px;">';
         asistencias.forEach(a => {
           const estado = a.presente ? '✅ Presente' : '❌ Falta';
-          detalleHtml += `<li style="margin-bottom:4px;">${estado} — ${JC.safeText(a.catefa_ninos?.nombre || 'Niño')}</li>`;
+          mensaje += `${estado} — ${a.catefa_ninos?.nombre || 'Niño'}\n`;
         });
-        detalleHtml += '</ul>';
       }
-
-      alert(`--- REVISIÓN DE SESIÓN ---\nFecha: ${fecha}\nTema: ${tema}\n\nRevisa los detalles completos en la sección de reportes.`);
+      alert(mensaje);
     } catch (e) {
       console.error('[Catefa] Error al revisar sesión:', e);
     }
   }
 
-  // 7. Crear / Asegurar Sesión
-  async function asegurarSesionHoy(grupoId, forzarTema = '') {
+  // 7. Crear / Asegurar Sesión con el Tema del Lunes
+  async function asegurarSesionHoy(grupoId) {
     if (!grupoId) return;
     const client = getClient();
     const hoy = new Date().toISOString().split('T')[0];
-    
-    let baseTema = forzarTema || document.getElementById('inputTemaSesion')?.value.trim() || 'Sesión Ordinaria';
-    baseTema = baseTema.replace(/ - \d{4}-\d{2}-\d{2}$/, '').trim();
-    const temaCompleto = `${baseTema} - ${hoy}`;
+    const temaIngresado = document.getElementById('inputTemaSesion')?.value.trim();
+
+    if (!temaIngresado) {
+      alert('Ingresa el tema del lunes de formación para poder iniciar la toma de asistencia.');
+      return;
+    }
 
     try {
-      let { data: sesion } = await client.from('catefa_sesiones').select('*').eq('grupo_id', grupoId).eq('fecha', hoy).maybeSingle();
+      let { data: sesion } = await client
+        .from('catefa_sesiones')
+        .select('*')
+        .eq('grupo_id', grupoId)
+        .eq('fecha', hoy)
+        .maybeSingle();
 
       if (!sesion) {
-        const { data: nueva } = await client.from('catefa_sesiones').insert([{ grupo_id: grupoId, tema: temaCompleto, fecha: hoy }]).select().single();
+        const { data: nueva, error } = await client
+          .from('catefa_sesiones')
+          .insert([{ grupo_id: grupoId, tema: temaIngresado, fecha: hoy }])
+          .select()
+          .single();
+        if (error) throw error;
         sesion = nueva;
+      } else {
+        await client.from('catefa_sesiones').update({ tema: temaIngresado }).eq('id', sesion.id);
       }
 
       currentSesionId = sesion.id;
-      if (document.getElementById('inputTemaSesion')) {
-        document.getElementById('inputTemaSesion').value = sesion.tema || temaCompleto;
-      }
       await cargarAsistencias(grupoId);
       await cargarHistorialSesiones(grupoId);
+      alert('¡Tema registrado correctamente en el historial!');
     } catch (err) {
       console.error('[Catefa] Error gestionando sesión:', err);
     }
