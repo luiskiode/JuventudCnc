@@ -18,7 +18,7 @@
     if (customBg && customBg !== "null" && customBg.trim() !== "" && bgLayer) {
       bgLayer.style.backgroundImage = `url('${customBg}')`;
     } else if (bgLayer) {
-      bgLayer.style.backgroundImage = `linear-gradient(to bottom right, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 1)), url('./assets/fondo-floral.jpg')`;
+      bgLayer.style.backgroundImage = `linear-gradient(to bottom right, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 1)), url('./assets/bg-floral.webp')`;
     }
 
     if (btnChangeBg && bgFileInput) {
