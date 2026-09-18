@@ -68,7 +68,7 @@
     });
   }
 
-  async function cargarGrupos() {
+async function cargarGrupos() {
     const select = document.getElementById('selectGrupo');
     if (!select) return;
 
@@ -80,19 +80,22 @@
 
     if (client) {
       try {
+        // 1. Consultar todos los grupos registrados en Supabase
         let { data, error } = await client
           .from('catefa_grupos')
           .select('*')
           .order('nombre', { ascending: true });
 
-        if (!error && data) {
-          // Si el filtro específico no encuentra coincidencias, se devuelven todos los grupos para evitar vistas vacías
+        if (!error && data && data.length > 0) {
+          // Si el usuario es Pareja Guía, priorizamos sus grupos pero sin ocultar el resto si no hay coincidencia
           if (user.rol === 'pareja_guia' && user.nombre) {
-            const filtrados = data.filter(g => 
+            const deSuPareja = data.filter(g => 
               (g.pareja_guia || '').toLowerCase().includes(user.nombre.toLowerCase())
             );
-            grupos = filtrados.length > 0 ? filtrados : data;
+            // Si coincide lo asigna, si no, mantiene la lista completa para no dejar la vista en blanco
+            grupos = deSuPareja.length > 0 ? deSuPareja : data;
           } else {
+            // Animadores ven todos los grupos
             grupos = data;
           }
         }
@@ -101,9 +104,9 @@
       }
     }
 
+    // Fallback a localStorage si la red falla
     if (!grupos || grupos.length === 0) {
-      const locales = JSON.parse(localStorage.getItem('jc_catefa_grupos') || '[]');
-      grupos = locales;
+      grupos = JSON.parse(localStorage.getItem('jc_catefa_grupos') || '[]');
     }
 
     JC.gruposCargados = grupos || [];
@@ -123,10 +126,8 @@
       select.appendChild(opt);
     });
 
-    if (!currentGrupoId || !JC.gruposCargados.some(g => String(g.id) === String(currentGrupoId))) {
-      currentGrupoId = JC.gruposCargados[0].id;
-    }
-
+    // Seleccionar automáticamente el primer grupo válido
+    currentGrupoId = JC.gruposCargados[0].id;
     select.value = currentGrupoId;
     actualizarVistaGrupo(currentGrupoId);
   }
