@@ -1,5 +1,5 @@
 /* ============================================================
-   js/catefa.js — Gestión de Grupos, Asistencia e Historial Central
+   js/catefa.js — Gestión de Grupos, Asistencia e Historial Central (Corregido)
    ============================================================ */
 
 (function () {
@@ -15,7 +15,6 @@
     "Ricardo y Yaneli"
   ];
 
-  // Corrección: Expandir búsqueda de la instancia del cliente para evitar nulos
   function getClient() {
     return window.JC?.supabase || window.sb || window.supabaseClient || window.supabase;
   }
@@ -87,13 +86,15 @@
           .order('nombre', { ascending: true });
 
         if (!error && data) {
-          // Filtrado reparado. Solo filtra si es explícitamente pareja guía
+          // Si el filtro específico no encuentra coincidencias, se devuelven todos los grupos para evitar vistas vacías
           if (user.rol === 'pareja_guia' && user.nombre) {
-            data = data.filter(g => 
+            const filtrados = data.filter(g => 
               (g.pareja_guia || '').toLowerCase().includes(user.nombre.toLowerCase())
             );
+            grupos = filtrados.length > 0 ? filtrados : data;
+          } else {
+            grupos = data;
           }
-          grupos = data;
         }
       } catch (e) {
         console.warn('[Catefa] Fallo al consultar Supabase:', e);
@@ -102,11 +103,7 @@
 
     if (!grupos || grupos.length === 0) {
       const locales = JSON.parse(localStorage.getItem('jc_catefa_grupos') || '[]');
-      if (user.rol === 'pareja_guia' && user.nombre) {
-        grupos = locales.filter(g => (g.pareja_guia || '').toLowerCase().includes(user.nombre.toLowerCase()));
-      } else {
-        grupos = locales;
-      }
+      grupos = locales;
     }
 
     JC.gruposCargados = grupos || [];
@@ -213,15 +210,25 @@
 
     if (client) {
       try {
-        const { data: asistencias } = await client
-          .from('catefa_asistencias')
-          .select('nino_id, presente, catefa_sesiones!inner(grupo_id)')
-          .eq('catefa_sesiones.grupo_id', grupoId)
-          .eq('presente', false);
+        // 1. Obtener IDs de las sesiones del grupo de forma explícita
+        const { data: sesiones } = await client
+          .from('catefa_sesiones')
+          .select('id')
+          .eq('grupo_id', grupoId);
 
-        (asistencias || []).forEach(a => {
-          mapaFaltas[a.nino_id] = (mapaFaltas[a.nino_id] || 0) + 1;
-        });
+        if (sesiones && sesiones.length > 0) {
+          const sesionIds = sesiones.map(s => s.id);
+          // 2. Obtener las inasistencias evitando el uso de relaciones SQL complejas en el select
+          const { data: asistencias } = await client
+            .from('catefa_asistencias')
+            .select('nino_id, presente')
+            .in('sesion_id', sesionIds)
+            .eq('presente', false);
+
+          (asistencias || []).forEach(a => {
+            mapaFaltas[a.nino_id] = (mapaFaltas[a.nino_id] || 0) + 1;
+          });
+        }
         return mapaFaltas;
       } catch (e) {
         console.warn('[Catefa] Error en conteo de faltas:', e);
@@ -492,10 +499,21 @@
       try {
         const { data } = await client
           .from('catefa_asistencias')
-          .select('presente, catefa_ninos(nombre)')
+          .select('presente, nino_id')
           .eq('sesion_id', sesionId);
 
-        if (data) asistencias = data;
+        if (data && data.length > 0) {
+          const ninoIds = data.map(d => d.nino_id);
+          const { data: ninosData } = await client.from('catefa_ninos').select('id, nombre').in('id', ninoIds);
+          
+          const mapNinos = {};
+          (ninosData || []).forEach(n => mapNinos[n.id] = n.nombre);
+          
+          asistencias = data.map(a => ({
+            presente: a.presente,
+            nombre: mapNinos[a.nino_id] || 'Niño'
+          }));
+        }
       } catch (e) {
         console.warn('[Catefa] Error al ver detalle:', e);
       }
@@ -507,7 +525,7 @@
     } else {
       asistencias.forEach(a => {
         const estado = a.presente ? '✅ Presente' : '❌ Falta';
-        mensaje += `${estado} — ${a.catefa_ninos?.nombre || 'Niño'}\n`;
+        mensaje += `${estado} — ${a.nombre}\n`;
       });
     }
     alert(mensaje);
