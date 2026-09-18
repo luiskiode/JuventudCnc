@@ -245,7 +245,7 @@
     return mapaFaltas;
   }
 
-  async function cargarNinos(grupoId) {
+async function cargarNinos(grupoId) {
     const list = document.getElementById('listaNinos');
     const client = getClient();
     if (!list) return;
@@ -259,13 +259,17 @@
 
     if (client) {
       try {
-        const { data } = await client
+        // Se asegura la conversión numérica si grupoId viene como String desde el <select>
+        const numericId = Number(grupoId);
+        const targetId = isNaN(numericId) ? grupoId : numericId;
+
+        const { data, error } = await client
           .from('catefa_ninos')
           .select('*')
-          .eq('grupo_id', grupoId)
+          .eq('grupo_id', targetId)
           .order('nombre', { ascending: true });
 
-        if (data && data.length > 0) ninos = data;
+        if (!error && data && data.length > 0) ninos = data;
       } catch (e) {
         console.warn('[Catefa] Error cargando niños:', e);
       }
