@@ -512,5 +512,6 @@ function initJudart() {
     if (typeof updateStateUI === "function") updateStateUI();
   });
 
-  window.checkSession = updateStateUI;
+window.checkSession = updateStateUI;
+  } 
 })();
