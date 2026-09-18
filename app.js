@@ -227,7 +227,7 @@
     }
   }
 
-  // 5. MÓDULO DE EVENTOS
+ // 5. MÓDULO DE EVENTOS
   function initEventos() {
     const form = document.getElementById("formNuevoEvento");
     if (!form) return;
@@ -272,32 +272,6 @@
   }
 
   // 6. MÓDULO DE JUDART
-function initJudart() {
-  const form = document.getElementById("formNuevoJudart");
-  const btnSelectFoto = document.getElementById("btnSelectJudartFoto");
-  const fileInput = document.getElementById("judartFileInput");
-  const fileNameLabel = document.getElementById("judartFileName");
-
-  let base64Foto = "";
-
-  if (btnSelectFoto && fileInput) {
-    btnSelectFoto.addEventListener("click", () => fileInput.click());
-    fileInput.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        fileNameLabel.textContent = file.name;
-        const reader = new FileReader();
-        reader.onload = function (event) {
-          base64Foto = event.target.result; // Convierte la foto a cadena utilizable
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-  }
-
-  if (!form) return;
-
-  // 6. MÓDULO DE JUDART (CON SELECTOR DE ARCHIVOS Y BASE64)
   function initJudart() {
     const form = document.getElementById("formNuevoJudart");
     const btnSelectFoto = document.getElementById("btnSelectJudartFoto");
@@ -326,7 +300,7 @@ function initJudart() {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       
-      const client = typeof getClient === "function" ? getClient() : null;
+      const client = window.JC?.supabase || window.sb || window.supabaseClient || window.supabase;
       const leyenda = document.getElementById("judartLeyenda")?.value.trim();
 
       if (!leyenda) return;
@@ -513,5 +487,4 @@ function initJudart() {
   });
 
 window.checkSession = updateStateUI;
-  } 
 })();
