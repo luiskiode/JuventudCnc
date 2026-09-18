@@ -297,50 +297,85 @@ function initJudart() {
 
   if (!form) return;
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const client = getClient();
-    const leyenda = document.getElementById("judartLeyenda")?.value.trim();
+  // 6. MÓDULO DE JUDART (CON SELECTOR DE ARCHIVOS Y BASE64)
+  function initJudart() {
+    const form = document.getElementById("formNuevoJudart");
+    const btnSelectFoto = document.getElementById("btnSelectJudartFoto");
+    const fileInput = document.getElementById("judartFileInput");
+    const fileNameLabel = document.getElementById("judartFileName");
 
-    if (!leyenda) return;
+    // Variable declarada dentro del scope de la función
+    let base64Foto = "";
 
-    const defaultImg = "https://via.placeholder.com/400x250/0f172a/f8fafc?text=Juventud+CNC";
-    const fotoFinal = base64Foto || defaultImg;
-
-    const nuevoPost = {
-      id: Date.now(),
-      foto_url: fotoFinal,
-      fotoUrl: fotoFinal,
-      leyenda,
-      fecha: new Date().toLocaleDateString()
-    };
-
-    if (client) {
-      try {
-        const { data, error } = await client
-          .from("jc_judart")
-          .insert([{ foto_url: fotoFinal, leyenda, fecha: nuevoPost.fecha }])
-          .select()
-          .single();
-
-        if (!error && data) nuevoPost.id = data.id;
-      } catch (err) {
-        console.warn("[App] Error guardando publicación en Supabase:", err);
-      }
+    if (btnSelectFoto && fileInput) {
+      btnSelectFoto.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          if (fileNameLabel) fileNameLabel.textContent = file.name;
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            base64Foto = event.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
     }
 
-    const posts = JSON.parse(localStorage.getItem("jc_judart") || "[]");
-    posts.unshift(nuevoPost);
-    localStorage.setItem("jc_judart", JSON.stringify(posts));
+    if (!form) return;
 
-    form.reset();
-    base64Foto = "";
-    if (fileNameLabel) fileNameLabel.textContent = "Ninguna foto seleccionada";
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      
+      // Verificación de getClient dentro del handler
+      const client = typeof getClient === "function" ? getClient() : null;
+      const leyenda = document.getElementById("judartLeyenda")?.value.trim();
 
-    await renderJudartList();
-    await renderPublicView();
-  });
-}
+      if (!leyenda) return;
+
+      const defaultImg = "https://via.placeholder.com/400x250/0f172a/f8fafc?text=Juventud+CNC";
+      const fotoFinal = base64Foto || defaultImg;
+
+      const nuevoPost = {
+        id: Date.now(),
+        foto_url: fotoFinal,
+        fotoUrl: fotoFinal,
+        leyenda,
+        fecha: new Date().toLocaleDateString()
+      };
+
+      if (client) {
+        try {
+          const { data, error } = await client
+            .from("jc_judart")
+            .insert([{ foto_url: fotoFinal, leyenda, fecha: nuevoPost.fecha }])
+            .select()
+            .single();
+
+          if (!error && data) {
+            nuevoPost.id = data.id;
+          } else if (error) {
+            console.warn("[App] Error de Supabase en Judart:", error.message);
+          }
+        } catch (err) {
+          console.warn("[App] Excepción al guardar en Supabase:", err);
+        }
+      }
+
+      // Guardado de respaldo en localStorage
+      const posts = JSON.parse(localStorage.getItem("jc_judart") || "[]");
+      posts.unshift(nuevoPost);
+      localStorage.setItem("jc_judart", JSON.stringify(posts));
+
+      // Limpieza del formulario
+      form.reset();
+      base64Foto = "";
+      if (fileNameLabel) fileNameLabel.textContent = "Ninguna foto seleccionada";
+
+      await renderJudartList();
+      await renderPublicView();
+    });
+  }
 
   function renderJudartList() {
     const container = document.getElementById("judartFeedInteractive");

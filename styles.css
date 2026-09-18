@@ -407,3 +407,34 @@ input:focus, select:focus, textarea:focus {
     align-items: stretch;
   }
 }
+
+/* Posicionamiento flotante inferior para las tarjetas de los bots */
+#jcFloatLayer {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.jc-float-card {
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  padding: 10px 14px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  max-width: 320px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.jc-float-card.is-show {
+  opacity: 1;
+  transform: translateY(0);
+}
