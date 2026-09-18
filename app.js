@@ -304,7 +304,6 @@ function initJudart() {
     const fileInput = document.getElementById("judartFileInput");
     const fileNameLabel = document.getElementById("judartFileName");
 
-    // Variable declarada dentro del scope de la función
     let base64Foto = "";
 
     if (btnSelectFoto && fileInput) {
@@ -327,7 +326,6 @@ function initJudart() {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       
-      // Verificación de getClient dentro del handler
       const client = typeof getClient === "function" ? getClient() : null;
       const leyenda = document.getElementById("judartLeyenda")?.value.trim();
 
@@ -362,12 +360,10 @@ function initJudart() {
         }
       }
 
-      // Guardado de respaldo en localStorage
       const posts = JSON.parse(localStorage.getItem("jc_judart") || "[]");
       posts.unshift(nuevoPost);
       localStorage.setItem("jc_judart", JSON.stringify(posts));
 
-      // Limpieza del formulario
       form.reset();
       base64Foto = "";
       if (fileNameLabel) fileNameLabel.textContent = "Ninguna foto seleccionada";
@@ -377,7 +373,7 @@ function initJudart() {
     });
   }
 
-  function renderJudartList() {
+  async function renderJudartList() {
     const container = document.getElementById("judartFeedInteractive");
     if (!container) return;
 
@@ -389,7 +385,7 @@ function initJudart() {
 
     container.innerHTML = `<div class="judart-grid">` + posts.map((post) => `
       <div class="judart-card">
-        <img src="${post.fotoUrl}" alt="Judart" onerror="this.src='https://via.placeholder.com/400x250/0f172a/f8fafc?text=Juventud+CNC'" />
+        <img src="${post.fotoUrl || post.foto_url}" alt="Judart" onerror="this.src='https://via.placeholder.com/400x250/0f172a/f8fafc?text=Juventud+CNC'" />
         <p>${post.leyenda}</p>
         <div style="padding: 0 10px 8px 10px;" class="small muted">${post.fecha}</div>
       </div>
@@ -397,7 +393,7 @@ function initJudart() {
   }
 
   // 7. RENDERIZADO DE LA VISTA PÚBLICA
-  function renderPublicView() {
+  async function renderPublicView() {
     const feedPublico = document.getElementById("judartFeedPublico");
     const calPublico = document.getElementById("calendarioPublico");
     const vistaBienvenida = document.getElementById("textoBienvenida");
@@ -420,7 +416,7 @@ function initJudart() {
       } else {
         feedPublico.innerHTML = posts.slice(0, 4).map((post) => `
           <div class="judart-card">
-            <img src="${post.fotoUrl}" alt="Judart" />
+            <img src="${post.fotoUrl || post.foto_url}" alt="Judart" />
             <p>${post.leyenda}</p>
           </div>
         `).join("");
@@ -505,15 +501,15 @@ function initJudart() {
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    initBackground();
-    initModals();
-    initPrivatedTabs();
-    initMensajes();
-    initEventos();
+    if (typeof initBackground === "function") initBackground();
+    if (typeof initModals === "function") initModals();
+    if (typeof initPrivatedTabs === "function") initPrivatedTabs();
+    if (typeof initMensajes === "function") initMensajes();
+    if (typeof initEventos === "function") initEventos();
     initJudart();
     initDragAndDrop();
     initBots();
-    updateStateUI();
+    if (typeof updateStateUI === "function") updateStateUI();
   });
 
   window.checkSession = updateStateUI;
