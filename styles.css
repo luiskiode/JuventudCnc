@@ -49,9 +49,8 @@ body {
   position: fixed;
   inset: 0;
   z-index: -2;
-  background-color: var(--bg-main);
-  /* Degradado de respaldo integrado en caso de que fondo-floral.jpg no exista en la ruta local */
-  background-image: linear-gradient(to bottom right, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 1)), url(./bg-floral.webp);
+  background-color: #0f172a;
+  background-image: linear-gradient(to bottom right, rgba(15, 23, 42, 0.3), rgba(2, 6, 23, 0.5)), url('./assets/bg-floral.webp');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -62,8 +61,8 @@ body {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.2) 0%, rgba(2, 6, 23, 0.6) 100%);
-  backdrop-filter: blur(1px);
+  background: rgba(2, 6, 23, 0.3);
+  backdrop-filter: blur(0px);
 }
 
 .container {

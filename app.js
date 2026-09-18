@@ -8,17 +8,24 @@
   const JC = (window.JC = window.JC || {});
 
   // 1. MANEJO DEL FONDO FLORAL Y PERSONALIZADO
+ // 1. MANEJO DEL FONDO FLORAL Y PERSONALIZADO
   function initBackground() {
     const bgLayer = document.getElementById("jcAppBgLayer");
     const btnChangeBg = document.getElementById("btnChangeBg");
     const bgFileInput = document.getElementById("bgFileInput");
 
+    // Limpiamos la caché antigua automáticamente si apunta a .jpg
     const customBg = localStorage.getItem("jc_custom_bg");
-    // Corrección: Forzamos la carga del fondo floral si no hay custom o si hubo un error en caché
-    if (customBg && customBg !== "null" && customBg.trim() !== "" && bgLayer) {
-      bgLayer.style.backgroundImage = `url('${customBg}')`;
+    if (customBg && customBg.includes(".jpg")) {
+      localStorage.removeItem("jc_custom_bg");
+    }
+
+    const activeBg = localStorage.getItem("jc_custom_bg");
+    if (activeBg && activeBg !== "null" && activeBg.trim() !== "" && bgLayer) {
+      bgLayer.style.backgroundImage = `url('${activeBg}')`;
     } else if (bgLayer) {
-      bgLayer.style.backgroundImage = `linear-gradient(to bottom right, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 1)), url('./bg-floral.webp')`;
+      // Usamos transparencias bajas (0.3 y 0.5) para que las flores resalten claramente
+      bgLayer.style.backgroundImage = `linear-gradient(to bottom right, rgba(15, 23, 42, 0.3), rgba(2, 6, 23, 0.5)), url('./assets/bg-floral.webp')`;
     }
 
     if (btnChangeBg && bgFileInput) {
