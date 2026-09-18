@@ -196,10 +196,16 @@
             </header>
             <div class="card-body">
               <form id="formNuevoJudart" class="form-grid">
-                <input id="judartFotoUrl" type="url" placeholder="URL de la imagen o foto" />
-                <textarea id="judartLeyenda" rows="2" placeholder="Escribe un pie de foto o reflexión..." required></textarea>
-                <button class="btn" type="submit">Publicar en Judart</button>
-              </form>
+  <!-- Botón/Input para subir imagen desde el dispositivo -->
+  <div style="display: flex; gap: 8px; align-items: center;">
+    <input type="file" id="judartFileInput" accept="image/*" style="display:none;" />
+    <button id="btnSelectJudartFoto" class="btn ghost small" type="button">📷 Subir Foto</button>
+    <span id="judartFileName" class="small muted">Ninguna foto seleccionada</span>
+  </div>
+  
+  <textarea id="judartLeyenda" rows="2" placeholder="Escribe un pie de foto o reflexión..." required></textarea>
+  <button class="btn" type="submit">Publicar en Judart</button>
+</form>
 
               <h4 style="margin-top: 16px;">Muro Comunitario Judart</h4>
               <div id="judartFeedInteractive" style="margin-top:8px;">

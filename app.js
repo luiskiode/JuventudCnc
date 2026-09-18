@@ -272,31 +272,75 @@
   }
 
   // 6. MÓDULO DE JUDART
-  function initJudart() {
-    const form = document.getElementById("formNuevoJudart");
-    if (!form) return;
+function initJudart() {
+  const form = document.getElementById("formNuevoJudart");
+  const btnSelectFoto = document.getElementById("btnSelectJudartFoto");
+  const fileInput = document.getElementById("judartFileInput");
+  const fileNameLabel = document.getElementById("judartFileName");
 
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const fotoUrl = document.getElementById("judartFotoUrl")?.value.trim();
-      const leyenda = document.getElementById("judartLeyenda")?.value.trim();
+  let base64Foto = "";
 
-      if (!leyenda) return;
-
-      const posts = JSON.parse(localStorage.getItem("jc_judart") || "[]");
-      posts.unshift({
-        id: Date.now(),
-        fotoUrl: fotoUrl || 'https://via.placeholder.com/400x250/0f172a/f8fafc?text=Juventud+CNC',
-        leyenda,
-        fecha: new Date().toLocaleDateString()
-      });
-
-      localStorage.setItem("jc_judart", JSON.stringify(posts));
-      form.reset();
-      renderJudartList();
-      renderPublicView();
+  if (btnSelectFoto && fileInput) {
+    btnSelectFoto.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        fileNameLabel.textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          base64Foto = event.target.result; // Convierte la foto a cadena utilizable
+        };
+        reader.readAsDataURL(file);
+      }
     });
   }
+
+  if (!form) return;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const client = getClient();
+    const leyenda = document.getElementById("judartLeyenda")?.value.trim();
+
+    if (!leyenda) return;
+
+    const defaultImg = "https://via.placeholder.com/400x250/0f172a/f8fafc?text=Juventud+CNC";
+    const fotoFinal = base64Foto || defaultImg;
+
+    const nuevoPost = {
+      id: Date.now(),
+      foto_url: fotoFinal,
+      fotoUrl: fotoFinal,
+      leyenda,
+      fecha: new Date().toLocaleDateString()
+    };
+
+    if (client) {
+      try {
+        const { data, error } = await client
+          .from("jc_judart")
+          .insert([{ foto_url: fotoFinal, leyenda, fecha: nuevoPost.fecha }])
+          .select()
+          .single();
+
+        if (!error && data) nuevoPost.id = data.id;
+      } catch (err) {
+        console.warn("[App] Error guardando publicación en Supabase:", err);
+      }
+    }
+
+    const posts = JSON.parse(localStorage.getItem("jc_judart") || "[]");
+    posts.unshift(nuevoPost);
+    localStorage.setItem("jc_judart", JSON.stringify(posts));
+
+    form.reset();
+    base64Foto = "";
+    if (fileNameLabel) fileNameLabel.textContent = "Ninguna foto seleccionada";
+
+    await renderJudartList();
+    await renderPublicView();
+  });
+}
 
   function renderJudartList() {
     const container = document.getElementById("judartFeedInteractive");
